@@ -1,0 +1,83 @@
+.headline-1 {
+  font-size: var(--font-headline-1-size);
+  line-height: var(--font-headline-1-line-height);
+  font-weight: var(--font-headline-1-weight);
+}
+
+.headline-2 {
+  font-size: var(--font-headline-2-size);
+  line-height: var(--font-headline-2-line-height);
+  font-weight: var(--font-headline-2-weight);
+}
+
+.headline-3 {
+  font-size: var(--font-headline-3-size);
+  line-height: var(--font-headline-3-line-height);
+  font-weight: var(--font-headline-3-weight);
+}
+
+.subhead-1 {
+  font-size: var(--font-subhead-1-size);
+  line-height: var(--font-subhead-1-line-height);
+  font-weight: var(--font-subhead-1-weight);
+}
+
+.subhead-2 {
+  font-size: var(--font-subhead-2-size);
+  line-height: var(--font-subhead-2-line-height);
+  font-weight: var(--font-subhead-2-weight);
+}
+
+.subhead-3 {
+  font-size: var(--font-subhead-3-size);
+  line-height: var(--font-subhead-3-line-height);
+  font-weight: var(--font-subhead-3-weight);
+}
+
+.subhead-4 {
+  font-size: var(--font-subhead-4-size);
+  line-height: var(--font-subhead-4-line-height);
+  font-weight: var(--font-subhead-4-weight);
+}
+
+.body-1 {
+  font-size: var(--font-body-1-size);
+  line-height: var(--font-body-1-line-height);
+  font-weight: var(--font-body-1-weight);
+}
+
+.body-2 {
+  font-size: var(--font-body-2-size);
+  line-height: var(--font-body-2-line-height);
+  font-weight: var(--font-body-2-weight);
+}
+
+.body-3 {
+  font-size: var(--font-body-3-size);
+  line-height: var(--font-body-3-line-height);
+  font-weight: var(--font-body-3-weight);
+}
+
+.body-4 {
+  font-size: var(--font-body-4-size);
+  line-height: var(--font-body-4-line-height);
+  font-weight: var(--font-body-4-weight);
+}
+
+.body-5 {
+  font-size: var(--font-body-5-size);
+  line-height: var(--font-body-5-line-height);
+  font-weight: var(--font-body-5-weight);
+}
+
+.caption-1 {
+  font-size: var(--font-caption-1-size);
+  line-height: var(--font-caption-1-line-height);
+  font-weight: var(--font-caption-1-weight);
+}
+
+.caption-2 {
+  font-size: var(--font-caption-2-size);
+  line-height: var(--font-caption-2-line-height);
+  font-weight: var(--font-caption-2-weight);
+}
