@@ -19,7 +19,7 @@ function NotificationButton({ onClick, className = '' }) {
       type="button"
       aria-label="알림"
       onClick={onClick}
-      className={`flex h-full w-14 shrink-0 items-center justify-center rounded-[10px] bg-[var(--color-background)] text-[#2b3f6c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gray-400)] ${className}`}
+      className={`flex h-10 w-[60px] shrink-0 items-center justify-center rounded-[10px] bg-[var(--color-background)] text-[#2b3f6c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gray-400)] ${className}`}
     >
       <NotificationIcon />
     </button>

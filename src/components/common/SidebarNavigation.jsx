@@ -1,4 +1,5 @@
 import homeIcon from '../../assets/icons/sidebar/home.svg';
+import homeInactiveIcon from '../../assets/icons/sidebar/home-inactive.svg';
 import logoIcon from '../../assets/icons/sidebar/logo-simple.svg';
 import messageDotIcon from '../../assets/icons/sidebar/message-dot.svg';
 import messageIcon from '../../assets/icons/sidebar/message.svg';
@@ -23,11 +24,9 @@ const navigationItems = [
 function HomeIcon({ isActive }) {
   return (
     <img
-      src={homeIcon}
+      src={isActive ? homeIcon : homeInactiveIcon}
       alt=""
-      className={`h-[20.4px] w-[20.5px] ${
-        isActive ? '' : 'brightness-0 saturate-100 invert-[24%] sepia-[23%] saturate-[1638%] hue-rotate-[181deg] brightness-[88%] contrast-[89%]'
-      }`}
+      className="h-[20.4px] w-[20.5px]"
     />
   );
 }
@@ -164,7 +163,7 @@ function SidebarNavigation({ activeItem = 'home', className = '', onNavigate, on
               className={`flex size-11 items-center justify-center rounded-[30px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gray-400)] ${
                 isActive
                   ? 'bg-[var(--color-gray-800)]'
-                  : 'bg-[var(--color-background-subtle)] hover:bg-[var(--color-gray-100)]'
+                  : 'bg-[var(--color-gray-100)] hover:bg-[var(--color-gray-200)]'
               }`}
             >
               <Icon isActive={isActive} />

@@ -23,11 +23,13 @@ function HomePage({ children }) {
         onSettingsClick={handleSettingsClick}
       />
       <main className="ml-[10px] flex min-w-0 flex-1 flex-col gap-[10px]">
-        <SearchToolbar
-          onSearchClick={() => console.log('검색 버튼 클릭됨')}
-          onNotificationClick={() => console.log('알림 버튼 클릭됨')}
-          onProfileClick={() => console.log('프로필 버튼 클릭됨')}
-        />
+        <header className="mx-auto flex h-14 w-[1204px] shrink-0 items-center justify-between">
+          <h1 className="subhead-1 text-[var(--color-text-primary)]">home</h1>
+          <SearchToolbar
+            onNotificationClick={() => console.log('알림 버튼 클릭됨')}
+            onProfileClick={() => console.log('프로필 버튼 클릭됨')}
+          />
+        </header>
         <div className="min-h-0 min-w-0 flex-1">{children}</div>
       </main>
     </div>
