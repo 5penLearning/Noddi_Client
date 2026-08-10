@@ -23,8 +23,13 @@ function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const activeItem = Object.entries(navigationPaths).find(([, path]) => path === location.pathname)?.[0];
-  const pageTitle = pageTitles[location.pathname] ?? '페이지를 찾을 수 없습니다.';
+  const activeItem = Object.entries(navigationPaths).find(
+    ([, path]) => location.pathname === path || location.pathname.startsWith(`${path}/`),
+  )?.[0];
+  const currentPagePath = Object.keys(pageTitles).find(
+    (path) => location.pathname === path || location.pathname.startsWith(`${path}/`),
+  );
+  const pageTitle = pageTitles[currentPagePath] ?? '페이지를 찾을 수 없습니다.';
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--color-gray-100)] p-[10px]">
