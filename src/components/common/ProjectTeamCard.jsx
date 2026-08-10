@@ -1,3 +1,5 @@
+import OutlineButton from './OutlineButton';
+
 const MAX_VISIBLE_MEMBERS = 4;
 
 function ProjectTeamCard({ team, onAsk, className = '' }) {
@@ -32,13 +34,13 @@ function ProjectTeamCard({ team, onAsk, className = '' }) {
 
       <div className="mt-[32px] flex items-center justify-between">
         <p className="subhead-2 text-[var(--color-gray-500)]">{team.status}</p>
-        <button
-          type="button"
+        <OutlineButton
+          variant="dark"
           onClick={() => onAsk?.(team.id)}
-          className="body-3 flex h-[42px] w-[114px] items-center justify-center whitespace-nowrap rounded-[10px] bg-[var(--color-black)] tracking-[-0.16px] text-[var(--color-white)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gray-500)]"
+          className="h-[42px] !min-h-0 w-[114px] !px-0 !py-0"
         >
           질문하러 가기
-        </button>
+        </OutlineButton>
       </div>
     </section>
   );

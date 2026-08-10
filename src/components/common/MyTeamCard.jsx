@@ -1,4 +1,5 @@
 import teamLogo from '../../assets/icons/my-team-logo.svg';
+import OutlineButton from './OutlineButton';
 
 const MAX_VISIBLE_MEMBERS = 4; // 지금 화면에 동그라미 4개 있어서 4로 함
 
@@ -11,9 +12,7 @@ function MyTeamCard({ team, onMove, onTodoToggle, className = '' }) {
       className={`h-[440px] w-[453px] overflow-hidden rounded-[10px] bg-[var(--color-gray-50)] px-[22px] pt-[23px] ${className}`}
     >
       <header className="flex h-[31px] items-center">
-        <h2 className="headline-3 tracking-[0.24px] text-black">
-          {team.name}
-        </h2>
+        <h2 className="headline-3 tracking-[0.24px] text-black">{team.name}</h2>
         <img src={teamLogo} alt="" className="mt-[6px] ml-[10px] h-[22px] w-[27px] self-start" />
 
         <div className="ml-auto flex items-center">
@@ -47,7 +46,7 @@ function MyTeamCard({ team, onMove, onTodoToggle, className = '' }) {
         <span className="body-5 text-[var(--color-gray-500)]">{team.todoCount}개</span>
       </div>
 
-      <ul className="mt-[14px] h-[150px] overflow-y-auto overflow-x-hidden bg-[var(--color-gray-100)] px-[11px] py-[14px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <ul className="mt-[14px] h-[150px] [scrollbar-width:none] overflow-x-hidden overflow-y-auto bg-[var(--color-gray-100)] px-[11px] py-[14px] [&::-webkit-scrollbar]:hidden">
         {team.todos.map((todo) => (
           <li key={todo.id} className="flex h-[40px] items-start">
             <button
@@ -66,13 +65,13 @@ function MyTeamCard({ team, onMove, onTodoToggle, className = '' }) {
       </ul>
 
       <div className="mt-[13px] flex justify-end pr-[1px]">
-        <button
-          type="button"
+        <OutlineButton
+          variant="primary"
           onClick={() => onMove?.(team.id)}
-          className="body-3 w-[114px] rounded-[10px] bg-[var(--color-action-primary)] px-5 py-[10px] tracking-[-0.16px] text-[var(--color-black)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gray-500)]"
+          className="h-[42px] !min-h-0 w-[114px]"
         >
           이동하기
-        </button>
+        </OutlineButton>
       </div>
     </section>
   );
