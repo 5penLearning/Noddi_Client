@@ -17,3 +17,10 @@ export const myTeamMockData = {
     completed: false,
   })),
 };
+
+export const projectTeamMockData = {
+  id: 'marketing-team',
+  name: '마케팅 팀',
+  members: myTeamMockData.members,
+  status: '현재 진행 상황',
+};
