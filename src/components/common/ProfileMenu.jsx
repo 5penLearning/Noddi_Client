@@ -1,25 +1,22 @@
-function ChevronDownIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-5">
-      <path d="m7 10 5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+import avatarDefault from '../../assets/icons/profile/avatar-default.svg';
+import chevronIcon from '../../assets/icons/profile/chevron.svg';
 
 function ProfileMenu({ name = '김유진', department = '마케팅부', onClick, className = '' }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex h-full min-w-[154px] items-center gap-2 rounded-[10px] bg-[var(--color-background)] px-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gray-400)] ${className}`}
+      className={`flex h-10 w-[346px] shrink-0 items-center justify-between rounded-[10px] bg-[var(--color-white)] p-[10px] text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gray-400)] ${className}`}
     >
-      <span className="size-8 shrink-0 rounded-full bg-[var(--color-gray-200)]" />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-medium leading-[1.2] text-[var(--color-gray-800)]">{name}</span>
-        <span className="mt-0.5 block truncate text-[10px] leading-[1.2] text-[var(--color-text-tertiary)]">{department}</span>
+      <span className="flex items-center gap-3">
+        <img src={avatarDefault} alt="" className="size-7 shrink-0" />
+        <span className="flex items-center gap-5 whitespace-nowrap">
+          <span className="body-3 tracking-[-0.16px] text-[var(--color-black)]">{name}</span>
+          <span className="caption-1 tracking-[-0.28px] text-[var(--color-text-secondary)]">{department}</span>
+        </span>
       </span>
-      <span className="shrink-0 text-[#2b3f6c]">
-        <ChevronDownIcon />
+      <span className="flex size-6 items-center justify-center">
+        <img src={chevronIcon} alt="" className="h-[7.12px] w-[15.5px] -rotate-90" />
       </span>
     </button>
   );
