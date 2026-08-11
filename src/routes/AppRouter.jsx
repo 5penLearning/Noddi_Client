@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import LoginPage from '../pages/auth/LoginPage';
 import SignUpPage from '../pages/auth/SignUpPage';
 import SplashPage from '../pages/splash/SplashPage';
@@ -16,7 +16,7 @@ function AppRouter() {
 
       <Route element={<AppLayout />}>
         <Route path="/home" element={<Home />} />
-        <Route path="/projects" element={<Navigate to="/projects/project-1" replace />} />
+        <Route path="/projects" element={<ProjectPage />} />
         <Route path="/projects/:projectId" element={<ProjectPage />} />
         <Route path="/meetings" element={<TemporaryPage title="화상회의" />} />
         <Route path="/chat" element={<TemporaryPage title="채팅" />} />

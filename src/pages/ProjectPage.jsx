@@ -1,27 +1,84 @@
 import { useEffect, useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import MyTeamCard from '../components/common/MyTeamCard';
 import OutlineButton from '../components/common/OutlineButton';
+import ProjectCreateButton from '../components/common/ProjectCreateButton';
 import ProjectNotice from '../components/common/ProjectNotice';
 import ProjectTeamCard from '../components/common/ProjectTeamCard';
-import chevronIcon from '../assets/icons/profile/chevron.svg';
+import { getApiErrorMessage } from '../api/axios';
+import { getProjects } from '../api/projects';
 import { projectPageMockData } from '../mocks/projectPageData';
+
+import chevronIcon from '../assets/icons/profile/chevron.svg';
 
 function ProjectPage() {
   const navigate = useNavigate();
   const { projectId } = useParams();
   const [isBannerVisible, setIsBannerVisible] = useState(true);
-  const { projects, dayCount, description, notices, myTeams, teamCount, teams } =
-    projectPageMockData;
-  const currentProject = projects.find((project) => project.id === projectId);
-  const visibleMyTeams = myTeams.slice(0, currentProject?.myTeamCount ?? 0);
+  const [projects, setProjects] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const { dayCount, description, notices, myTeams, teamCount, teams } = projectPageMockData;
+  const currentProject = projects.find(
+    (project) => String(project.projectId) === projectId,
+  );
+  const currentProjectIndex = projects.findIndex(
+    (project) => String(project.projectId) === projectId,
+  );
+  const visibleMyTeams = myTeams.slice(
+    0,
+    projectPageMockData.projects[currentProjectIndex]?.myTeamCount ?? 0,
+  );
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setIsLoading(true);
+        setErrorMessage('');
+        const projectList = await getProjects();
+        setProjects(projectList);
+      } catch (error) {
+        setErrorMessage(
+          getApiErrorMessage(error, '프로젝트 목록을 불러오지 못했습니다.'),
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, []);
+
+  useEffect(() => {
+    if (isLoading || errorMessage || projects.length === 0) return;
+
+    const hasCurrentProject = projects.some(
+      (project) => String(project.projectId) === projectId,
+    );
+
+    if (!hasCurrentProject) {
+      navigate(`/projects/${projects[0].projectId}`, { replace: true });
+    }
+  }, [errorMessage, isLoading, navigate, projectId, projects]);
 
   useEffect(() => {
     setIsBannerVisible(true);
   }, [projectId]);
 
+  if (isLoading) {
+    return <div className="flex h-full items-center justify-center">프로젝트를 불러오는 중입니다.</div>;
+  }
+
+  if (errorMessage) {
+    return <div className="flex h-full items-center justify-center">{errorMessage}</div>;
+  }
+
+  if (projects.length === 0) {
+    return <div className="flex h-full items-center justify-center">소속된 프로젝트가 없습니다.</div>;
+  }
+
   if (!currentProject) {
-    return <Navigate to={`/projects/${projects[0].id}`} replace />;
+    return null;
   }
 
   return (
@@ -29,13 +86,13 @@ function ProjectPage() {
       <div className="mx-auto w-full max-w-[1350px]">
         <div className="flex h-[82px] items-start gap-[14px] pt-[17px]">
           {projects.map((project) => {
-            const isActive = project.id === projectId;
+            const isActive = String(project.projectId) === projectId;
 
             return (
               <button
-                key={project.id}
+                key={project.projectId}
                 type="button"
-                onClick={() => navigate(`/projects/${project.id}`)}
+                onClick={() => navigate(`/projects/${project.projectId}`)}
                 className={`subhead-3 flex w-[162px] shrink-0 justify-center text-[var(--color-black)] ${
                   isActive
                     ? 'h-[75px] items-start rounded-t-[10px] bg-[var(--color-action-primary)] pt-[14px]'
@@ -47,12 +104,7 @@ function ProjectPage() {
             );
           })}
 
-          <button
-            type="button"
-            className="flex size-[54px] shrink-0 items-center justify-center rounded-[10px] bg-[var(--color-white)] text-[28px] leading-none text-[#2b3f6c]"
-          >
-            ＋
-          </button>
+          <ProjectCreateButton />
         </div>
 
         <main className="relative z-10 min-h-[1032px] overflow-hidden rounded-[10px] bg-[var(--color-white)]">
@@ -62,7 +114,7 @@ function ProjectPage() {
                 D+{dayCount}
               </span>
               <p className="subhead-3 ml-5 min-w-0 flex-1 truncate text-[var(--color-gray-700)]">
-                {description}
+                {currentProject.description || description}
               </p>
               <button
                 type="button"
