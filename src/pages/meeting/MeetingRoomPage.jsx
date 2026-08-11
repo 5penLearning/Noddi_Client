@@ -331,10 +331,10 @@ function ToolbarButton({
       disabled={disabled}
       onClick={onClick}
       className={`flex min-w-[58px] flex-col items-center gap-1 text-[10px] transition ${disabled
-        ? 'cursor-not-allowed text-[#59625F]'
-        : active
-          ? 'text-[#31F5A0]'
-          : 'text-[#D7DEDB] hover:text-white'
+          ? 'cursor-not-allowed text-[#59625F]'
+          : active
+            ? 'text-[#31F5A0]'
+            : 'text-[#D7DEDB] hover:text-white'
         }`}
     >
       <span className="flex h-6 items-center justify-center">
