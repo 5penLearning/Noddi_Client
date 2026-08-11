@@ -1,10 +1,14 @@
 import { Route, Routes } from 'react-router-dom';
+
 import LoginPage from '../pages/auth/LoginPage';
 import SignUpPage from '../pages/auth/SignUpPage';
 import SplashPage from '../pages/splash/SplashPage';
+
 import AppLayout from '../layouts/AppLayout';
+
 import Home from '../pages/Home';
 import ProjectPage from '../pages/ProjectPage';
+import MeetingPage from '../pages/meeting/MeetingPage';
 import TemporaryPage from '../pages/TemporaryPage';
 
 function AppRouter() {
@@ -16,13 +20,20 @@ function AppRouter() {
 
       <Route element={<AppLayout />}>
         <Route path="/home" element={<Home />} />
+
         <Route path="/projects" element={<ProjectPage />} />
         <Route path="/projects/:projectId" element={<ProjectPage />} />
-        <Route path="/meetings" element={<TemporaryPage title="화상회의" />} />
+
+        <Route path="/meetings" element={<MeetingPage />} />
+
         <Route path="/chat" element={<TemporaryPage title="채팅" />} />
         <Route path="/mypage" element={<TemporaryPage title="마이페이지" />} />
         <Route path="/settings" element={<TemporaryPage title="설정" />} />
-        <Route path="*" element={<TemporaryPage title="페이지를 찾을 수 없습니다." />} />
+
+        <Route
+          path="*"
+          element={<TemporaryPage title="페이지를 찾을 수 없습니다." />}
+        />
       </Route>
     </Routes>
   );
