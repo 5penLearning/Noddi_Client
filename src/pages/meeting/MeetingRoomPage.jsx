@@ -1,10 +1,16 @@
-import { useEffect, useRef } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+
 import {
   useLocation,
   useNavigate,
   useParams,
 } from 'react-router-dom';
 
+import MeetingSidePanel from '../../components/feature/meeting/MeetingSidePanel';
 import useLocalMedia from '../../hooks/useLocalMedia';
 import useScreenShare from '../../hooks/useScreenShare';
 
@@ -295,11 +301,9 @@ function LocalParticipantTile({
   const videoRef = useRef(null);
 
   useEffect(() => {
-    if (!videoRef.current) {
-      return;
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
     }
-
-    videoRef.current.srcObject = stream;
   }, [stream]);
 
   return (
@@ -313,14 +317,14 @@ function LocalParticipantTile({
           className="h-full w-full object-cover"
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center">
+        <div className="flex h-full items-center justify-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#353B38] text-2xl font-semibold text-white">
             나
           </div>
         </div>
       )}
 
-      <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-lg bg-black/50 px-3 py-2 text-white backdrop-blur-sm">
+      <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-lg bg-black/50 px-3 py-2 text-white">
         {!isMicOn && <MicrophoneIcon off />}
 
         <span className="text-xs font-semibold">
@@ -334,11 +338,11 @@ function LocalParticipantTile({
 function RemoteParticipantTile({ participant }) {
   return (
     <div className="relative flex min-h-0 items-center justify-center overflow-hidden border border-[#444] bg-[#F7F8F7]">
-      <div className="flex h-20 w-20 items-center justify-center rounded-full border border-[#B8BFBC] bg-[#E5E9E7] text-xl font-semibold text-[#59625F]">
+      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#E5E9E7] text-xl font-semibold text-[#59625F]">
         {participant.name.charAt(0)}
       </div>
 
-      <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-lg bg-white/80 px-3 py-2 backdrop-blur-sm">
+      <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-lg bg-white/80 px-3 py-2">
         <span className="text-xs font-semibold text-[#303633]">
           {participant.name}
         </span>
@@ -351,117 +355,72 @@ function RemoteParticipantTile({ participant }) {
   );
 }
 
-function LocalParticipantStripTile({
+function ParticipantStrip({
   stream,
   isCameraOn,
-  isMicOn,
 }) {
   const videoRef = useRef(null);
 
   useEffect(() => {
-    if (!videoRef.current) {
-      return;
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
     }
-
-    videoRef.current.srcObject = stream;
   }, [stream]);
 
-  return (
-    <div className="relative h-full min-w-[128px] flex-1 overflow-hidden border-r border-[#444] bg-[#202422]">
-      {stream && isCameraOn ? (
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="h-full w-full object-cover"
-        />
-      ) : (
-        <div className="flex h-full items-center justify-center">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#353B38] text-xs font-semibold text-white">
-            나
-          </div>
-        </div>
-      )}
-
-      <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap">
-        {!isMicOn && (
-          <MicrophoneIcon off />
-        )}
-
-        <span className="text-[10px] font-semibold text-white">
-          나
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function RemoteParticipantStripTile({
-  participant,
-  active = false,
-}) {
-  return (
-    <div
-      className={`relative flex h-full min-w-[128px] flex-1 items-center justify-center overflow-hidden border-r bg-[#F7F8F7] ${active
-        ? 'border-2 border-[#31F5A0]'
-        : 'border-[#444]'
-        }`}
-    >
-      <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#B8BFBC] bg-[#E5E9E7] text-xs font-semibold text-[#59625F]">
-        {participant.name.charAt(0)}
-      </div>
-
-      <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap">
-        <span className="text-[10px] font-semibold text-[#303633]">
-          {participant.name}
-        </span>
-
-        <span className="text-[8px] text-[#8A9490]">
-          {participant.role}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function ParticipantStrip({
-  stream,
-  isCameraOn,
-  isMicOn,
-}) {
   return (
     <div className="flex h-[76px] shrink-0 bg-[#171A19]">
       <button
         type="button"
-        className="flex w-9 shrink-0 items-center justify-center bg-black/30 text-white transition hover:bg-black/50"
-        aria-label="이전 참여자"
+        className="flex w-9 shrink-0 items-center justify-center bg-black/30 text-white"
       >
         <ChevronLeftIcon />
       </button>
 
       <div className="flex min-w-0 flex-1 overflow-hidden">
-        <LocalParticipantStripTile
-          stream={stream}
-          isCameraOn={isCameraOn}
-          isMicOn={isMicOn}
-        />
+        <div className="relative min-w-[128px] flex-1 overflow-hidden border-r border-[#444] bg-[#202422]">
+          {stream && isCameraOn ? (
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-xs text-white">
+              나
+            </div>
+          )}
+
+          <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-white">
+            나
+          </span>
+        </div>
 
         {remoteParticipants.map(
           (participant, index) => (
-            <RemoteParticipantStripTile
+            <div
               key={participant.id}
-              participant={participant}
-              active={index === 0}
-            />
+              className={`relative flex min-w-[128px] flex-1 items-center justify-center bg-[#F7F8F7] ${index === 0
+                ? 'border-2 border-[#31F5A0]'
+                : 'border-r border-[#444]'
+                }`}
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E5E9E7] text-xs font-semibold text-[#59625F]">
+                {participant.name.charAt(0)}
+              </div>
+
+              <span className="absolute bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-semibold text-[#303633]">
+                {participant.name}
+              </span>
+            </div>
           ),
         )}
       </div>
 
       <button
         type="button"
-        className="flex w-9 shrink-0 items-center justify-center bg-black/30 text-white transition hover:bg-black/50"
-        aria-label="다음 참여자"
+        className="flex w-9 shrink-0 items-center justify-center bg-black/30 text-white"
       >
         <ChevronRightIcon />
       </button>
@@ -473,15 +432,13 @@ function ScreenShareView({ stream }) {
   const videoRef = useRef(null);
 
   useEffect(() => {
-    if (!videoRef.current) {
-      return;
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
     }
-
-    videoRef.current.srcObject = stream;
   }, [stream]);
 
   return (
-    <div className="flex h-full min-h-0 w-full items-center justify-center overflow-hidden bg-[#303533]">
+    <div className="flex h-full items-center justify-center overflow-hidden bg-[#303533]">
       <video
         ref={videoRef}
         autoPlay
@@ -528,6 +485,9 @@ function MeetingRoomPage() {
 
   const meeting = location.state?.meeting;
 
+  const [activePanel, setActivePanel] =
+    useState(null);
+
   const {
     stream,
     isMicOn,
@@ -547,6 +507,22 @@ function MeetingRoomPage() {
     stopScreenShare,
     toggleScreenShare,
   } = useScreenShare();
+
+  const participants = [
+    {
+      id: 'me',
+      name: '나',
+      role: meeting?.team ?? '참여자',
+      isMe: true,
+    },
+    ...remoteParticipants,
+  ];
+
+  const togglePanel = (panel) => {
+    setActivePanel((prev) =>
+      prev === panel ? null : panel,
+    );
+  };
 
   const handleLeave = () => {
     stopScreenShare();
@@ -571,7 +547,7 @@ function MeetingRoomPage() {
           <button
             type="button"
             onClick={startMedia}
-            className="rounded-lg bg-[#101211] px-4 py-2 text-xs font-medium text-white"
+            className="rounded-lg bg-[#101211] px-4 py-2 text-xs text-white"
           >
             다시 시도
           </button>
@@ -586,50 +562,61 @@ function MeetingRoomPage() {
         </div>
       )}
 
-      <main className="flex min-h-0 flex-1 flex-col">
-        {isLoading ? (
-          <div className="flex h-full items-center justify-center bg-[#202422]">
-            <p className="text-sm text-[#A7B0AC]">
-              카메라와 마이크를 준비하고 있습니다.
-            </p>
-          </div>
-        ) : isSharing && screenStream ? (
-          <>
-            {/* 공유 중 참여자 가로 스트립 */}
-            <ParticipantStrip
-              stream={stream}
-              isCameraOn={isCameraOn}
-              isMicOn={isMicOn}
-            />
-
-            {/* 공유 화면 */}
-            <div className="min-h-0 flex-1">
-              <ScreenShareView
-                stream={screenStream}
-              />
+      <main className="flex min-h-0 flex-1">
+        {/* 영상 영역 */}
+        <section className="flex min-w-0 flex-1 flex-col">
+          {isLoading ? (
+            <div className="flex h-full items-center justify-center bg-[#202422]">
+              <p className="text-sm text-[#A7B0AC]">
+                카메라와 마이크를 준비하고 있습니다.
+              </p>
             </div>
-          </>
-        ) : (
-          <div className="grid h-full grid-cols-2 grid-rows-2">
-            <LocalParticipantTile
-              stream={stream}
-              isCameraOn={isCameraOn}
-              isMicOn={isMicOn}
-            />
+          ) : isSharing && screenStream ? (
+            <>
+              <ParticipantStrip
+                stream={stream}
+                isCameraOn={isCameraOn}
+              />
 
-            {remoteParticipants
-              .slice(0, 3)
-              .map((participant) => (
-                <RemoteParticipantTile
-                  key={participant.id}
-                  participant={participant}
+              <div className="min-h-0 flex-1">
+                <ScreenShareView
+                  stream={screenStream}
                 />
-              ))}
-          </div>
+              </div>
+            </>
+          ) : (
+            <div className="grid h-full grid-cols-2 grid-rows-2">
+              <LocalParticipantTile
+                stream={stream}
+                isCameraOn={isCameraOn}
+                isMicOn={isMicOn}
+              />
+
+              {remoteParticipants
+                .slice(0, 3)
+                .map((participant) => (
+                  <RemoteParticipantTile
+                    key={participant.id}
+                    participant={participant}
+                  />
+                ))}
+            </div>
+          )}
+        </section>
+
+        {/* 우측 패널 */}
+        {activePanel && (
+          <MeetingSidePanel
+            type={activePanel}
+            participants={participants}
+            onClose={() =>
+              setActivePanel(null)
+            }
+          />
         )}
       </main>
 
-      {/* 하단 컨트롤바 */}
+      {/* 하단 바 */}
       <footer className="relative flex h-[64px] shrink-0 items-center bg-[#101211] px-4">
         <div className="flex items-center gap-2">
           <ToolbarButton
@@ -663,6 +650,12 @@ function MeetingRoomPage() {
           <ToolbarButton
             label="참여자"
             icon={<UsersIcon />}
+            active={
+              activePanel === 'participants'
+            }
+            onClick={() =>
+              togglePanel('participants')
+            }
           />
 
           <ToolbarButton
@@ -684,11 +677,19 @@ function MeetingRoomPage() {
           <ToolbarButton
             label="채팅"
             icon={<ChatIcon />}
+            active={activePanel === 'chat'}
+            onClick={() =>
+              togglePanel('chat')
+            }
           />
 
           <ToolbarButton
             label="AI 회의록"
             icon={<FileIcon />}
+            active={activePanel === 'ai'}
+            onClick={() =>
+              togglePanel('ai')
+            }
           />
         </div>
 
@@ -696,7 +697,7 @@ function MeetingRoomPage() {
           <button
             type="button"
             onClick={handleEndMeeting}
-            className="rounded-lg border border-[#F64E42] px-5 py-2 text-xs font-semibold text-[#F64E42] transition hover:bg-[#F64E42]/10"
+            className="rounded-lg border border-[#F64E42] px-5 py-2 text-xs font-semibold text-[#F64E42]"
           >
             종료하기
           </button>
@@ -704,7 +705,7 @@ function MeetingRoomPage() {
           <button
             type="button"
             onClick={handleLeave}
-            className="rounded-lg bg-[#F64E42] px-6 py-2 text-xs font-semibold text-white transition hover:opacity-90"
+            className="rounded-lg bg-[#F64E42] px-6 py-2 text-xs font-semibold text-white"
           >
             나가기
           </button>
