@@ -1,8 +1,4 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { useEffect, useRef } from 'react';
 import {
   useLocation,
   useNavigate,
@@ -10,6 +6,7 @@ import {
 } from 'react-router-dom';
 
 import useLocalMedia from '../../hooks/useLocalMedia';
+import useScreenShare from '../../hooks/useScreenShare';
 
 function MicrophoneIcon({ off = false }) {
   return (
@@ -124,13 +121,6 @@ function UsersIcon() {
         strokeWidth="1.8"
         strokeLinecap="round"
       />
-
-      <path
-        d="M17 14.5C19.2 15 20.5 16.3 20.5 18"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
     </svg>
   );
 }
@@ -234,6 +224,46 @@ function FileIcon() {
   );
 }
 
+function ChevronLeftIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M15 18L9 12L15 6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M9 18L15 12L9 6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 const remoteParticipants = [
   {
     id: 2,
@@ -248,6 +278,11 @@ const remoteParticipants = [
   {
     id: 4,
     name: '박지우',
+    role: '마케팅팀',
+  },
+  {
+    id: 5,
+    name: '최유진',
     role: '마케팅팀',
   },
 ];
@@ -286,9 +321,7 @@ function LocalParticipantTile({
       )}
 
       <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-lg bg-black/50 px-3 py-2 text-white backdrop-blur-sm">
-        {!isMicOn && (
-          <MicrophoneIcon off />
-        )}
+        {!isMicOn && <MicrophoneIcon off />}
 
         <span className="text-xs font-semibold">
           나
@@ -318,6 +351,148 @@ function RemoteParticipantTile({ participant }) {
   );
 }
 
+function LocalParticipantStripTile({
+  stream,
+  isCameraOn,
+  isMicOn,
+}) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (!videoRef.current) {
+      return;
+    }
+
+    videoRef.current.srcObject = stream;
+  }, [stream]);
+
+  return (
+    <div className="relative h-full min-w-[128px] flex-1 overflow-hidden border-r border-[#444] bg-[#202422]">
+      {stream && isCameraOn ? (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full items-center justify-center">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#353B38] text-xs font-semibold text-white">
+            나
+          </div>
+        </div>
+      )}
+
+      <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap">
+        {!isMicOn && (
+          <MicrophoneIcon off />
+        )}
+
+        <span className="text-[10px] font-semibold text-white">
+          나
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function RemoteParticipantStripTile({
+  participant,
+  active = false,
+}) {
+  return (
+    <div
+      className={`relative flex h-full min-w-[128px] flex-1 items-center justify-center overflow-hidden border-r bg-[#F7F8F7] ${active
+        ? 'border-2 border-[#31F5A0]'
+        : 'border-[#444]'
+        }`}
+    >
+      <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#B8BFBC] bg-[#E5E9E7] text-xs font-semibold text-[#59625F]">
+        {participant.name.charAt(0)}
+      </div>
+
+      <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap">
+        <span className="text-[10px] font-semibold text-[#303633]">
+          {participant.name}
+        </span>
+
+        <span className="text-[8px] text-[#8A9490]">
+          {participant.role}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ParticipantStrip({
+  stream,
+  isCameraOn,
+  isMicOn,
+}) {
+  return (
+    <div className="flex h-[76px] shrink-0 bg-[#171A19]">
+      <button
+        type="button"
+        className="flex w-9 shrink-0 items-center justify-center bg-black/30 text-white transition hover:bg-black/50"
+        aria-label="이전 참여자"
+      >
+        <ChevronLeftIcon />
+      </button>
+
+      <div className="flex min-w-0 flex-1 overflow-hidden">
+        <LocalParticipantStripTile
+          stream={stream}
+          isCameraOn={isCameraOn}
+          isMicOn={isMicOn}
+        />
+
+        {remoteParticipants.map(
+          (participant, index) => (
+            <RemoteParticipantStripTile
+              key={participant.id}
+              participant={participant}
+              active={index === 0}
+            />
+          ),
+        )}
+      </div>
+
+      <button
+        type="button"
+        className="flex w-9 shrink-0 items-center justify-center bg-black/30 text-white transition hover:bg-black/50"
+        aria-label="다음 참여자"
+      >
+        <ChevronRightIcon />
+      </button>
+    </div>
+  );
+}
+
+function ScreenShareView({ stream }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (!videoRef.current) {
+      return;
+    }
+
+    videoRef.current.srcObject = stream;
+  }, [stream]);
+
+  return (
+    <div className="flex h-full min-h-0 w-full items-center justify-center overflow-hidden bg-[#303533]">
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className="h-full w-full object-contain"
+      />
+    </div>
+  );
+}
+
 function ToolbarButton({
   icon,
   label,
@@ -331,10 +506,10 @@ function ToolbarButton({
       disabled={disabled}
       onClick={onClick}
       className={`flex min-w-[58px] flex-col items-center gap-1 text-[10px] transition ${disabled
-          ? 'cursor-not-allowed text-[#59625F]'
-          : active
-            ? 'text-[#31F5A0]'
-            : 'text-[#D7DEDB] hover:text-white'
+        ? 'cursor-not-allowed text-[#59625F]'
+        : active
+          ? 'text-[#31F5A0]'
+          : 'text-[#D7DEDB] hover:text-white'
         }`}
     >
       <span className="flex h-6 items-center justify-center">
@@ -358,51 +533,39 @@ function MeetingRoomPage() {
     isMicOn,
     isCameraOn,
     isLoading,
-    error,
+    error: localMediaError,
     toggleMic,
     toggleCamera,
     startMedia,
     stopMedia,
   } = useLocalMedia();
 
-  const [isSharing, setIsSharing] = useState(false);
+  const {
+    screenStream,
+    isSharing,
+    error: screenShareError,
+    stopScreenShare,
+    toggleScreenShare,
+  } = useScreenShare();
 
   const handleLeave = () => {
+    stopScreenShare();
     stopMedia();
     navigate('/meetings');
   };
 
   const handleEndMeeting = () => {
+    stopScreenShare();
     stopMedia();
     navigate('/meetings');
   };
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#101211]">
-      {/* 회의 정보 */}
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-white/10 bg-[#101211] px-5">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-white">
-            {meeting?.title ?? '화상회의'}
-          </p>
-
-          {meeting && (
-            <p className="text-[10px] text-[#8A9490]">
-              {meeting.project} / {meeting.team}
-            </p>
-          )}
-        </div>
-
-        <span className="text-xs text-[#8A9490]">
-          회의 #{meeting?.id ?? meetingId}
-        </span>
-      </header>
-
-      {/* 권한 오류 */}
-      {error && (
+      {localMediaError && (
         <div className="flex shrink-0 items-center justify-between bg-[#FFF1F0] px-5 py-3">
           <p className="text-sm text-[#F64E42]">
-            {error}
+            {localMediaError}
           </p>
 
           <button
@@ -415,14 +578,37 @@ function MeetingRoomPage() {
         </div>
       )}
 
-      {/* 참가자 영역 */}
-      <main className="min-h-0 flex-1">
+      {screenShareError && (
+        <div className="shrink-0 bg-[#FFF1F0] px-5 py-3">
+          <p className="text-sm text-[#F64E42]">
+            {screenShareError}
+          </p>
+        </div>
+      )}
+
+      <main className="flex min-h-0 flex-1 flex-col">
         {isLoading ? (
           <div className="flex h-full items-center justify-center bg-[#202422]">
             <p className="text-sm text-[#A7B0AC]">
               카메라와 마이크를 준비하고 있습니다.
             </p>
           </div>
+        ) : isSharing && screenStream ? (
+          <>
+            {/* 공유 중 참여자 가로 스트립 */}
+            <ParticipantStrip
+              stream={stream}
+              isCameraOn={isCameraOn}
+              isMicOn={isMicOn}
+            />
+
+            {/* 공유 화면 */}
+            <div className="min-h-0 flex-1">
+              <ScreenShareView
+                stream={screenStream}
+              />
+            </div>
+          </>
         ) : (
           <div className="grid h-full grid-cols-2 grid-rows-2">
             <LocalParticipantTile
@@ -431,22 +617,25 @@ function MeetingRoomPage() {
               isMicOn={isMicOn}
             />
 
-            {remoteParticipants.map((participant) => (
-              <RemoteParticipantTile
-                key={participant.id}
-                participant={participant}
-              />
-            ))}
+            {remoteParticipants
+              .slice(0, 3)
+              .map((participant) => (
+                <RemoteParticipantTile
+                  key={participant.id}
+                  participant={participant}
+                />
+              ))}
           </div>
         )}
       </main>
 
       {/* 하단 컨트롤바 */}
-      <footer className="relative flex h-[76px] shrink-0 items-center bg-[#101211] px-5">
-        {/* 왼쪽 */}
-        <div className="flex items-center gap-5">
+      <footer className="relative flex h-[64px] shrink-0 items-center bg-[#101211] px-4">
+        <div className="flex items-center gap-2">
           <ToolbarButton
-            label={isMicOn ? '마이크' : '음소거'}
+            label={
+              isMicOn ? '마이크' : '음소거'
+            }
             icon={
               <MicrophoneIcon off={!isMicOn} />
             }
@@ -457,7 +646,9 @@ function MeetingRoomPage() {
 
           <ToolbarButton
             label={
-              isCameraOn ? '카메라' : '카메라 끔'
+              isCameraOn
+                ? '카메라'
+                : '카메라 끔'
             }
             icon={
               <CameraIcon off={!isCameraOn} />
@@ -468,8 +659,7 @@ function MeetingRoomPage() {
           />
         </div>
 
-        {/* 가운데 */}
-        <div className="absolute left-1/2 flex -translate-x-1/2 items-center gap-7">
+        <div className="absolute left-1/2 flex -translate-x-1/2 items-center gap-4">
           <ToolbarButton
             label="참여자"
             icon={<UsersIcon />}
@@ -481,12 +671,14 @@ function MeetingRoomPage() {
           />
 
           <ToolbarButton
-            label="화면 공유"
+            label={
+              isSharing
+                ? '공유 중지'
+                : '화면 공유'
+            }
             icon={<ShareIcon />}
             active={isSharing}
-            onClick={() =>
-              setIsSharing((prev) => !prev)
-            }
+            onClick={toggleScreenShare}
           />
 
           <ToolbarButton
@@ -500,12 +692,11 @@ function MeetingRoomPage() {
           />
         </div>
 
-        {/* 오른쪽 */}
         <div className="ml-auto flex items-center gap-3">
           <button
             type="button"
             onClick={handleEndMeeting}
-            className="rounded-lg border border-[#F64E42] px-5 py-2.5 text-xs font-semibold text-[#F64E42] transition hover:bg-[#F64E42]/10"
+            className="rounded-lg border border-[#F64E42] px-5 py-2 text-xs font-semibold text-[#F64E42] transition hover:bg-[#F64E42]/10"
           >
             종료하기
           </button>
@@ -513,12 +704,16 @@ function MeetingRoomPage() {
           <button
             type="button"
             onClick={handleLeave}
-            className="rounded-lg bg-[#F64E42] px-6 py-2.5 text-xs font-semibold text-white transition hover:opacity-90"
+            className="rounded-lg bg-[#F64E42] px-6 py-2 text-xs font-semibold text-white transition hover:opacity-90"
           >
             나가기
           </button>
         </div>
       </footer>
+
+      <span className="sr-only">
+        회의 {meeting?.id ?? meetingId}
+      </span>
     </div>
   );
 }
