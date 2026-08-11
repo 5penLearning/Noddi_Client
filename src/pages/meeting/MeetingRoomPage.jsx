@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   useLocation,
   useNavigate,
   useParams,
 } from 'react-router-dom';
+
+import useLocalMedia from '../../hooks/useLocalMedia';
 
 function MicrophoneIcon({ off = false }) {
   return (
@@ -228,39 +234,78 @@ function FileIcon() {
   );
 }
 
-const participants = [
-  {
-    id: 1,
-    name: '홍길동',
-    role: '디자인팀 과장',
-  },
+const remoteParticipants = [
   {
     id: 2,
-    name: '홍길동',
-    role: '디자인팀 과장',
+    name: '김민지',
+    role: '마케팅팀',
   },
   {
     id: 3,
-    name: '홍길동',
-    role: '디자인팀 과장',
+    name: '이서준',
+    role: '마케팅팀',
   },
   {
     id: 4,
-    name: '홍길동',
-    role: '디자인팀 과장',
+    name: '박지우',
+    role: '마케팅팀',
   },
 ];
 
-function ParticipantTile({ participant }) {
+function LocalParticipantTile({
+  stream,
+  isCameraOn,
+  isMicOn,
+}) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (!videoRef.current) {
+      return;
+    }
+
+    videoRef.current.srcObject = stream;
+  }, [stream]);
+
   return (
-    <div className="relative flex min-h-0 items-center justify-center border border-[#555] bg-[#F7F8F7]">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full border border-[#B8BFBC] bg-[#E5E9E7] text-xl font-semibold text-[#59625F]">
+    <div className="relative min-h-0 overflow-hidden border border-[#444] bg-[#202422]">
+      {stream && isCameraOn ? (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#353B38] text-2xl font-semibold text-white">
+            나
+          </div>
+        </div>
+      )}
+
+      <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-lg bg-black/50 px-3 py-2 text-white backdrop-blur-sm">
+        {!isMicOn && (
+          <MicrophoneIcon off />
+        )}
+
+        <span className="text-xs font-semibold">
+          나
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function RemoteParticipantTile({ participant }) {
+  return (
+    <div className="relative flex min-h-0 items-center justify-center overflow-hidden border border-[#444] bg-[#F7F8F7]">
+      <div className="flex h-20 w-20 items-center justify-center rounded-full border border-[#B8BFBC] bg-[#E5E9E7] text-xl font-semibold text-[#59625F]">
         {participant.name.charAt(0)}
       </div>
 
-      <div className="absolute bottom-4 right-4 flex items-center gap-2">
-        <div className="h-4 w-4 rounded-full border border-[#777] bg-[#E5E9E7]" />
-
+      <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-lg bg-white/80 px-3 py-2 backdrop-blur-sm">
         <span className="text-xs font-semibold text-[#303633]">
           {participant.name}
         </span>
@@ -277,15 +322,19 @@ function ToolbarButton({
   icon,
   label,
   active = false,
+  disabled = false,
   onClick,
 }) {
   return (
     <button
       type="button"
+      disabled={disabled}
       onClick={onClick}
-      className={`flex min-w-[54px] flex-col items-center gap-1 text-[10px] transition ${active
-        ? 'text-[#31F5A0]'
-        : 'text-[#D7DEDB] hover:text-white'
+      className={`flex min-w-[58px] flex-col items-center gap-1 text-[10px] transition ${disabled
+        ? 'cursor-not-allowed text-[#59625F]'
+        : active
+          ? 'text-[#31F5A0]'
+          : 'text-[#D7DEDB] hover:text-white'
         }`}
     >
       <span className="flex h-6 items-center justify-center">
@@ -304,56 +353,118 @@ function MeetingRoomPage() {
 
   const meeting = location.state?.meeting;
 
-  const [isMicOn, setIsMicOn] = useState(true);
-  const [isCameraOn, setIsCameraOn] = useState(true);
+  const {
+    stream,
+    isMicOn,
+    isCameraOn,
+    isLoading,
+    error,
+    toggleMic,
+    toggleCamera,
+    startMedia,
+    stopMedia,
+  } = useLocalMedia();
+
   const [isSharing, setIsSharing] = useState(false);
 
   const handleLeave = () => {
+    stopMedia();
     navigate('/meetings');
   };
 
   const handleEndMeeting = () => {
+    stopMedia();
     navigate('/meetings');
   };
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#101211]">
-      {/* 참여자 영상 영역 */}
-      <main className="min-h-0 flex-1">
-        <div className="grid h-full grid-cols-2 grid-rows-2">
-          {participants.map((participant) => (
-            <ParticipantTile
-              key={participant.id}
-              participant={participant}
-            />
-          ))}
+      {/* 회의 정보 */}
+      <header className="flex h-12 shrink-0 items-center justify-between border-b border-white/10 bg-[#101211] px-5">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-white">
+            {meeting?.title ?? '화상회의'}
+          </p>
+
+          {meeting && (
+            <p className="text-[10px] text-[#8A9490]">
+              {meeting.project} / {meeting.team}
+            </p>
+          )}
         </div>
+
+        <span className="text-xs text-[#8A9490]">
+          회의 #{meeting?.id ?? meetingId}
+        </span>
+      </header>
+
+      {/* 권한 오류 */}
+      {error && (
+        <div className="flex shrink-0 items-center justify-between bg-[#FFF1F0] px-5 py-3">
+          <p className="text-sm text-[#F64E42]">
+            {error}
+          </p>
+
+          <button
+            type="button"
+            onClick={startMedia}
+            className="rounded-lg bg-[#101211] px-4 py-2 text-xs font-medium text-white"
+          >
+            다시 시도
+          </button>
+        </div>
+      )}
+
+      {/* 참가자 영역 */}
+      <main className="min-h-0 flex-1">
+        {isLoading ? (
+          <div className="flex h-full items-center justify-center bg-[#202422]">
+            <p className="text-sm text-[#A7B0AC]">
+              카메라와 마이크를 준비하고 있습니다.
+            </p>
+          </div>
+        ) : (
+          <div className="grid h-full grid-cols-2 grid-rows-2">
+            <LocalParticipantTile
+              stream={stream}
+              isCameraOn={isCameraOn}
+              isMicOn={isMicOn}
+            />
+
+            {remoteParticipants.map((participant) => (
+              <RemoteParticipantTile
+                key={participant.id}
+                participant={participant}
+              />
+            ))}
+          </div>
+        )}
       </main>
 
       {/* 하단 컨트롤바 */}
-      <footer className="flex h-[72px] shrink-0 items-center justify-between bg-[#101211] px-5">
+      <footer className="relative flex h-[76px] shrink-0 items-center bg-[#101211] px-5">
         {/* 왼쪽 */}
         <div className="flex items-center gap-5">
           <ToolbarButton
-            label="마이크"
+            label={isMicOn ? '마이크' : '음소거'}
             icon={
               <MicrophoneIcon off={!isMicOn} />
             }
             active={isMicOn}
-            onClick={() =>
-              setIsMicOn((prev) => !prev)
-            }
+            disabled={!stream}
+            onClick={toggleMic}
           />
 
           <ToolbarButton
-            label="카메라"
+            label={
+              isCameraOn ? '카메라' : '카메라 끔'
+            }
             icon={
               <CameraIcon off={!isCameraOn} />
             }
             active={isCameraOn}
-            onClick={() =>
-              setIsCameraOn((prev) => !prev)
-            }
+            disabled={!stream}
+            onClick={toggleCamera}
           />
         </div>
 
@@ -370,7 +481,7 @@ function MeetingRoomPage() {
           />
 
           <ToolbarButton
-            label="화면 공유하기"
+            label="화면 공유"
             icon={<ShareIcon />}
             active={isSharing}
             onClick={() =>
@@ -408,11 +519,6 @@ function MeetingRoomPage() {
           </button>
         </div>
       </footer>
-
-      {/* 임시 확인용 */}
-      <span className="sr-only">
-        회의 ID {meeting?.id ?? meetingId}
-      </span>
     </div>
   );
 }
