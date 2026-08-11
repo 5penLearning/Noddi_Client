@@ -1,6 +1,11 @@
+import { useState } from 'react';
+
 import MeetingCalendar from '../../components/feature/meeting/MeetingCalendar';
 import MeetingScheduleList from '../../components/feature/meeting/MeetingScheduleList';
 import MeetingStatusBanner from '../../components/feature/meeting/MeetingStatusBanner';
+import { meetingMockData } from '../../constants/meetingMockData';
+import useCurrentDateTime from '../../hooks/useCurrentDateTime';
+import { formatDateKey } from '../../utils/date';
 
 function VideoIcon() {
   return (
@@ -90,28 +95,68 @@ const quickActions = [
   },
 ];
 
+const WEEK_DAYS = [
+  '일요일',
+  '월요일',
+  '화요일',
+  '수요일',
+  '목요일',
+  '금요일',
+  '토요일',
+];
+
 function MeetingPage() {
+  const now = useCurrentDateTime();
+
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+
+  const [viewDate, setViewDate] = useState(
+    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+  );
+
+  const selectedDateKey = formatDateKey(selectedDate);
+
+  const selectedMeetings = meetingMockData.filter(
+    (meeting) => meeting.date === selectedDateKey,
+  );
+
+  const hours = now.getHours();
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+
+  const period = hours >= 12 ? 'pm' : 'am';
+  const displayHour = hours % 12 || 12;
+
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const date = String(now.getDate()).padStart(2, '0');
+  const day = WEEK_DAYS[now.getDay()];
+
   return (
     <div className="h-full w-full overflow-y-auto pb-8">
       <header className="mb-5">
-        <h1 className="text-2xl font-semibold text-[#101211]">회의하기</h1>
+        <h1 className="text-2xl font-semibold text-[#101211]">
+          회의하기
+        </h1>
       </header>
 
       <MeetingStatusBanner />
 
       <section className="mt-4 rounded-2xl bg-white p-6">
         <div className="grid min-h-[520px] grid-cols-1 gap-8 xl:grid-cols-[0.9fr_1.15fr]">
-          {/* 왼쪽 영역 */}
           <div className="flex items-center justify-center xl:border-r xl:border-[#EDF0EF]">
             <div className="w-full max-w-[360px]">
               <div className="mb-7">
-                <p className="text-[32px] font-semibold leading-none text-[#101211]">
-                  10:00
-                  <span className="ml-1 text-lg font-medium">pm</span>
-                </p>
+                <div className="flex items-end gap-1">
+                  <p className="text-[32px] font-semibold leading-none text-[#101211]">
+                    {displayHour}:{minutes}
+                  </p>
+
+                  <span className="text-lg font-medium leading-none text-[#101211]">
+                    {period}
+                  </span>
+                </div>
 
                 <p className="mt-3 text-base text-[#8C9692]">
-                  08. 09 일요일
+                  {month}. {date} {day}
                 </p>
               </div>
 
@@ -137,11 +182,19 @@ function MeetingPage() {
             </div>
           </div>
 
-          {/* 오른쪽 영역 */}
           <div className="min-w-0">
-            <MeetingCalendar />
+            <MeetingCalendar
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              viewDate={viewDate}
+              onChangeViewDate={setViewDate}
+              meetings={meetingMockData}
+            />
 
-            <MeetingScheduleList />
+            <MeetingScheduleList
+              meetings={selectedMeetings}
+              selectedDate={selectedDate}
+            />
           </div>
         </div>
       </section>
