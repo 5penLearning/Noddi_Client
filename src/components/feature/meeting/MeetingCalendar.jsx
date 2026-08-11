@@ -48,6 +48,9 @@ function MeetingCalendar({
   viewDate,
   onChangeViewDate,
   meetings,
+  filterOptions,
+  selectedFilter,
+  onChangeFilter,
 }) {
   const today = new Date();
 
@@ -77,30 +80,30 @@ function MeetingCalendar({
 
   return (
     <section>
-      <div className="mb-4 flex items-center justify-between gap-4">
-        <h2 className="text-lg font-semibold text-[#101211]">캘린더</h2>
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <h2 className="shrink-0 text-lg font-semibold text-[#101211]">
+          캘린더
+        </h2>
 
         <div className="flex flex-wrap justify-end gap-2">
-          <button
-            type="button"
-            className="rounded-md border border-[#101211] bg-[#101211] px-3 py-2 text-xs font-medium text-white"
-          >
-            전체
-          </button>
+          {filterOptions.map((filter) => {
+            const isSelected = selectedFilter === filter.id;
 
-          <button
-            type="button"
-            className="rounded-md border border-[#D8DFDC] bg-white px-3 py-2 text-xs text-[#6D7572]"
-          >
-            노디 프로젝트 / 마케팅팀
-          </button>
-
-          <button
-            type="button"
-            className="rounded-md border border-[#D8DFDC] bg-white px-3 py-2 text-xs text-[#6D7572]"
-          >
-            몰포 프로젝트 / 마케팅팀
-          </button>
+            return (
+              <button
+                key={filter.id}
+                type="button"
+                onClick={() => onChangeFilter(filter.id)}
+                className={`rounded-md border px-3 py-2 text-xs font-medium transition ${
+                  isSelected
+                    ? 'border-[#101211] bg-[#101211] text-white'
+                    : 'border-[#D8DFDC] bg-white text-[#6D7572] hover:border-[#AEB7B3] hover:text-[#101211]'
+                }`}
+              >
+                {filter.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 

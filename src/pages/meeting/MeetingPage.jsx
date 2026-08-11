@@ -114,9 +114,44 @@ function MeetingPage() {
     () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   );
 
+  const [selectedFilter, setSelectedFilter] = useState('ALL');
+
+  const filterOptions = [
+    {
+      id: 'ALL',
+      label: '전체',
+    },
+    ...Array.from(
+      new Map(
+        meetingMockData.map((meeting) => {
+          const id = `${meeting.project}::${meeting.team}`;
+
+          return [
+            id,
+            {
+              id,
+              label: `${meeting.project} / ${meeting.team}`,
+              project: meeting.project,
+              team: meeting.team,
+            },
+          ];
+        }),
+      ).values(),
+    ),
+  ];
+
+  const filteredMeetings =
+    selectedFilter === 'ALL'
+      ? meetingMockData
+      : meetingMockData.filter((meeting) => {
+          const filterId = `${meeting.project}::${meeting.team}`;
+
+          return filterId === selectedFilter;
+        });
+
   const selectedDateKey = formatDateKey(selectedDate);
 
-  const selectedMeetings = meetingMockData.filter(
+  const selectedMeetings = filteredMeetings.filter(
     (meeting) => meeting.date === selectedDateKey,
   );
 
@@ -188,7 +223,10 @@ function MeetingPage() {
               onSelectDate={setSelectedDate}
               viewDate={viewDate}
               onChangeViewDate={setViewDate}
-              meetings={meetingMockData}
+              meetings={filteredMeetings}
+              filterOptions={filterOptions}
+              selectedFilter={selectedFilter}
+              onChangeFilter={setSelectedFilter}
             />
 
             <MeetingScheduleList
