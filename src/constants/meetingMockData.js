@@ -8,6 +8,33 @@ export const meetingMockData = [
     project: '노디 프로젝트',
     team: '마케팅팀',
     status: 'IN_PROGRESS',
+    participants: [
+      {
+        id: 1,
+        name: '김민지',
+        profileImageUrl: null,
+      },
+      {
+        id: 2,
+        name: '이서준',
+        profileImageUrl: null,
+      },
+      {
+        id: 3,
+        name: '박지우',
+        profileImageUrl: null,
+      },
+      {
+        id: 4,
+        name: '최유진',
+        profileImageUrl: null,
+      },
+      {
+        id: 5,
+        name: '정현우',
+        profileImageUrl: null,
+      },
+    ],
   },
   {
     id: 2,
@@ -18,6 +45,7 @@ export const meetingMockData = [
     project: '노디 프로젝트',
     team: '마케팅팀',
     status: 'SCHEDULED',
+    participants: [],
   },
   {
     id: 3,
@@ -28,6 +56,7 @@ export const meetingMockData = [
     project: '몰포 프로젝트',
     team: '마케팅팀',
     status: 'SCHEDULED',
+    participants: [],
   },
   {
     id: 4,
@@ -38,5 +67,6 @@ export const meetingMockData = [
     project: '노디 프로젝트',
     team: '디자인팀',
     status: 'SCHEDULED',
+    participants: [],
   },
 ];
