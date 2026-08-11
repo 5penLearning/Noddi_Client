@@ -1,3 +1,8 @@
+import {
+  formatMeetingTime,
+  getMeetingStatus,
+} from '../../../utils/meeting';
+
 const WEEK_DAYS = [
   '일요일',
   '월요일',
@@ -8,7 +13,11 @@ const WEEK_DAYS = [
   '토요일',
 ];
 
-function MeetingScheduleList({ meetings, selectedDate }) {
+function MeetingScheduleList({
+  meetings,
+  selectedDate,
+  now,
+}) {
   const month = selectedDate.getMonth() + 1;
   const date = selectedDate.getDate();
   const day = WEEK_DAYS[selectedDate.getDay()];
@@ -34,7 +43,12 @@ function MeetingScheduleList({ meetings, selectedDate }) {
       ) : (
         <div className="max-h-[240px] space-y-2 overflow-y-auto pr-2">
           {meetings.map((meeting) => {
-            const isInProgress = meeting.status === 'IN_PROGRESS';
+            const status = getMeetingStatus(meeting, now);
+
+            const isInProgress =
+              status === 'IN_PROGRESS';
+
+            const isEnded = status === 'ENDED';
 
             return (
               <article
@@ -44,7 +58,9 @@ function MeetingScheduleList({ meetings, selectedDate }) {
                 <div className="flex min-w-0 gap-4">
                   <span
                     className={`mt-1.5 h-3 w-3 shrink-0 rounded-full ${
-                      isInProgress ? 'bg-[#F64E42]' : 'bg-[#D8DDDB]'
+                      isInProgress
+                        ? 'bg-[#F64E42]'
+                        : 'bg-[#D8DDDB]'
                     }`}
                   />
 
@@ -55,8 +71,17 @@ function MeetingScheduleList({ meetings, selectedDate }) {
                       </p>
                     )}
 
+                    {isEnded && (
+                      <p className="mb-1 text-xs font-medium text-[#8A9490]">
+                        종료된 회의예요
+                      </p>
+                    )}
+
                     <p className="text-sm font-semibold text-[#101211]">
-                      {meeting.time} {meeting.title}
+                      {formatMeetingTime(
+                        meeting.startTime,
+                      )}{' '}
+                      {meeting.title}
                     </p>
 
                     <p className="mt-1 text-xs text-[#59625F]">
@@ -69,17 +94,22 @@ function MeetingScheduleList({ meetings, selectedDate }) {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  disabled={!isInProgress}
-                  className={`shrink-0 rounded-lg border px-4 py-2.5 text-xs font-medium transition ${
-                    isInProgress
-                      ? 'border-[#101211] bg-white text-[#101211] hover:bg-[#F5F7F6]'
-                      : 'cursor-not-allowed border-transparent bg-[#E4E9E7] text-[#A7B0AC]'
-                  }`}
-                >
-                  참여하러 가기
-                </button>
+                {isInProgress ? (
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-lg border border-[#101211] bg-white px-4 py-2.5 text-xs font-medium text-[#101211] transition hover:bg-[#F5F7F6]"
+                  >
+                    참여하러 가기
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="cursor-not-allowed shrink-0 rounded-lg bg-[#E4E9E7] px-4 py-2.5 text-xs font-medium text-[#A7B0AC]"
+                  >
+                    {isEnded ? '종료됨' : '참여 예정'}
+                  </button>
+                )}
               </article>
             );
           })}
