@@ -5,3 +5,12 @@ export const getProjects = async () => {
 
   return response.data.result ?? [];
 };
+
+export const createProject = async ({ name, description }) => {
+  const response = await api.post('/api/v1/projects', {
+    name,
+    description,
+  });
+
+  return response.data.result;
+};

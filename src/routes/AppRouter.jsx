@@ -7,6 +7,7 @@ import SplashPage from '../pages/splash/SplashPage';
 import AppLayout from '../layouts/AppLayout';
 
 import Home from '../pages/Home';
+import ProjectCreatePage from '../pages/ProjectCreatePage';
 import ProjectPage from '../pages/ProjectPage';
 import MeetingPage from '../pages/meeting/MeetingPage';
 import MeetingRoomPage from '../pages/meeting/MeetingRoomPage';
@@ -30,6 +31,7 @@ function AppRouter() {
         <Route path="/home" element={<Home />} />
 
         <Route path="/projects" element={<ProjectPage />} />
+        <Route path="/projects/new" element={<ProjectCreatePage />} />
         <Route path="/projects/:projectId" element={<ProjectPage />} />
 
         <Route path="/meetings" element={<MeetingPage />} />
