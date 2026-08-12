@@ -11,6 +11,35 @@ import { projectPageMockData } from '../mocks/projectPageData';
 
 import chevronIcon from '../assets/icons/profile/chevron.svg';
 
+const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
+
+const getDateAtMidnight = (dateValue) => {
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+};
+
+const getProjectDayLabel = (project) => {
+  const today = getDateAtMidnight(new Date());
+  const deadline = getDateAtMidnight(project.endDate ?? project.deadline ?? project.dueDate);
+
+  if (deadline) {
+    const remainingDays = Math.max(0, Math.ceil((deadline - today) / MILLISECONDS_PER_DAY));
+
+    return `D-${remainingDays}`;
+  }
+
+  const createdAt = getDateAtMidnight(project.createdAt);
+
+  if (!createdAt) return 'D+0';
+
+  const elapsedDays = Math.max(0, Math.floor((today - createdAt) / MILLISECONDS_PER_DAY));
+
+  return `D+${elapsedDays}`;
+};
+
 function ProjectPage() {
   const navigate = useNavigate();
   const { projectId } = useParams();
@@ -18,7 +47,7 @@ function ProjectPage() {
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
-  const { dayCount, description, notices, myTeams, teamCount, teams } = projectPageMockData;
+  const { description, notices, myTeams, teamCount, teams } = projectPageMockData;
   const currentProject = projects.find((project) => String(project.projectId) === projectId);
   const currentProjectIndex = projects.findIndex(
     (project) => String(project.projectId) === projectId,
@@ -33,19 +62,19 @@ function ProjectPage() {
       try {
         setIsLoading(true);
         setErrorMessage('');
-        //const projectList = await getProjects();
-        //setProjects(projectList);
+        const projectList = await getProjects();
+        setProjects(projectList);
 
         // 백엔드 데이터가 없어서 임시로 목데이터 사용
-        const mockProjects = projectPageMockData.projects.map((project, index) => ({
-          projectId: project.id,
-          name: project.name,
-          description: projectPageMockData.description,
-          createdByName: '목데이터',
-          createdAt: new Date(2026, 5, index + 1).toISOString(),
-        }));
+        // const mockProjects = projectPageMockData.projects.map((project, index) => ({
+        //   projectId: project.id,
+        //   name: project.name,
+        //   description: projectPageMockData.description,
+        //   createdByName: '목데이터',
+        //   createdAt: new Date(2026, 5, index + 1).toISOString(),
+        // }));
 
-        setProjects(mockProjects);
+        // setProjects(mockProjects);
       } catch (error) {
         setErrorMessage(getApiErrorMessage(error, '프로젝트 목록을 불러오지 못했습니다.'));
       } finally {
@@ -120,7 +149,7 @@ function ProjectPage() {
           {isBannerVisible && (
             <section className="flex h-16 items-center bg-[var(--color-action-primary)] px-[21px]">
               <span className="body-3 flex h-9 w-[75px] shrink-0 items-center justify-center rounded-[300px] bg-[var(--color-white)] text-[var(--color-gray-900)]">
-                D+{dayCount}
+                {getProjectDayLabel(currentProject)}
               </span>
               <p className="subhead-3 ml-5 min-w-0 flex-1 truncate text-[var(--color-gray-700)]">
                 {currentProject.description || description}

@@ -1,12 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import OutlineButton from '../components/common/OutlineButton';
 import ProjectMemberModal from '../components/common/ProjectMemberModal';
 import ProjectTeamSetupCard from '../components/common/ProjectTeamSetupCard';
-import {
-  projectCreateTeamsMockData,
-  projectMemberModalMockData,
-} from '../mocks/projectPageData';
+import { getApiErrorMessage } from '../api/axios';
+import { createProject } from '../api/projects';
+import { projectCreateTeamsMockData, projectMemberModalMockData } from '../mocks/projectPageData';
 
 import chevronIcon from '../assets/icons/profile/chevron.svg';
 import clearXIcon from '../assets/icons/project-create/clear-x.svg';
@@ -21,6 +21,7 @@ const projectColors = Array.from({ length: 12 }, (_, index) => ({
 const formatDatePart = (value) => String(value).padStart(2, '0');
 
 function ProjectCreatePage() {
+  const navigate = useNavigate();
   const [startDate] = useState(() => new Date());
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
@@ -29,29 +30,26 @@ function ProjectCreatePage() {
   const [endYear, setEndYear] = useState('');
   const [endMonth, setEndMonth] = useState('');
   const [endDay, setEndDay] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const startYear = startDate.getFullYear();
   const startMonth = startDate.getMonth() + 1;
   const startDay = startDate.getDate();
-  const yearOptions = Array.from(
-    { length: 11 },
-    (_, index) => startYear + index,
-  );
+  const yearOptions = Array.from({ length: 11 }, (_, index) => startYear + index);
   const monthOptions = Array.from({ length: 12 }, (_, index) => index + 1);
-  const daysInEndMonth = endYear && endMonth
-    ? new Date(Number(endYear), Number(endMonth), 0).getDate()
-    : 31;
-  const dayOptions = Array.from(
-    { length: daysInEndMonth },
-    (_, index) => index + 1,
-  );
-  const endDate = endYear && endMonth && endDay
-    ? new Date(Number(endYear), Number(endMonth) - 1, Number(endDay))
-    : null;
+  const daysInEndMonth =
+    endYear && endMonth ? new Date(Number(endYear), Number(endMonth), 0).getDate() : 31;
+  const dayOptions = Array.from({ length: daysInEndMonth }, (_, index) => index + 1);
+  const endDate =
+    endYear && endMonth && endDay
+      ? new Date(Number(endYear), Number(endMonth) - 1, Number(endDay))
+      : null;
   const startDateAtMidnight = new Date(startYear, startMonth - 1, startDay);
-  const totalDays = endDate && endDate >= startDateAtMidnight
-    ? Math.floor((endDate - startDateAtMidnight) / 86400000) + 1
-    : null;
+  const totalDays =
+    endDate && endDate >= startDateAtMidnight
+      ? Math.floor((endDate - startDateAtMidnight) / 86400000) + 1
+      : null;
 
   const handleEndYearChange = (event) => {
     setEndYear(event.target.value);
@@ -65,20 +63,42 @@ function ProjectCreatePage() {
   };
 
   const handleRemoveTeam = (teamId) => {
-    setTeams((currentTeams) => (
-      currentTeams.filter((team) => team.id !== teamId)
-    ));
+    setTeams((currentTeams) => currentTeams.filter((team) => team.id !== teamId));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+
+    const trimmedName = projectName.trim();
+    const trimmedDescription = description.trim();
+
+    if (!trimmedName || !trimmedDescription) {
+      setErrorMessage('프로젝트명과 프로젝트 설명을 입력해주세요.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setErrorMessage('');
+
+      const createdProject = await createProject({
+        name: trimmedName,
+        description: trimmedDescription,
+      });
+
+      navigate(`/projects/${createdProject.projectId}`, { replace: true });
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, '프로젝트를 생성하지 못했습니다.'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <main className="h-full overflow-y-auto rounded-[10px] bg-[var(--color-white)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <main className="h-full [scrollbar-width:none] overflow-y-auto rounded-[10px] bg-[var(--color-white)] [&::-webkit-scrollbar]:hidden">
       <form
         onSubmit={handleSubmit}
-        className="mx-auto grid min-h-[970px] w-full max-w-[1347px] grid-cols-[283px_887px] gap-x-[46px] px-[46px] pb-[44px] pt-[79px]"
+        className="mx-auto grid min-h-[970px] w-full max-w-[1347px] grid-cols-[283px_887px] gap-x-[46px] px-[46px] pt-[79px] pb-[44px]"
       >
         <section>
           <h2 className="body-4 tracking-[-0.16px]">대표 컬러 선정</h2>
@@ -112,7 +132,7 @@ function ProjectCreatePage() {
               onClick={() => setProjectName('')}
               className="relative flex size-6 shrink-0 items-center justify-center"
             >
-              <span className="absolute left-0.5 top-0.5 size-5 rounded-[5px] border-[1.5px] border-[var(--color-gray-400)]" />
+              <span className="absolute top-0.5 left-0.5 size-5 rounded-[5px] border-[1.5px] border-[var(--color-gray-400)]" />
               <img src={clearXIcon} className="size-[6px]" />
             </button>
           </div>
@@ -131,12 +151,12 @@ function ProjectCreatePage() {
             <button
               type="button"
               onClick={() => setDescription('')}
-              className="absolute right-5 top-[10px] flex size-6 items-center justify-center"
+              className="absolute top-[10px] right-5 flex size-6 items-center justify-center"
             >
-              <span className="absolute left-0.5 top-0.5 size-5 rounded-[5px] border-[1.5px] border-[var(--color-gray-400)]" />
+              <span className="absolute top-0.5 left-0.5 size-5 rounded-[5px] border-[1.5px] border-[var(--color-gray-400)]" />
               <img src={clearXIcon} className="size-[6px]" />
             </button>
-            <span className="body-4 absolute right-[64px] top-1/2 -translate-y-1/2 tracking-[-0.16px] text-[var(--color-gray-500)]">
+            <span className="body-4 absolute top-1/2 right-[64px] -translate-y-1/2 tracking-[-0.16px] text-[var(--color-gray-500)]">
               ({description.length}/100)
             </span>
           </div>
@@ -158,10 +178,15 @@ function ProjectCreatePage() {
                 >
                   <option value="">년도</option>
                   {yearOptions.map((year) => (
-                    <option key={year} value={year}>{year} 년도</option>
+                    <option key={year} value={year}>
+                      {year} 년도
+                    </option>
                   ))}
                 </select>
-                <img src={chevronIcon} className="pointer-events-none absolute right-5 top-1/2 h-[7px] w-[15px] -translate-y-1/2" />
+                <img
+                  src={chevronIcon}
+                  className="pointer-events-none absolute top-1/2 right-5 h-[7px] w-[15px] -translate-y-1/2"
+                />
               </div>
               <div className="relative">
                 <select
@@ -172,10 +197,15 @@ function ProjectCreatePage() {
                 >
                   <option value="">월</option>
                   {monthOptions.map((month) => (
-                    <option key={month} value={month}>{month} 월</option>
+                    <option key={month} value={month}>
+                      {month} 월
+                    </option>
                   ))}
                 </select>
-                <img src={chevronIcon} className="pointer-events-none absolute right-5 top-1/2 h-[7px] w-[15px] -translate-y-1/2" />
+                <img
+                  src={chevronIcon}
+                  className="pointer-events-none absolute top-1/2 right-5 h-[7px] w-[15px] -translate-y-1/2"
+                />
               </div>
               <div className="relative">
                 <select
@@ -186,25 +216,24 @@ function ProjectCreatePage() {
                 >
                   <option value="">일</option>
                   {dayOptions.map((day) => (
-                    <option key={day} value={day}>{day} 일</option>
+                    <option key={day} value={day}>
+                      {day} 일
+                    </option>
                   ))}
                 </select>
-                <img src={chevronIcon} className="pointer-events-none absolute right-5 top-1/2 h-[7px] w-[15px] -translate-y-1/2" />
+                <img
+                  src={chevronIcon}
+                  className="pointer-events-none absolute top-1/2 right-5 h-[7px] w-[15px] -translate-y-1/2"
+                />
               </div>
             </div>
-            <span className="body-4 ml-auto">
-              {totalDays ? `총 ${totalDays}일` : '총 0일'}
-            </span>
+            <span className="body-4 ml-auto">{totalDays ? `총 ${totalDays}일` : '총 0일'}</span>
           </div>
 
           <h2 className="body-4 mt-[47px] tracking-[-0.16px]">팀/팀장 설정</h2>
           <div className="mt-[12px] flex flex-wrap items-center gap-3">
             {teams.map((team) => (
-              <ProjectTeamSetupCard
-                key={team.id}
-                team={team}
-                onRemove={handleRemoveTeam}
-              />
+              <ProjectTeamSetupCard key={team.id} team={team} onRemove={handleRemoveTeam} />
             ))}
             <button
               type="button"
@@ -214,11 +243,11 @@ function ProjectCreatePage() {
               <span className="relative size-6">
                 <img
                   src={addHorizontalIcon}
-                  className="absolute left-1/2 top-1/2 h-[1.5px] w-[7.5px] -translate-x-1/2 -translate-y-1/2 brightness-0 invert"
+                  className="absolute top-1/2 left-1/2 h-[1.5px] w-[7.5px] -translate-x-1/2 -translate-y-1/2 brightness-0 invert"
                 />
                 <img
                   src={addVerticalIcon}
-                  className="absolute left-1/2 top-1/2 h-[1.5px] w-[7.5px] -translate-x-1/2 -translate-y-1/2 rotate-90 brightness-0 invert"
+                  className="absolute top-1/2 left-1/2 h-[1.5px] w-[7.5px] -translate-x-1/2 -translate-y-1/2 rotate-90 brightness-0 invert"
                 />
               </span>
             </button>
@@ -228,11 +257,15 @@ function ProjectCreatePage() {
             <OutlineButton
               type="submit"
               variant="dark"
+              disabled={isSubmitting}
               className="h-[45px] w-[255px]"
             >
-              프로젝트 만들기
+              {isSubmitting ? '프로젝트 생성 중' : '프로젝트 만들기'}
             </OutlineButton>
           </div>
+          {errorMessage && (
+            <p className="body-5 mt-3 text-center text-[var(--color-red)]">{errorMessage}</p>
+          )}
         </div>
       </form>
       {isMemberModalOpen && (
