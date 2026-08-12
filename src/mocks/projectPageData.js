@@ -25,6 +25,41 @@ export const projectTeamMockData = {
   status: '현재 진행 상황',
 };
 
+export const projectCreateTeamMockData = {
+  id: 'marketing-team',
+  name: '마케팅팀',
+  leader: {
+    id: 'leader-1',
+    name: '홍길동',
+    position: '디자인팀 과장',
+  },
+};
+
+export const projectCreateTeamsMockData = Array.from(
+  { length: 5 },
+  (_, index) => ({
+    ...projectCreateTeamMockData,
+    id: `project-create-team-${index + 1}`,
+    leader: index === 0 || index === 3
+      ? projectCreateTeamMockData.leader
+      : null,
+  }),
+);
+
+export const projectMemberModalMockData = {
+  projectName: '노디 프로젝트',
+  totalCount: 36,
+  selectedMembers: [
+    { id: 'selected-member-1', name: '김유진' },
+    { id: 'selected-member-2', name: '김유진' },
+  ],
+  members: Array.from({ length: 5 }, (_, index) => ({
+    id: `project-member-${index + 1}`,
+    name: '홍길동',
+    position: '디자인팀 과장',
+  })),
+};
+
 export const projectPageMockData = {
   projects: [2, 1, 3, 1, 2, 4].map((myTeamCount, index) => ({
     id: `project-${index + 1}`,

@@ -19,9 +19,7 @@ function ProjectPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const { dayCount, description, notices, myTeams, teamCount, teams } = projectPageMockData;
-  const currentProject = projects.find(
-    (project) => String(project.projectId) === projectId,
-  );
+  const currentProject = projects.find((project) => String(project.projectId) === projectId);
   const currentProjectIndex = projects.findIndex(
     (project) => String(project.projectId) === projectId,
   );
@@ -35,12 +33,21 @@ function ProjectPage() {
       try {
         setIsLoading(true);
         setErrorMessage('');
-        const projectList = await getProjects();
-        setProjects(projectList);
+        //const projectList = await getProjects();
+        //setProjects(projectList);
+
+        // 백엔드 데이터가 없어서 임시로 목데이터 사용
+        const mockProjects = projectPageMockData.projects.map((project, index) => ({
+          projectId: project.id,
+          name: project.name,
+          description: projectPageMockData.description,
+          createdByName: '목데이터',
+          createdAt: new Date(2026, 5, index + 1).toISOString(),
+        }));
+
+        setProjects(mockProjects);
       } catch (error) {
-        setErrorMessage(
-          getApiErrorMessage(error, '프로젝트 목록을 불러오지 못했습니다.'),
-        );
+        setErrorMessage(getApiErrorMessage(error, '프로젝트 목록을 불러오지 못했습니다.'));
       } finally {
         setIsLoading(false);
       }
@@ -52,9 +59,7 @@ function ProjectPage() {
   useEffect(() => {
     if (isLoading || errorMessage || projects.length === 0) return;
 
-    const hasCurrentProject = projects.some(
-      (project) => String(project.projectId) === projectId,
-    );
+    const hasCurrentProject = projects.some((project) => String(project.projectId) === projectId);
 
     if (!hasCurrentProject) {
       navigate(`/projects/${projects[0].projectId}`, { replace: true });
@@ -66,7 +71,9 @@ function ProjectPage() {
   }, [projectId]);
 
   if (isLoading) {
-    return <div className="flex h-full items-center justify-center">프로젝트를 불러오는 중입니다.</div>;
+    return (
+      <div className="flex h-full items-center justify-center">프로젝트를 불러오는 중입니다.</div>
+    );
   }
 
   if (errorMessage) {
@@ -74,7 +81,9 @@ function ProjectPage() {
   }
 
   if (projects.length === 0) {
-    return <div className="flex h-full items-center justify-center">소속된 프로젝트가 없습니다.</div>;
+    return (
+      <div className="flex h-full items-center justify-center">소속된 프로젝트가 없습니다.</div>
+    );
   }
 
   if (!currentProject) {
@@ -104,7 +113,7 @@ function ProjectPage() {
             );
           })}
 
-          <ProjectCreateButton />
+          <ProjectCreateButton onClick={() => navigate('/projects/new')} />
         </div>
 
         <main className="relative z-10 min-h-[1032px] overflow-hidden rounded-[10px] bg-[var(--color-white)]">
@@ -132,7 +141,7 @@ function ProjectPage() {
 
             <section className="mt-[38px]">
               <h2 className="subhead-1 text-[var(--color-black)]">내 팀</h2>
-              <div className="mt-[19px] flex gap-[14px] overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="mt-[19px] flex [scrollbar-width:none] gap-[14px] overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden">
                 {visibleMyTeams.map((team) => (
                   <MyTeamCard key={team.id} team={team} className="shrink-0" />
                 ))}
