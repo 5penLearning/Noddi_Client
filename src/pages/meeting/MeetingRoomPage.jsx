@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -10,9 +11,13 @@ import {
   useParams,
 } from 'react-router-dom';
 
+import {
+  endMeeting,
+  startMeeting,
+} from '../../api/meetingApi';
+
 import MeetingSidePanel from '../../components/feature/meeting/MeetingSidePanel';
-import useLocalMedia from '../../hooks/useLocalMedia';
-import useScreenShare from '../../hooks/useScreenShare';
+import useDailyCall from '../../hooks/useDailyCall';
 
 function MicrophoneIcon({ off = false }) {
   return (
@@ -270,57 +275,125 @@ function ChevronRightIcon() {
   );
 }
 
-const remoteParticipants = [
-  {
-    id: 2,
-    name: '김민지',
-    role: '마케팅팀',
-  },
-  {
-    id: 3,
-    name: '이서준',
-    role: '마케팅팀',
-  },
-  {
-    id: 4,
-    name: '박지우',
-    role: '마케팅팀',
-  },
-  {
-    id: 5,
-    name: '최유진',
-    role: '마케팅팀',
-  },
-];
+function getParticipantName(participant) {
+  if (participant?.local) {
+    return '나';
+  }
 
-function LocalParticipantTile({
-  stream,
-  isCameraOn,
-  isMicOn,
+  return participant?.user_name || '참여자';
+}
+
+function VideoTrack({
+  track,
+  muted = false,
+  className = '',
 }) {
   const videoRef = useRef(null);
 
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
+    const videoElement = videoRef.current;
+
+    if (!videoElement || !track) {
+      return undefined;
     }
-  }, [stream]);
+
+    const mediaStream = new MediaStream([track]);
+
+    videoElement.srcObject = mediaStream;
+
+    return () => {
+      if (videoElement.srcObject === mediaStream) {
+        videoElement.srcObject = null;
+      }
+    };
+  }, [track]);
 
   return (
-    <div className="relative min-h-0 overflow-hidden border border-[#444] bg-[#202422]">
-      {stream && isCameraOn ? (
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted={muted}
+      className={className}
+    />
+  );
+}
+
+function ParticipantAudio({ participant }) {
+  const audioRef = useRef(null);
+
+  const audioTrack =
+    participant?.tracks?.audio?.persistentTrack;
+
+  useEffect(() => {
+    const audioElement = audioRef.current;
+
+    if (
+      participant?.local ||
+      !audioElement ||
+      !audioTrack
+    ) {
+      return undefined;
+    }
+
+    const mediaStream = new MediaStream([audioTrack]);
+
+    audioElement.srcObject = mediaStream;
+
+    audioElement.play().catch((error) => {
+      console.error(
+        'Failed to play Daily audio:',
+        error,
+      );
+    });
+
+    return () => {
+      if (audioElement.srcObject === mediaStream) {
+        audioElement.srcObject = null;
+      }
+    };
+  }, [audioTrack, participant?.local]);
+
+  if (participant?.local || !audioTrack) {
+    return null;
+  }
+
+  return (
+    <audio
+      ref={audioRef}
+      autoPlay
+      playsInline
+      className="hidden"
+    />
+  );
+}
+
+function ParticipantTile({ participant }) {
+  const name = getParticipantName(participant);
+
+  const videoTrack =
+    participant?.tracks?.video?.persistentTrack;
+
+  const isCameraOn =
+    participant?.tracks?.video?.state === 'playable' &&
+    Boolean(videoTrack);
+
+  const isMicOn =
+    participant?.tracks?.audio?.state === 'playable';
+
+  return (
+    <div className="relative flex min-h-0 items-center justify-center overflow-hidden border border-[#444] bg-[#202422]">
+      <ParticipantAudio participant={participant} />
+
+      {isCameraOn ? (
+        <VideoTrack
+          track={videoTrack}
+          muted={participant.local}
           className="h-full w-full object-cover"
         />
       ) : (
-        <div className="flex h-full items-center justify-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#353B38] text-2xl font-semibold text-white">
-            나
-          </div>
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#353B38] text-2xl font-semibold text-white">
+          {name.charAt(0)}
         </div>
       )}
 
@@ -328,45 +401,14 @@ function LocalParticipantTile({
         {!isMicOn && <MicrophoneIcon off />}
 
         <span className="text-xs font-semibold">
-          나
+          {name}
         </span>
       </div>
     </div>
   );
 }
 
-function RemoteParticipantTile({ participant }) {
-  return (
-    <div className="relative flex min-h-0 items-center justify-center overflow-hidden border border-[#444] bg-[#F7F8F7]">
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#E5E9E7] text-xl font-semibold text-[#59625F]">
-        {participant.name.charAt(0)}
-      </div>
-
-      <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-lg bg-white/80 px-3 py-2">
-        <span className="text-xs font-semibold text-[#303633]">
-          {participant.name}
-        </span>
-
-        <span className="text-[10px] text-[#8A9490]">
-          {participant.role}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function ParticipantStrip({
-  stream,
-  isCameraOn,
-}) {
-  const videoRef = useRef(null);
-
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-    }
-  }, [stream]);
-
+function ParticipantStrip({ participants }) {
   return (
     <div className="flex h-[76px] shrink-0 bg-[#171A19]">
       <button
@@ -377,45 +419,43 @@ function ParticipantStrip({
       </button>
 
       <div className="flex min-w-0 flex-1 overflow-hidden">
-        <div className="relative min-w-[128px] flex-1 overflow-hidden border-r border-[#444] bg-[#202422]">
-          {stream && isCameraOn ? (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-xs text-white">
-              나
-            </div>
-          )}
+        {participants.slice(0, 6).map((participant) => {
+          const name = getParticipantName(participant);
 
-          <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-white">
-            나
-          </span>
-        </div>
+          const videoTrack =
+            participant?.tracks?.video?.persistentTrack;
 
-        {remoteParticipants.map(
-          (participant, index) => (
+          const isCameraOn =
+            participant?.tracks?.video?.state ===
+            'playable' && Boolean(videoTrack);
+
+          return (
             <div
-              key={participant.id}
-              className={`relative flex min-w-[128px] flex-1 items-center justify-center bg-[#F7F8F7] ${index === 0
-                ? 'border-2 border-[#31F5A0]'
-                : 'border-r border-[#444]'
-                }`}
+              key={participant.session_id}
+              className="relative min-w-[128px] flex-1 overflow-hidden border-r border-[#444] bg-[#202422]"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E5E9E7] text-xs font-semibold text-[#59625F]">
-                {participant.name.charAt(0)}
-              </div>
+              <ParticipantAudio participant={participant} />
 
-              <span className="absolute bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-semibold text-[#303633]">
-                {participant.name}
+              {isCameraOn ? (
+                <VideoTrack
+                  track={videoTrack}
+                  muted={participant.local}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#353B38] text-xs font-semibold text-white">
+                    {name.charAt(0)}
+                  </div>
+                </div>
+              )}
+
+              <span className="absolute bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold text-white">
+                {name}
               </span>
             </div>
-          ),
-        )}
+          );
+        })}
       </div>
 
       <button
@@ -428,21 +468,19 @@ function ParticipantStrip({
   );
 }
 
-function ScreenShareView({ stream }) {
-  const videoRef = useRef(null);
+function ScreenShareView({ participant }) {
+  const screenTrack =
+    participant?.tracks?.screenVideo
+      ?.persistentTrack;
 
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-    }
-  }, [stream]);
+  if (!screenTrack) {
+    return null;
+  }
 
   return (
     <div className="flex h-full items-center justify-center overflow-hidden bg-[#303533]">
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
+      <VideoTrack
+        track={screenTrack}
         muted
         className="h-full w-full object-contain"
       />
@@ -485,80 +523,210 @@ function MeetingRoomPage() {
 
   const meeting = location.state?.meeting;
 
+  const [roomUrl, setRoomUrl] = useState(null);
+
   const [activePanel, setActivePanel] =
     useState(null);
 
+  const [isStarting, setIsStarting] =
+    useState(true);
+
+  const [isEnding, setIsEnding] =
+    useState(false);
+
+  const [roomError, setRoomError] =
+    useState(null);
+
   const {
-    stream,
+    participants,
+    isJoining,
+    isJoined,
     isMicOn,
     isCameraOn,
-    isLoading,
-    error: localMediaError,
+    isSharing,
+    error: dailyError,
     toggleMic,
     toggleCamera,
-    startMedia,
-    stopMedia,
-  } = useLocalMedia();
-
-  const {
-    screenStream,
-    isSharing,
-    error: screenShareError,
-    stopScreenShare,
     toggleScreenShare,
-  } = useScreenShare();
+    leaveCall,
+  } = useDailyCall(roomUrl);
 
-  const participants = [
-    {
-      id: 'me',
-      name: '나',
-      role: meeting?.team ?? '참여자',
-      isMe: true,
-    },
-    ...remoteParticipants,
-  ];
+  /*
+   * 회의방 입장 시:
+   * 백엔드에서 Daily Room 생성 또는 기존 Room 반환
+   */
+  useEffect(() => {
+    let cancelled = false;
+
+    const enterMeeting = async () => {
+      try {
+        setIsStarting(true);
+        setRoomError(null);
+
+        const response = await startMeeting(meetingId);
+
+        if (cancelled) {
+          return;
+        }
+
+        const nextRoomUrl = response?.result?.roomUrl;
+
+        if (!nextRoomUrl) {
+          throw new Error(
+            '회의방 URL을 전달받지 못했습니다.',
+          );
+        }
+
+        setRoomUrl(nextRoomUrl);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        console.error(
+          'Failed to start meeting:',
+          error,
+        );
+
+        setRoomError(
+          error?.response?.data?.message ??
+          error?.message ??
+          '회의를 시작하지 못했습니다.',
+        );
+      } finally {
+        if (!cancelled) {
+          setIsStarting(false);
+        }
+      }
+    };
+
+    enterMeeting();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [meetingId]);
+
+  /*
+   * Daily 화면 공유 중인 참가자
+   */
+  const screenSharingParticipant =
+    participants.find(
+      (participant) =>
+        participant?.tracks?.screenVideo?.state ===
+        'playable' &&
+        participant?.tracks?.screenVideo
+          ?.persistentTrack,
+    );
+
+  /*
+   * 화면에 표시할 참가자
+   */
+  const visibleParticipants = participants.slice(
+    0,
+    4,
+  );
+
+  const gridClassName = useMemo(() => {
+    if (visibleParticipants.length <= 1) {
+      return 'grid-cols-1 grid-rows-1';
+    }
+
+    if (visibleParticipants.length === 2) {
+      return 'grid-cols-2 grid-rows-1';
+    }
+
+    return 'grid-cols-2 grid-rows-2';
+  }, [visibleParticipants.length]);
+
+  /*
+   * 우측 참여자 패널에 전달할 형태
+   */
+  const sidePanelParticipants = participants.map(
+    (participant) => ({
+      id: participant.session_id,
+      name: getParticipantName(participant),
+      role: participant.local
+        ? meeting?.team ?? '참여자'
+        : '참여자',
+      isMe: participant.local,
+    }),
+  );
 
   const togglePanel = (panel) => {
-    setActivePanel((prev) =>
-      prev === panel ? null : panel,
+    setActivePanel((previousPanel) =>
+      previousPanel === panel ? null : panel,
     );
   };
 
-  const handleLeave = () => {
-    stopScreenShare();
-    stopMedia();
-    navigate('/meetings');
+  /*
+   * 나가기
+   *
+   * Daily 연결만 해제한다.
+   * 백엔드 회의 자체는 종료하지 않는다.
+   */
+  const handleLeave = async () => {
+    try {
+      await leaveCall();
+    } finally {
+      navigate('/meetings');
+    }
   };
 
-  const handleEndMeeting = () => {
-    stopScreenShare();
-    stopMedia();
-    navigate('/meetings');
+  /*
+   * 회의 종료
+   *
+   * 백엔드 /end 호출 후 Daily 연결을 정리한다.
+   */
+  const handleEndMeeting = async () => {
+    if (isEnding) {
+      return;
+    }
+
+    try {
+      setIsEnding(true);
+      setRoomError(null);
+
+      await endMeeting(meetingId);
+      await leaveCall();
+
+      navigate('/meetings');
+    } catch (error) {
+      console.error(
+        'Failed to end meeting:',
+        error,
+      );
+
+      setRoomError(
+        error?.response?.data?.message ??
+        '회의를 종료하지 못했습니다.',
+      );
+    } finally {
+      setIsEnding(false);
+    }
   };
+
+  const connectionError =
+    roomError || dailyError;
+
+  const isLoading =
+    isStarting || (roomUrl && isJoining);
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#101211]">
-      {localMediaError && (
+      {connectionError && (
         <div className="flex shrink-0 items-center justify-between bg-[#FFF1F0] px-5 py-3">
           <p className="text-sm text-[#F64E42]">
-            {localMediaError}
+            {connectionError}
           </p>
 
           <button
             type="button"
-            onClick={startMedia}
+            onClick={() => window.location.reload()}
             className="rounded-lg bg-[#101211] px-4 py-2 text-xs text-white"
           >
             다시 시도
           </button>
-        </div>
-      )}
-
-      {screenShareError && (
-        <div className="shrink-0 bg-[#FFF1F0] px-5 py-3">
-          <p className="text-sm text-[#F64E42]">
-            {screenShareError}
-          </p>
         </div>
       )}
 
@@ -568,38 +736,41 @@ function MeetingRoomPage() {
           {isLoading ? (
             <div className="flex h-full items-center justify-center bg-[#202422]">
               <p className="text-sm text-[#A7B0AC]">
-                카메라와 마이크를 준비하고 있습니다.
+                회의방에 연결하고 있습니다.
               </p>
             </div>
-          ) : isSharing && screenStream ? (
+          ) : !isJoined ? (
+            <div className="flex h-full items-center justify-center bg-[#202422]">
+              <p className="text-sm text-[#A7B0AC]">
+                회의방 연결을 기다리고 있습니다.
+              </p>
+            </div>
+          ) : screenSharingParticipant ? (
             <>
               <ParticipantStrip
-                stream={stream}
-                isCameraOn={isCameraOn}
+                participants={participants}
               />
 
               <div className="min-h-0 flex-1">
                 <ScreenShareView
-                  stream={screenStream}
+                  participant={
+                    screenSharingParticipant
+                  }
                 />
               </div>
             </>
           ) : (
-            <div className="grid h-full grid-cols-2 grid-rows-2">
-              <LocalParticipantTile
-                stream={stream}
-                isCameraOn={isCameraOn}
-                isMicOn={isMicOn}
-              />
-
-              {remoteParticipants
-                .slice(0, 3)
-                .map((participant) => (
-                  <RemoteParticipantTile
-                    key={participant.id}
+            <div
+              className={`grid h-full ${gridClassName}`}
+            >
+              {visibleParticipants.map(
+                (participant) => (
+                  <ParticipantTile
+                    key={participant.session_id}
                     participant={participant}
                   />
-                ))}
+                ),
+              )}
             </div>
           )}
         </section>
@@ -608,7 +779,9 @@ function MeetingRoomPage() {
         {activePanel && (
           <MeetingSidePanel
             type={activePanel}
-            participants={participants}
+            participants={
+              sidePanelParticipants
+            }
             onClose={() =>
               setActivePanel(null)
             }
@@ -616,7 +789,7 @@ function MeetingRoomPage() {
         )}
       </main>
 
-      {/* 하단 바 */}
+      {/* 하단 툴바 */}
       <footer className="relative flex h-[64px] shrink-0 items-center bg-[#101211] px-4">
         <div className="flex items-center gap-2">
           <ToolbarButton
@@ -627,7 +800,7 @@ function MeetingRoomPage() {
               <MicrophoneIcon off={!isMicOn} />
             }
             active={isMicOn}
-            disabled={!stream}
+            disabled={!isJoined}
             onClick={toggleMic}
           />
 
@@ -641,18 +814,19 @@ function MeetingRoomPage() {
               <CameraIcon off={!isCameraOn} />
             }
             active={isCameraOn}
-            disabled={!stream}
+            disabled={!isJoined}
             onClick={toggleCamera}
           />
         </div>
 
         <div className="absolute left-1/2 flex -translate-x-1/2 items-center gap-4">
           <ToolbarButton
-            label="참여자"
+            label={`참여자 ${participants.length}`}
             icon={<UsersIcon />}
             active={
               activePanel === 'participants'
             }
+            disabled={!isJoined}
             onClick={() =>
               togglePanel('participants')
             }
@@ -661,6 +835,7 @@ function MeetingRoomPage() {
           <ToolbarButton
             label="내 화면"
             icon={<CameraIcon />}
+            disabled={!isJoined}
           />
 
           <ToolbarButton
@@ -671,6 +846,7 @@ function MeetingRoomPage() {
             }
             icon={<ShareIcon />}
             active={isSharing}
+            disabled={!isJoined}
             onClick={toggleScreenShare}
           />
 
@@ -678,6 +854,7 @@ function MeetingRoomPage() {
             label="채팅"
             icon={<ChatIcon />}
             active={activePanel === 'chat'}
+            disabled={!isJoined}
             onClick={() =>
               togglePanel('chat')
             }
@@ -696,10 +873,13 @@ function MeetingRoomPage() {
         <div className="ml-auto flex items-center gap-3">
           <button
             type="button"
+            disabled={isEnding}
             onClick={handleEndMeeting}
-            className="rounded-lg border border-[#F64E42] px-5 py-2 text-xs font-semibold text-[#F64E42]"
+            className="rounded-lg border border-[#F64E42] px-5 py-2 text-xs font-semibold text-[#F64E42] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            종료하기
+            {isEnding
+              ? '종료 중...'
+              : '종료하기'}
           </button>
 
           <button
