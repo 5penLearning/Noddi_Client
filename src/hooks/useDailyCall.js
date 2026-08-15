@@ -5,28 +5,98 @@ import {
   useState,
 } from 'react';
 
-import Daily from '@daily-co/daily-js';
+import DailyIframe from '@daily-co/daily-js';
+
+const CHAT_MESSAGE_TYPE =
+  'meeting-chat';
+
+function getErrorMessage(
+  error,
+  fallbackMessage,
+) {
+  if (
+    typeof error === 'string'
+  ) {
+    return error;
+  }
+
+  return (
+    error?.errorMsg ??
+    error?.message ??
+    fallbackMessage
+  );
+}
+
+function getParticipants(
+  callObject,
+) {
+  if (!callObject) {
+    return [];
+  }
+
+  const participantMap =
+    callObject.participants?.() ??
+    {};
+
+  return Object.values(
+    participantMap,
+  );
+}
+
+function createMessageId() {
+  if (
+    typeof crypto !==
+      'undefined' &&
+    typeof crypto.randomUUID ===
+      'function'
+  ) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
+}
 
 function useDailyCall(roomUrl) {
-  const callObjectRef = useRef(null);
-
-  const recordingStartTimeoutRef =
+  const callObjectRef =
     useRef(null);
 
-  const [participants, setParticipants] =
-    useState([]);
+  const [
+    participants,
+    setParticipants,
+  ] = useState([]);
 
-  const [isJoining, setIsJoining] =
-    useState(false);
+  const [
+    chatMessages,
+    setChatMessages,
+  ] = useState([]);
+
+  const [
+    isJoining,
+    setIsJoining,
+  ] = useState(false);
 
   const [isJoined, setIsJoined] =
     useState(false);
 
-  const [error, setError] =
-    useState(null);
-
-  const [isRecording, setIsRecording] =
+  const [isMicOn, setIsMicOn] =
     useState(false);
+
+  const [
+    isCameraOn,
+    setIsCameraOn,
+  ] = useState(false);
+
+  const [
+    isSharing,
+    setIsSharing,
+  ] = useState(false);
+
+  const [
+    isRecording,
+    setIsRecording,
+  ] = useState(false);
 
   const [
     isRecordingStarting,
@@ -39,164 +109,165 @@ function useDailyCall(roomUrl) {
   ] = useState(false);
 
   const [
-    recordingStartedBy,
-    setRecordingStartedBy,
-  ] = useState(null);
-
-  const [
     recordingError,
     setRecordingError,
   ] = useState(null);
 
-  const clearRecordingStartTimeout =
-    useCallback(() => {
-      if (
-        recordingStartTimeoutRef.current
-      ) {
-        window.clearTimeout(
-          recordingStartTimeoutRef.current,
-        );
-
-        recordingStartTimeoutRef.current =
-          null;
-      }
-    }, []);
+  const [error, setError] =
+    useState(null);
 
   const syncParticipants =
-    useCallback(() => {
-      const callObject =
-        callObjectRef.current;
+    useCallback(
+      (callObject) => {
+        const nextParticipants =
+          getParticipants(
+            callObject,
+          );
 
-      if (
-        !callObject ||
-        callObject.isDestroyed()
-      ) {
-        return;
-      }
-
-      const currentParticipants =
-        Object.values(
-          callObject.participants(),
+        setParticipants(
+          nextParticipants,
         );
 
-      setParticipants(
-        currentParticipants,
-      );
-    }, []);
+        const localParticipant =
+          nextParticipants.find(
+            (participant) =>
+              participant.local,
+          );
+
+        if (!localParticipant) {
+          setIsMicOn(false);
+          setIsCameraOn(false);
+          setIsSharing(false);
+          return;
+        }
+
+        const audioTrack =
+          localParticipant
+            ?.tracks?.audio;
+
+        const videoTrack =
+          localParticipant
+            ?.tracks?.video;
+
+        const screenTrack =
+          localParticipant
+            ?.tracks
+            ?.screenVideo;
+
+        setIsMicOn(
+          audioTrack?.state ===
+            'playable' ||
+            audioTrack?.state ===
+              'loading',
+        );
+
+        setIsCameraOn(
+          videoTrack?.state ===
+            'playable' ||
+            videoTrack?.state ===
+              'loading',
+        );
+
+        setIsSharing(
+          screenTrack?.state ===
+            'playable' ||
+            screenTrack?.state ===
+              'loading',
+        );
+      },
+      [],
+    );
 
   useEffect(() => {
     if (!roomUrl) {
       return undefined;
     }
 
-    let isDisposed = false;
+    let cancelled = false;
 
     const callObject =
-      Daily.createCallObject({
-        allowMultipleCallInstances: true,
-      });
+      DailyIframe.createCallObject();
 
     callObjectRef.current =
       callObject;
 
-    const handleParticipantChange =
-      () => {
-        if (isDisposed) {
-          return;
-        }
-
-        const currentParticipants =
-          Object.values(
-            callObject.participants(),
-          );
-
-        setParticipants(
-          currentParticipants,
-        );
-      };
+    setChatMessages([]);
+    setError(null);
+    setRecordingError(null);
+    setIsJoining(true);
 
     const handleJoinedMeeting =
       () => {
-        if (isDisposed) {
+        if (cancelled) {
           return;
         }
 
-        setIsJoined(true);
         setIsJoining(false);
+        setIsJoined(true);
 
-        handleParticipantChange();
+        syncParticipants(
+          callObject,
+        );
       };
 
     const handleLeftMeeting =
       () => {
-        if (isDisposed) {
+        if (cancelled) {
           return;
         }
 
         setIsJoined(false);
+
         setParticipants([]);
+
+        setIsMicOn(false);
+        setIsCameraOn(false);
+        setIsSharing(false);
+
+        setIsRecording(false);
+        setIsRecordingStarting(
+          false,
+        );
+        setIsRecordingStopping(
+          false,
+        );
       };
 
-    const handleError = (event) => {
-      if (isDisposed) {
-        return;
-      }
-
-      console.error(
-        'Daily call error:',
-        event,
-      );
-
-      setError(
-        event?.errorMsg ??
-          event?.error?.msg ??
-          '화상회의 연결 중 오류가 발생했습니다.',
-      );
-
-      setIsJoining(false);
-    };
-
-    /*
-     * 누군가 녹음을 시작하면
-     * 모든 참가자에게 발생
-     */
-    const handleRecordingStarted = (
-      event,
-    ) => {
-      if (isDisposed) {
-        return;
-      }
-
-      clearRecordingStartTimeout();
-
-      setIsRecording(true);
-
-      setIsRecordingStarting(
-        false,
-      );
-
-      setIsRecordingStopping(
-        false,
-      );
-
-      setRecordingError(null);
-
-      setRecordingStartedBy(
-        event?.startedBy ?? null,
-      );
-    };
-
-    /*
-     * 녹음 종료 역시
-     * 모든 참가자에게 발생
-     */
-    const handleRecordingStopped =
+    const handleParticipantChange =
       () => {
-        if (isDisposed) {
+        if (cancelled) {
           return;
         }
 
-        clearRecordingStartTimeout();
+        syncParticipants(
+          callObject,
+        );
+      };
+
+    const handleRecordingStarted =
+      () => {
+        if (cancelled) {
+          return;
+        }
+
+        setIsRecording(true);
+
+        setIsRecordingStarting(
+          false,
+        );
+
+        setIsRecordingStopping(
+          false,
+        );
+
+        setRecordingError(null);
+      };
+
+    const handleRecordingStopped =
+      () => {
+        if (cancelled) {
+          return;
+        }
 
         setIsRecording(false);
 
@@ -207,39 +278,131 @@ function useDailyCall(roomUrl) {
         setIsRecordingStopping(
           false,
         );
+      };
 
-        setRecordingStartedBy(
-          null,
+    const handleRecordingError =
+      (event) => {
+        if (cancelled) {
+          return;
+        }
+
+        const message =
+          getErrorMessage(
+            event,
+            '녹음 처리 중 오류가 발생했습니다.',
+          );
+
+        console.error(
+          'Daily recording error:',
+          event,
+        );
+
+        setRecordingError(
+          message,
+        );
+
+        setIsRecordingStarting(
+          false,
+        );
+
+        setIsRecordingStopping(
+          false,
         );
       };
 
-    const handleRecordingError = (
-      event,
-    ) => {
-      if (isDisposed) {
+    const handleAppMessage = ({
+      data,
+      fromId,
+    }) => {
+      if (
+        cancelled ||
+        data?.type !==
+          CHAT_MESSAGE_TYPE ||
+        !data?.message
+      ) {
         return;
       }
 
-      console.error(
-        'Daily recording error:',
-        event,
-      );
+      const participant =
+        callObject
+          .participants?.()?.[
+          fromId
+        ];
 
-      clearRecordingStartTimeout();
+      const senderName =
+        data.senderName ||
+        participant?.user_name ||
+        '참여자';
 
-      setIsRecordingStarting(
-        false,
-      );
+      const nextMessage = {
+        id:
+          data.id ??
+          createMessageId(),
 
-      setIsRecordingStopping(
-        false,
-      );
+        senderSessionId:
+          fromId,
 
-      setRecordingError(
-        event?.errorMsg ??
-          '녹음 처리 중 오류가 발생했습니다.',
+        name: senderName,
+
+        message:
+          data.message,
+
+        sentAt:
+          data.sentAt ??
+          new Date().toISOString(),
+
+        isMine: false,
+      };
+
+      setChatMessages(
+        (previousMessages) => {
+          const alreadyExists =
+            previousMessages.some(
+              (message) =>
+                message.id ===
+                nextMessage.id,
+            );
+
+          if (alreadyExists) {
+            return previousMessages;
+          }
+
+          return [
+            ...previousMessages,
+            nextMessage,
+          ];
+        },
       );
     };
+
+    const handleDailyError =
+      (event) => {
+        if (cancelled) {
+          return;
+        }
+
+        console.error(
+          'Daily error:',
+          event,
+        );
+
+        setError(
+          getErrorMessage(
+            event,
+            '화상회의 연결 중 오류가 발생했습니다.',
+          ),
+        );
+      };
+
+    callObject.on(
+      'joined-meeting',
+      handleJoinedMeeting,
+    );
+
+    callObject.on(
+      'left-meeting',
+      handleLeftMeeting,
+    );
 
     callObject.on(
       'participant-joined',
@@ -254,26 +417,6 @@ function useDailyCall(roomUrl) {
     callObject.on(
       'participant-left',
       handleParticipantChange,
-    );
-
-    callObject.on(
-      'track-started',
-      handleParticipantChange,
-    );
-
-    callObject.on(
-      'track-stopped',
-      handleParticipantChange,
-    );
-
-    callObject.on(
-      'joined-meeting',
-      handleJoinedMeeting,
-    );
-
-    callObject.on(
-      'left-meeting',
-      handleLeftMeeting,
     );
 
     callObject.on(
@@ -292,47 +435,96 @@ function useDailyCall(roomUrl) {
     );
 
     callObject.on(
-      'error',
-      handleError,
+      'app-message',
+      handleAppMessage,
     );
 
-    const joinMeeting = async () => {
-      try {
-        setError(null);
-        setIsJoining(true);
+    callObject.on(
+      'error',
+      handleDailyError,
+    );
 
-        await callObject.join({
-          url: roomUrl,
-        });
+    const joinMeeting =
+      async () => {
+        try {
+          await callObject.join({
+            url: roomUrl,
+          });
+        } catch (joinError) {
+          if (cancelled) {
+            return;
+          }
 
-        if (!isDisposed) {
-          handleParticipantChange();
+          console.error(
+            'Failed to join Daily room:',
+            joinError,
+          );
+
+          setIsJoining(false);
+
+          setError(
+            getErrorMessage(
+              joinError,
+              '회의방에 참여하지 못했습니다.',
+            ),
+          );
         }
-      } catch (joinError) {
-        if (isDisposed) {
-          return;
-        }
-
-        console.error(
-          'Failed to join Daily room:',
-          joinError,
-        );
-
-        setError(
-          joinError?.message ??
-            '회의방에 입장하지 못했습니다.',
-        );
-
-        setIsJoining(false);
-      }
-    };
+      };
 
     joinMeeting();
 
     return () => {
-      isDisposed = true;
+      cancelled = true;
 
-      clearRecordingStartTimeout();
+      callObject.off(
+        'joined-meeting',
+        handleJoinedMeeting,
+      );
+
+      callObject.off(
+        'left-meeting',
+        handleLeftMeeting,
+      );
+
+      callObject.off(
+        'participant-joined',
+        handleParticipantChange,
+      );
+
+      callObject.off(
+        'participant-updated',
+        handleParticipantChange,
+      );
+
+      callObject.off(
+        'participant-left',
+        handleParticipantChange,
+      );
+
+      callObject.off(
+        'recording-started',
+        handleRecordingStarted,
+      );
+
+      callObject.off(
+        'recording-stopped',
+        handleRecordingStopped,
+      );
+
+      callObject.off(
+        'recording-error',
+        handleRecordingError,
+      );
+
+      callObject.off(
+        'app-message',
+        handleAppMessage,
+      );
+
+      callObject.off(
+        'error',
+        handleDailyError,
+      );
 
       if (
         callObjectRef.current ===
@@ -342,24 +534,22 @@ function useDailyCall(roomUrl) {
           null;
       }
 
-      if (
-        !callObject.isDestroyed()
-      ) {
-        callObject
-          .destroy()
-          .catch(
-            (destroyError) => {
-              console.error(
-                'Failed to destroy Daily call:',
-                destroyError,
-              );
-            },
-          );
+      try {
+        if (
+          !callObject.isDestroyed?.()
+        ) {
+          callObject.destroy();
+        }
+      } catch (destroyError) {
+        console.error(
+          'Failed to destroy Daily call:',
+          destroyError,
+        );
       }
     };
   }, [
     roomUrl,
-    clearRecordingStartTimeout,
+    syncParticipants,
   ]);
 
   const toggleMic =
@@ -369,25 +559,39 @@ function useDailyCall(roomUrl) {
 
       if (
         !callObject ||
-        callObject.isDestroyed()
+        !isJoined
       ) {
         return;
       }
 
-      const localParticipant =
-        callObject.participants()
-          .local;
+      try {
+        setError(null);
 
-      const isMicOn =
-        localParticipant?.tracks?.audio
-          ?.state === 'playable';
+        await callObject.setLocalAudio(
+          !isMicOn,
+        );
 
-      await callObject.setLocalAudio(
-        !isMicOn,
-      );
+        syncParticipants(
+          callObject,
+        );
+      } catch (toggleError) {
+        console.error(
+          'Failed to toggle microphone:',
+          toggleError,
+        );
 
-      syncParticipants();
-    }, [syncParticipants]);
+        setError(
+          getErrorMessage(
+            toggleError,
+            '마이크 상태를 변경하지 못했습니다.',
+          ),
+        );
+      }
+    }, [
+      isJoined,
+      isMicOn,
+      syncParticipants,
+    ]);
 
   const toggleCamera =
     useCallback(async () => {
@@ -396,25 +600,39 @@ function useDailyCall(roomUrl) {
 
       if (
         !callObject ||
-        callObject.isDestroyed()
+        !isJoined
       ) {
         return;
       }
 
-      const localParticipant =
-        callObject.participants()
-          .local;
+      try {
+        setError(null);
 
-      const isCameraOn =
-        localParticipant?.tracks?.video
-          ?.state === 'playable';
+        await callObject.setLocalVideo(
+          !isCameraOn,
+        );
 
-      await callObject.setLocalVideo(
-        !isCameraOn,
-      );
+        syncParticipants(
+          callObject,
+        );
+      } catch (toggleError) {
+        console.error(
+          'Failed to toggle camera:',
+          toggleError,
+        );
 
-      syncParticipants();
-    }, [syncParticipants]);
+        setError(
+          getErrorMessage(
+            toggleError,
+            '카메라 상태를 변경하지 못했습니다.',
+          ),
+        );
+      }
+    }, [
+      isCameraOn,
+      isJoined,
+      syncParticipants,
+    ]);
 
   const toggleScreenShare =
     useCallback(async () => {
@@ -423,163 +641,270 @@ function useDailyCall(roomUrl) {
 
       if (
         !callObject ||
-        callObject.isDestroyed()
+        !isJoined
       ) {
         return;
       }
-
-      const localParticipant =
-        callObject.participants()
-          .local;
-
-      const isSharing =
-        localParticipant?.tracks
-          ?.screenVideo?.state ===
-        'playable';
 
       try {
         setError(null);
 
         if (isSharing) {
-          await Promise.resolve(
-            callObject.stopScreenShare(),
-          );
+          await callObject.stopScreenShare();
         } else {
-          await Promise.resolve(
-            callObject.startScreenShare(),
-          );
+          await callObject.startScreenShare();
         }
 
-        syncParticipants();
-      } catch (screenShareError) {
+        syncParticipants(
+          callObject,
+        );
+      } catch (shareError) {
         console.error(
-          'Screen share error:',
-          screenShareError,
+          'Failed to toggle screen share:',
+          shareError,
         );
 
         setError(
-          screenShareError?.message ??
-            '화면 공유를 시작하지 못했습니다.',
+          getErrorMessage(
+            shareError,
+            '화면 공유 상태를 변경하지 못했습니다.',
+          ),
         );
-      }
-    }, [syncParticipants]);
-
-  /*
-   * Daily Cloud Recording 시작
-   *
-   * 실제 시작 여부는
-   * recording-started 이벤트로 판단
-   */
-  const startRecording =
-    useCallback(async () => {
-      const callObject =
-        callObjectRef.current;
-
-      if (
-        !callObject ||
-        callObject.isDestroyed()
-      ) {
-        throw new Error(
-          '회의 연결이 되어 있지 않습니다.',
-        );
-      }
-
-      try {
-        setRecordingError(null);
-
-        setIsRecordingStarting(
-          true,
-        );
-
-        clearRecordingStartTimeout();
-
-        await Promise.resolve(
-          callObject.startRecording({
-            type: 'cloud-audio-only',
-          }),
-        );
-
-        /*
-         * Daily 공식 문서에서도
-         * startRecording 호출 성공보다
-         * recording-started 이벤트를
-         * 실제 시작 기준으로 사용함.
-         */
-        recordingStartTimeoutRef.current =
-          window.setTimeout(() => {
-            setIsRecordingStarting(
-              false,
-            );
-
-            setRecordingError(
-              '녹음 시작을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.',
-            );
-
-            recordingStartTimeoutRef.current =
-              null;
-          }, 15000);
-      } catch (startError) {
-        console.error(
-          'Failed to start recording:',
-          startError,
-        );
-
-        clearRecordingStartTimeout();
-
-        setIsRecordingStarting(
-          false,
-        );
-
-        const message =
-          startError?.message ??
-          '녹음을 시작하지 못했습니다.';
-
-        setRecordingError(message);
-
-        throw startError;
       }
     }, [
-      clearRecordingStartTimeout,
+      isJoined,
+      isSharing,
+      syncParticipants,
     ]);
 
-  /*
-   * 녹음 종료
-   *
-   * recording-stopped 이벤트가
-   * 실제로 발생할 때까지 기다린다.
-   *
-   * 회의 전체 종료 시 녹음본 처리가
-   * 먼저 끝나도록 하기 위함.
-   */
-  const stopRecording =
-    useCallback(async () => {
+  const sendChatMessage =
+    useCallback(
+      async (message) => {
+        const callObject =
+          callObjectRef.current;
+
+        const trimmedMessage =
+          message?.trim();
+
+        if (
+          !callObject ||
+          !isJoined ||
+          !trimmedMessage
+        ) {
+          return;
+        }
+
+        const localParticipant =
+          callObject
+            .participants?.()
+            ?.local;
+
+        const id =
+          createMessageId();
+
+        const sentAt =
+          new Date().toISOString();
+
+        const senderName =
+          localParticipant
+            ?.user_name ||
+          '나';
+
+        const payload = {
+          type:
+            CHAT_MESSAGE_TYPE,
+
+          id,
+
+          message:
+            trimmedMessage,
+
+          senderName,
+
+          sentAt,
+        };
+
+        try {
+          callObject.sendAppMessage(
+            payload,
+            '*',
+          );
+
+          setChatMessages(
+            (previousMessages) => [
+              ...previousMessages,
+              {
+                id,
+
+                senderSessionId:
+                  localParticipant
+                    ?.session_id ??
+                  'local',
+
+                name: '나',
+
+                message:
+                  trimmedMessage,
+
+                sentAt,
+
+                isMine: true,
+              },
+            ],
+          );
+        } catch (sendError) {
+          console.error(
+            'Failed to send chat message:',
+            sendError,
+          );
+
+          throw new Error(
+            getErrorMessage(
+              sendError,
+              '메시지를 전송하지 못했습니다.',
+            ),
+          );
+        }
+      },
+      [isJoined],
+    );
+
+  const startRecording =
+    useCallback(() => {
       const callObject =
         callObjectRef.current;
 
       if (
         !callObject ||
-        callObject.isDestroyed()
+        !isJoined ||
+        isRecording ||
+        isRecordingStarting
       ) {
-        throw new Error(
-          '회의 연결이 되어 있지 않습니다.',
-        );
+        return Promise.resolve();
       }
 
       setRecordingError(null);
 
-      setIsRecordingStopping(true);
+      setIsRecordingStarting(
+        true,
+      );
 
       return new Promise(
         (resolve, reject) => {
-          let timeoutId = null;
+          let timeoutId;
 
-          const handleStopped = () => {
-            if (timeoutId) {
-              window.clearTimeout(
-                timeoutId,
+          const cleanup = () => {
+            callObject.off(
+              'recording-started',
+              handleStarted,
+            );
+
+            callObject.off(
+              'recording-error',
+              handleError,
+            );
+
+            window.clearTimeout(
+              timeoutId,
+            );
+          };
+
+          const handleStarted =
+            (event) => {
+              cleanup();
+              resolve(event);
+            };
+
+          const handleError =
+            (event) => {
+              cleanup();
+
+              reject(
+                new Error(
+                  getErrorMessage(
+                    event,
+                    '녹음을 시작하지 못했습니다.',
+                  ),
+                ),
               );
-            }
+            };
 
+          callObject.on(
+            'recording-started',
+            handleStarted,
+          );
+
+          callObject.on(
+            'recording-error',
+            handleError,
+          );
+
+          timeoutId =
+            window.setTimeout(
+              () => {
+                cleanup();
+
+                setIsRecordingStarting(
+                  false,
+                );
+
+                reject(
+                  new Error(
+                    '녹음 시작 상태를 확인하지 못했습니다.',
+                  ),
+                );
+              },
+              15000,
+            );
+
+          try {
+            callObject.startRecording({
+              type:
+                'cloud-audio-only',
+            });
+          } catch (
+            startError
+          ) {
+            cleanup();
+
+            setIsRecordingStarting(
+              false,
+            );
+
+            reject(startError);
+          }
+        },
+      );
+    }, [
+      isJoined,
+      isRecording,
+      isRecordingStarting,
+    ]);
+
+  const stopRecording =
+    useCallback(() => {
+      const callObject =
+        callObjectRef.current;
+
+      if (
+        !callObject ||
+        !isRecording ||
+        isRecordingStopping
+      ) {
+        return Promise.resolve();
+      }
+
+      setRecordingError(null);
+
+      setIsRecordingStopping(
+        true,
+      );
+
+      return new Promise(
+        (resolve, reject) => {
+          let timeoutId;
+
+          const cleanup = () => {
             callObject.off(
               'recording-stopped',
               handleStopped,
@@ -587,53 +912,33 @@ function useDailyCall(roomUrl) {
 
             callObject.off(
               'recording-error',
-              handleStopError,
+              handleError,
             );
 
-            setIsRecording(false);
-
-            setIsRecordingStopping(
-              false,
+            window.clearTimeout(
+              timeoutId,
             );
-
-            resolve();
           };
 
-          const handleStopError = (
-            event,
-          ) => {
-            if (timeoutId) {
-              window.clearTimeout(
-                timeoutId,
+          const handleStopped =
+            (event) => {
+              cleanup();
+              resolve(event);
+            };
+
+          const handleError =
+            (event) => {
+              cleanup();
+
+              reject(
+                new Error(
+                  getErrorMessage(
+                    event,
+                    '녹음을 종료하지 못했습니다.',
+                  ),
+                ),
               );
-            }
-
-            callObject.off(
-              'recording-stopped',
-              handleStopped,
-            );
-
-            callObject.off(
-              'recording-error',
-              handleStopError,
-            );
-
-            const message =
-              event?.errorMsg ??
-              '녹음을 종료하지 못했습니다.';
-
-            setIsRecordingStopping(
-              false,
-            );
-
-            setRecordingError(
-              message,
-            );
-
-            reject(
-              new Error(message),
-            );
-          };
+            };
 
           callObject.on(
             'recording-stopped',
@@ -642,120 +947,47 @@ function useDailyCall(roomUrl) {
 
           callObject.on(
             'recording-error',
-            handleStopError,
+            handleError,
           );
 
           timeoutId =
             window.setTimeout(
               () => {
-                callObject.off(
-                  'recording-stopped',
-                  handleStopped,
-                );
-
-                callObject.off(
-                  'recording-error',
-                  handleStopError,
-                );
-
-                const message =
-                  '녹음 종료를 확인하지 못했습니다. 다시 시도해주세요.';
+                cleanup();
 
                 setIsRecordingStopping(
                   false,
                 );
 
-                setRecordingError(
-                  message,
-                );
-
                 reject(
-                  new Error(message),
+                  new Error(
+                    '녹음 종료 상태를 확인하지 못했습니다.',
+                  ),
                 );
               },
               10000,
             );
 
           try {
-            const result =
-              callObject.stopRecording();
-
-            Promise.resolve(
-              result,
-            ).catch(
-              (stopError) => {
-                if (timeoutId) {
-                  window.clearTimeout(
-                    timeoutId,
-                  );
-                }
-
-                callObject.off(
-                  'recording-stopped',
-                  handleStopped,
-                );
-
-                callObject.off(
-                  'recording-error',
-                  handleStopError,
-                );
-
-                setIsRecordingStopping(
-                  false,
-                );
-
-                const message =
-                  stopError?.message ??
-                  '녹음을 종료하지 못했습니다.';
-
-                setRecordingError(
-                  message,
-                );
-
-                reject(stopError);
-              },
-            );
-          } catch (stopError) {
-            if (timeoutId) {
-              window.clearTimeout(
-                timeoutId,
-              );
-            }
-
-            callObject.off(
-              'recording-stopped',
-              handleStopped,
-            );
-
-            callObject.off(
-              'recording-error',
-              handleStopError,
-            );
+            callObject.stopRecording();
+          } catch (
+            stopError
+          ) {
+            cleanup();
 
             setIsRecordingStopping(
               false,
-            );
-
-            const message =
-              stopError?.message ??
-              '녹음을 종료하지 못했습니다.';
-
-            setRecordingError(
-              message,
             );
 
             reject(stopError);
           }
         },
       );
-    }, []);
+    }, [
+      isRecording,
+      isRecordingStopping,
+    ]);
 
-  /*
-   * 개인 나가기
-   *
-   * 녹음은 종료하지 않는다.
-   * 다른 참가자가 회의를 계속할 수 있음.
-   */
   const leaveCall =
     useCallback(async () => {
       const callObject =
@@ -765,66 +997,22 @@ function useDailyCall(roomUrl) {
         return;
       }
 
-      callObjectRef.current = null;
-
       try {
-        if (
-          !callObject.isDestroyed()
-        ) {
-          await callObject.destroy();
-        }
+        await callObject.leave();
       } catch (leaveError) {
         console.error(
-          'Failed to leave Daily room:',
+          'Failed to leave Daily call:',
           leaveError,
         );
-      } finally {
-        clearRecordingStartTimeout();
 
-        setParticipants([]);
-
-        setIsJoined(false);
-
-        setIsRecording(false);
-
-        setIsRecordingStarting(
-          false,
-        );
-
-        setIsRecordingStopping(
-          false,
-        );
-
-        setRecordingStartedBy(
-          null,
-        );
+        throw leaveError;
       }
-    }, [
-      clearRecordingStartTimeout,
-    ]);
-
-  const localParticipant =
-    participants.find(
-      (participant) =>
-        participant.local,
-    );
-
-  const isMicOn =
-    localParticipant?.tracks?.audio
-      ?.state === 'playable';
-
-  const isCameraOn =
-    localParticipant?.tracks?.video
-      ?.state === 'playable';
-
-  const isSharing =
-    localParticipant?.tracks
-      ?.screenVideo?.state ===
-    'playable';
+    }, []);
 
   return {
     participants,
-    localParticipant,
+
+    chatMessages,
 
     isJoining,
     isJoined,
@@ -833,17 +1021,18 @@ function useDailyCall(roomUrl) {
     isCameraOn,
     isSharing,
 
-    error,
-
     isRecording,
     isRecordingStarting,
     isRecordingStopping,
-    recordingStartedBy,
     recordingError,
+
+    error,
 
     toggleMic,
     toggleCamera,
     toggleScreenShare,
+
+    sendChatMessage,
 
     startRecording,
     stopRecording,
