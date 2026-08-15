@@ -13,14 +13,17 @@ export const getMeetings = async (teamId) => {
 export const createMeeting = async ({
   teamId,
   title,
+  agenda,
+  scheduledStartAt,
+  scheduledEndAt,
 }) => {
-  const { data } = await api.post(
-    '/api/v1/meetings',
-    {
-      teamId,
-      title,
-    },
-  );
+  const { data } = await api.post('/api/v1/meetings', {
+    teamId,
+    title,
+    agenda,
+    scheduledStartAt,
+    scheduledEndAt,
+  });
 
   return data;
 };
@@ -54,6 +57,16 @@ export const getMeetingParticipants = async (
 ) => {
   const { data } = await api.get(
     `/api/v1/meetings/${meetingId}/participants`,
+  );
+
+  return data;
+};
+
+export const getMeetingRecordingUrl = async (
+  meetingId,
+) => {
+  const { data } = await api.get(
+    `/api/v1/meetings/${meetingId}/recording-url`,
   );
 
   return data;

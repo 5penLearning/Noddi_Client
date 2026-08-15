@@ -1,14 +1,26 @@
-import { useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
+
 import { useNavigate } from 'react-router-dom';
+
+import {
+  createMeeting,
+  getMeetings,
+} from '../../api/meetingApi';
+
+import { getMyTeams } from '../../api/teamApi';
 
 import MeetingCalendar from '../../components/feature/meeting/MeetingCalendar';
 import MeetingReservationModal from '../../components/feature/meeting/MeetingReservationModal';
 import MeetingScheduleList from '../../components/feature/meeting/MeetingScheduleList';
 import MeetingStatusBanner from '../../components/feature/meeting/MeetingStatusBanner';
-import { meetingMockData } from '../../constants/meetingMockData';
+
 import useCurrentDateTime from '../../hooks/useCurrentDateTime';
+
 import { formatDateKey } from '../../utils/date';
-import { getMeetingStatus } from '../../utils/meeting';
 
 function VideoIcon() {
   return (
@@ -105,13 +117,84 @@ const WEEK_DAYS = [
   '토요일',
 ];
 
+function formatServerMeeting(
+  meeting,
+  team,
+) {
+  const scheduledStartAt =
+    meeting.scheduledStartAt ?? '';
+
+  const scheduledEndAt =
+    meeting.scheduledEndAt ?? '';
+
+  return {
+    ...meeting,
+
+    id: meeting.meetingId,
+    teamId: meeting.teamId,
+
+    project: '',
+    team: team?.name ?? '팀',
+
+    description: meeting.agenda ?? '',
+
+    date: scheduledStartAt
+      ? scheduledStartAt.slice(0, 10)
+      : '',
+
+    startTime: scheduledStartAt
+      ? scheduledStartAt.slice(11, 16)
+      : '',
+
+    endTime: scheduledEndAt
+      ? scheduledEndAt.slice(11, 16)
+      : '',
+  };
+}
+
+function toScheduledDateTime(
+  date,
+  time,
+) {
+  return `${date}T${time}:00`;
+}
+
 function MeetingPage() {
   const navigate = useNavigate();
+
   const now = useCurrentDateTime();
 
-  const [meetings, setMeetings] = useState(meetingMockData);
+  const [teams, setTeams] = useState([]);
 
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [meetings, setMeetings] = useState([]);
+
+  const [
+    isLoadingMeetings,
+    setIsLoadingMeetings,
+  ] = useState(true);
+
+  const [
+    meetingLoadError,
+    setMeetingLoadError,
+  ] = useState('');
+
+  const [
+    isReservationModalOpen,
+    setIsReservationModalOpen,
+  ] = useState(false);
+
+  const [
+    isCreatingMeeting,
+    setIsCreatingMeeting,
+  ] = useState(false);
+
+  const [
+    reservationError,
+    setReservationError,
+  ] = useState('');
+
+  const [selectedDate, setSelectedDate] =
+    useState(() => new Date());
 
   const [viewDate, setViewDate] = useState(
     () =>
@@ -122,21 +205,99 @@ function MeetingPage() {
       ),
   );
 
-  const [selectedFilter, setSelectedFilter] = useState('ALL');
+  const [
+    selectedFilter,
+    setSelectedFilter,
+  ] = useState('ALL');
 
-  const [isReservationModalOpen, setIsReservationModalOpen] =
-    useState(false);
+  const loadMeetings = useCallback(async () => {
+    try {
+      setIsLoadingMeetings(true);
+      setMeetingLoadError('');
+
+      const teamResponse =
+        await getMyTeams();
+
+      const nextTeams =
+        teamResponse?.result ?? [];
+
+      setTeams(nextTeams);
+
+      if (nextTeams.length === 0) {
+        setMeetings([]);
+        return;
+      }
+
+      const meetingResponses =
+        await Promise.all(
+          nextTeams.map((team) =>
+            getMeetings(team.teamId),
+          ),
+        );
+
+      const nextMeetings =
+        meetingResponses.flatMap(
+          (response, index) => {
+            const team =
+              nextTeams[index];
+
+            return (
+              response?.result ?? []
+            ).map((meeting) =>
+              formatServerMeeting(
+                meeting,
+                team,
+              ),
+            );
+          },
+        );
+
+      nextMeetings.sort(
+        (meetingA, meetingB) => {
+          const dateTimeA =
+            `${meetingA.date} ${meetingA.startTime}`;
+
+          const dateTimeB =
+            `${meetingB.date} ${meetingB.startTime}`;
+
+          return dateTimeA.localeCompare(
+            dateTimeB,
+          );
+        },
+      );
+
+      setMeetings(nextMeetings);
+    } catch (error) {
+      console.error(
+        'Failed to load meetings:',
+        error,
+      );
+
+      setMeetingLoadError(
+        error?.response?.data?.message ??
+        '회의 정보를 불러오지 못했습니다.',
+      );
+    } finally {
+      setIsLoadingMeetings(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMeetings();
+  }, [loadMeetings]);
 
   /*
    * 현재 실제 진행 중인 회의
    */
-  const currentMeeting = meetings.find(
-    (meeting) =>
-      getMeetingStatus(meeting, now) === 'IN_PROGRESS',
-  );
+  const currentMeeting =
+    meetings.find(
+      (meeting) =>
+        meeting.status ===
+        'IN_PROGRESS',
+    );
 
   /*
-   * 프로젝트 / 팀 필터
+   * 팀 필터
    */
   const filterOptions = [
     {
@@ -144,132 +305,200 @@ function MeetingPage() {
       label: '전체',
     },
 
-    ...Array.from(
-      new Map(
-        meetings.map((meeting) => {
-          const id = `${meeting.project}::${meeting.team}`;
-
-          return [
-            id,
-            {
-              id,
-              label: `${meeting.project} / ${meeting.team}`,
-              project: meeting.project,
-              team: meeting.team,
-            },
-          ];
-        }),
-      ).values(),
-    ),
+    ...teams.map((team) => ({
+      id: `TEAM-${team.teamId}`,
+      label: team.name,
+      teamId: team.teamId,
+      team: team.name,
+      project: '',
+    })),
   ];
 
   /*
-   * 선택한 프로젝트 / 팀으로 필터링
+   * 선택된 팀 필터
    */
   const filteredMeetings =
     selectedFilter === 'ALL'
       ? meetings
-      : meetings.filter((meeting) => {
-        const filterId = `${meeting.project}::${meeting.team}`;
-
-        return filterId === selectedFilter;
-      });
+      : meetings.filter(
+        (meeting) =>
+          `TEAM-${meeting.teamId}` ===
+          selectedFilter,
+      );
 
   /*
-   * 선택한 날짜의 회의
+   * 선택 날짜 회의
    */
-  const selectedDateKey = formatDateKey(selectedDate);
+  const selectedDateKey =
+    formatDateKey(selectedDate);
 
-  const selectedMeetings = filteredMeetings.filter(
-    (meeting) => meeting.date === selectedDateKey,
-  );
+  const selectedMeetings =
+    filteredMeetings.filter(
+      (meeting) =>
+        meeting.date ===
+        selectedDateKey,
+    );
 
   /*
    * 현재 시간
    */
   const hours = now.getHours();
-  const minutes = String(now.getMinutes()).padStart(2, '0');
 
-  const period = hours >= 12 ? 'pm' : 'am';
-  const displayHour = hours % 12 || 12;
+  const minutes = String(
+    now.getMinutes(),
+  ).padStart(2, '0');
+
+  const period =
+    hours >= 12 ? 'pm' : 'am';
+
+  const displayHour =
+    hours % 12 || 12;
 
   /*
    * 현재 날짜
    */
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const date = String(now.getDate()).padStart(2, '0');
-  const day = WEEK_DAYS[now.getDay()];
+  const month = String(
+    now.getMonth() + 1,
+  ).padStart(2, '0');
+
+  const date = String(
+    now.getDate(),
+  ).padStart(2, '0');
+
+  const day =
+    WEEK_DAYS[now.getDay()];
 
   /*
-   * 회의 참여
+   * 진행 중 회의 참여
    */
   const handleJoinMeeting = () => {
     if (!currentMeeting) {
       return;
     }
 
-    navigate(`/meetings/${currentMeeting.id}/room`, {
-      state: {
-        meeting: currentMeeting,
+    navigate(
+      `/meetings/${currentMeeting.meetingId}/room`,
+      {
+        state: {
+          meeting:
+            currentMeeting,
+        },
       },
-    });
+    );
   };
 
-  /*
-   * 빠른 메뉴
-   */
-  const handleQuickAction = (actionId) => {
+  const handleQuickAction = (
+    actionId,
+  ) => {
     if (actionId === 'join') {
       handleJoinMeeting();
       return;
     }
 
     if (actionId === 'reserve') {
-      setIsReservationModalOpen(true);
+      setReservationError('');
+
+      setIsReservationModalOpen(
+        true,
+      );
+
+      return;
+    }
+
+    if (actionId === 'records') {
+      return;
     }
   };
 
   /*
-   * 회의 예약
+   * 실제 회의 예약
    */
-  const handleReserveMeeting = (reservation) => {
-    const newMeeting = {
-      id: Date.now(),
-      ...reservation,
-      participants: [],
+  const handleReserveMeeting =
+    async (reservation) => {
+      try {
+        setIsCreatingMeeting(true);
+        setReservationError('');
+
+        const scheduledStartAt =
+          toScheduledDateTime(
+            reservation.date,
+            reservation.startTime,
+          );
+
+        const scheduledEndAt =
+          toScheduledDateTime(
+            reservation.date,
+            reservation.endTime,
+          );
+
+        await createMeeting({
+          teamId: reservation.teamId,
+          title: reservation.title,
+          agenda: reservation.agenda,
+          scheduledStartAt,
+          scheduledEndAt,
+        });
+
+        const [
+          year,
+          reservationMonth,
+          reservationDate,
+        ] = reservation.date
+          .split('-')
+          .map(Number);
+
+        setSelectedDate(
+          new Date(
+            year,
+            reservationMonth - 1,
+            reservationDate,
+          ),
+        );
+
+        setViewDate(
+          new Date(
+            year,
+            reservationMonth - 1,
+            1,
+          ),
+        );
+
+        setSelectedFilter(
+          `TEAM-${reservation.teamId}`,
+        );
+
+        setIsReservationModalOpen(
+          false,
+        );
+
+        await loadMeetings();
+      } catch (error) {
+        console.error(
+          'Failed to create meeting:',
+          error,
+        );
+
+        setReservationError(
+          error?.response?.data?.message ??
+          '회의 예약에 실패했습니다.',
+        );
+      } finally {
+        setIsCreatingMeeting(false);
+      }
     };
 
-    setMeetings((prev) =>
-      [...prev, newMeeting].sort((meetingA, meetingB) => {
-        const dateTimeA = `${meetingA.date} ${meetingA.startTime}`;
-        const dateTimeB = `${meetingB.date} ${meetingB.startTime}`;
+  const handleCloseReservationModal =
+    () => {
+      if (isCreatingMeeting) {
+        return;
+      }
 
-        return dateTimeA.localeCompare(dateTimeB);
-      }),
-    );
+      setReservationError('');
 
-    const [year, reservationMonth, reservationDate] =
-      reservation.date.split('-').map(Number);
-
-    const reservedDate = new Date(
-      year,
-      reservationMonth - 1,
-      reservationDate,
-    );
-
-    setSelectedDate(reservedDate);
-
-    setViewDate(
-      new Date(
-        year,
-        reservationMonth - 1,
-        1,
-      ),
-    );
-
-    setSelectedFilter('ALL');
-    setIsReservationModalOpen(false);
-  };
+      setIsReservationModalOpen(
+        false,
+      );
+    };
 
   return (
     <>
@@ -282,23 +511,29 @@ function MeetingPage() {
 
         {currentMeeting && (
           <MeetingStatusBanner
-            meeting={currentMeeting}
-            onJoin={handleJoinMeeting}
+            meeting={
+              currentMeeting
+            }
+            onJoin={
+              handleJoinMeeting
+            }
           />
         )}
 
         <section
-          className={`rounded-2xl bg-white p-6 ${currentMeeting ? 'mt-4' : ''
+          className={`rounded-2xl bg-white p-6 ${currentMeeting
+            ? 'mt-4'
+            : ''
             }`}
         >
           <div className="grid min-h-[520px] grid-cols-1 gap-8 xl:grid-cols-[0.9fr_1.15fr]">
-            {/* 왼쪽 영역 */}
             <div className="flex items-center justify-center xl:border-r xl:border-[#EDF0EF]">
               <div className="w-full max-w-[360px]">
                 <div className="mb-7">
                   <div className="flex items-end gap-1">
                     <p className="text-[32px] font-semibold leading-none text-[#101211]">
-                      {displayHour}:{minutes}
+                      {displayHour}:
+                      {minutes}
                     </p>
 
                     <span className="text-lg font-medium leading-none text-[#101211]">
@@ -307,76 +542,139 @@ function MeetingPage() {
                   </div>
 
                   <p className="mt-3 text-base text-[#8C9692]">
-                    {month}. {date} {day}
+                    {month}. {date}{' '}
+                    {day}
                   </p>
                 </div>
 
                 <div className="flex gap-4">
-                  {quickActions.map((action) => {
-                    const isJoinAction = action.id === 'join';
+                  {quickActions.map(
+                    (action) => {
+                      const isJoinAction =
+                        action.id ===
+                        'join';
 
-                    const isDisabled =
-                      isJoinAction && !currentMeeting;
+                      const isReserveAction =
+                        action.id ===
+                        'reserve';
 
-                    return (
-                      <button
-                        key={action.id}
-                        type="button"
-                        disabled={isDisabled}
-                        onClick={() =>
-                          handleQuickAction(action.id)
-                        }
-                        className={`group flex flex-col items-center gap-2 ${isDisabled
-                          ? 'cursor-not-allowed'
-                          : 'cursor-pointer'
-                          }`}
-                      >
-                        <span
-                          className={`flex h-12 w-12 items-center justify-center rounded-full transition ${isDisabled
-                            ? 'bg-[#E4E9E7] text-[#A7B0AC]'
-                            : 'bg-[#101211] text-white group-hover:-translate-y-0.5'
+                      const isDisabled =
+                        (isJoinAction &&
+                          (isLoadingMeetings ||
+                            !currentMeeting)) ||
+                        (isReserveAction &&
+                          (isLoadingMeetings ||
+                            teams.length ===
+                            0));
+
+                      return (
+                        <button
+                          key={
+                            action.id
+                          }
+                          type="button"
+                          disabled={
+                            isDisabled
+                          }
+                          onClick={() =>
+                            handleQuickAction(
+                              action.id,
+                            )
+                          }
+                          className={`group flex flex-col items-center gap-2 ${isDisabled
+                            ? 'cursor-not-allowed'
+                            : 'cursor-pointer'
                             }`}
                         >
-                          {action.icon}
-                        </span>
+                          <span
+                            className={`flex h-12 w-12 items-center justify-center rounded-full transition ${isDisabled
+                              ? 'bg-[#E4E9E7] text-[#A7B0AC]'
+                              : 'bg-[#101211] text-white group-hover:-translate-y-0.5'
+                              }`}
+                          >
+                            {
+                              action.icon
+                            }
+                          </span>
 
-                        <span
-                          className={`text-xs font-medium ${isDisabled
-                            ? 'text-[#A7B0AC]'
-                            : 'text-[#303633]'
-                            }`}
-                        >
-                          {action.label}
-                        </span>
-                      </button>
-                    );
-                  })}
+                          <span
+                            className={`text-xs font-medium ${isDisabled
+                              ? 'text-[#A7B0AC]'
+                              : 'text-[#303633]'
+                              }`}
+                          >
+                            {
+                              action.label
+                            }
+                          </span>
+                        </button>
+                      );
+                    },
+                  )}
                 </div>
 
-                {!currentMeeting && (
+                {isLoadingMeetings ? (
                   <p className="mt-4 text-xs text-[#8A9490]">
-                    현재 참여할 수 있는 회의가 없습니다.
+                    회의 정보를
+                    확인하고 있습니다.
                   </p>
-                )}
+                ) : meetingLoadError ? (
+                  <p className="mt-4 text-xs text-[#F64E42]">
+                    {
+                      meetingLoadError
+                    }
+                  </p>
+                ) : teams.length ===
+                  0 ? (
+                  <p className="mt-4 text-xs text-[#8A9490]">
+                    참여 중인 팀이
+                    없습니다.
+                  </p>
+                ) : !currentMeeting ? (
+                  <p className="mt-4 text-xs text-[#8A9490]">
+                    현재 참여할 수
+                    있는 회의가
+                    없습니다.
+                  </p>
+                ) : null}
               </div>
             </div>
 
-            {/* 오른쪽 영역 */}
             <div className="min-w-0">
               <MeetingCalendar
-                selectedDate={selectedDate}
-                onSelectDate={setSelectedDate}
-                viewDate={viewDate}
-                onChangeViewDate={setViewDate}
-                meetings={filteredMeetings}
-                filterOptions={filterOptions}
-                selectedFilter={selectedFilter}
-                onChangeFilter={setSelectedFilter}
+                selectedDate={
+                  selectedDate
+                }
+                onSelectDate={
+                  setSelectedDate
+                }
+                viewDate={
+                  viewDate
+                }
+                onChangeViewDate={
+                  setViewDate
+                }
+                meetings={
+                  filteredMeetings
+                }
+                filterOptions={
+                  filterOptions
+                }
+                selectedFilter={
+                  selectedFilter
+                }
+                onChangeFilter={
+                  setSelectedFilter
+                }
               />
 
               <MeetingScheduleList
-                meetings={selectedMeetings}
-                selectedDate={selectedDate}
+                meetings={
+                  selectedMeetings
+                }
+                selectedDate={
+                  selectedDate
+                }
                 now={now}
               />
             </div>
@@ -385,13 +683,31 @@ function MeetingPage() {
       </div>
 
       <MeetingReservationModal
-        isOpen={isReservationModalOpen}
-        onClose={() => setIsReservationModalOpen(false)}
-        onReserve={handleReserveMeeting}
-        filterOptions={filterOptions}
-        defaultDate={formatDateKey(selectedDate)}
-        minDate={formatDateKey(new Date())}
+        isOpen={
+          isReservationModalOpen
+        }
+        onClose={
+          handleCloseReservationModal
+        }
+        onReserve={
+          handleReserveMeeting
+        }
+        filterOptions={
+          filterOptions
+        }
+        defaultDate={formatDateKey(
+          selectedDate,
+        )}
+        minDate={formatDateKey(
+          new Date(),
+        )}
         meetings={meetings}
+        isSubmitting={
+          isCreatingMeeting
+        }
+        submitError={
+          reservationError
+        }
       />
     </>
   );

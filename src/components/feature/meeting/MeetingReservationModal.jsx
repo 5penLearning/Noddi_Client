@@ -6,7 +6,7 @@ const INITIAL_FORM = {
   date: '',
   startTime: '',
   endTime: '',
-  description: '',
+  agenda: '',
 };
 
 function CloseIcon() {
@@ -36,6 +36,8 @@ function MeetingReservationModal({
   defaultDate,
   minDate,
   meetings,
+  isSubmitting = false,
+  submitError = '',
 }) {
   const [form, setForm] = useState(INITIAL_FORM);
   const [errorMessage, setErrorMessage] = useState('');
@@ -59,7 +61,7 @@ function MeetingReservationModal({
     }
 
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && !isSubmitting) {
         onClose();
       }
     };
@@ -67,9 +69,12 @@ function MeetingReservationModal({
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener(
+        'keydown',
+        handleKeyDown,
+      );
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, isSubmitting, onClose]);
 
   if (!isOpen) {
     return null;
@@ -82,8 +87,8 @@ function MeetingReservationModal({
   const handleChange = (event) => {
     const { name, value } = event.target;
 
-    setForm((prev) => ({
-      ...prev,
+    setForm((previousForm) => ({
+      ...previousForm,
       [name]: value,
     }));
 
@@ -98,14 +103,15 @@ function MeetingReservationModal({
     if (!selectedOption) {
       return {
         valid: false,
-        message: '프로젝트와 팀을 선택해주세요.',
+        message: '팀을 선택해주세요.',
       };
     }
 
     if (form.startTime >= form.endTime) {
       return {
         valid: false,
-        message: '종료 시간은 시작 시간보다 늦어야 합니다.',
+        message:
+          '종료 시간은 시작 시간보다 늦어야 합니다.',
       };
     }
 
@@ -118,15 +124,15 @@ function MeetingReservationModal({
     if (startDateTime <= now) {
       return {
         valid: false,
-        message: '현재 시간보다 이후의 회의만 예약할 수 있습니다.',
+        message:
+          '현재 시간보다 이후의 회의만 예약할 수 있습니다.',
       };
     }
 
     const hasOverlap = meetings.some((meeting) => {
       if (
         meeting.date !== form.date ||
-        meeting.project !== selectedOption.project ||
-        meeting.team !== selectedOption.team
+        meeting.teamId !== selectedOption.teamId
       ) {
         return false;
       }
@@ -141,7 +147,7 @@ function MeetingReservationModal({
       return {
         valid: false,
         message:
-          '선택한 시간에 이미 해당 프로젝트/팀의 회의가 있습니다.',
+          '선택한 시간에 이미 해당 팀의 회의가 있습니다.',
       };
     }
 
@@ -151,8 +157,12 @@ function MeetingReservationModal({
     };
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
 
     const validation = validateReservation();
 
@@ -161,14 +171,14 @@ function MeetingReservationModal({
       return;
     }
 
-    onReserve({
+    await onReserve({
+      teamId: validation.selectedOption.teamId,
+      team: validation.selectedOption.team,
       title: form.title.trim(),
-      description: form.description.trim(),
+      agenda: form.agenda.trim(),
       date: form.date,
       startTime: form.startTime,
       endTime: form.endTime,
-      project: validation.selectedOption.project,
-      team: validation.selectedOption.team,
     });
   };
 
@@ -179,11 +189,17 @@ function MeetingReservationModal({
     form.startTime &&
     form.endTime;
 
+  const visibleError =
+    errorMessage || submitError;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
+        if (
+          event.target === event.currentTarget &&
+          !isSubmitting
+        ) {
           onClose();
         }
       }}
@@ -202,8 +218,9 @@ function MeetingReservationModal({
 
           <button
             type="button"
+            disabled={isSubmitting}
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[#59625F] transition hover:bg-[#F5F7F6]"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-[#59625F] transition hover:bg-[#F5F7F6] disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="닫기"
           >
             <CloseIcon />
@@ -241,7 +258,7 @@ function MeetingReservationModal({
                 htmlFor="meeting-filter"
                 className="mb-2 block text-sm font-medium text-[#101211]"
               >
-                프로젝트 / 팀
+                팀
               </label>
 
               <select
@@ -252,7 +269,7 @@ function MeetingReservationModal({
                 className="h-11 w-full rounded-lg border border-[#D8DFDC] bg-white px-3 text-sm text-[#101211] outline-none transition focus:border-[#101211]"
               >
                 <option value="">
-                  프로젝트와 팀을 선택해주세요
+                  팀을 선택해주세요
                 </option>
 
                 {meetingFilters.map((filter) => (
@@ -325,7 +342,7 @@ function MeetingReservationModal({
 
             <div>
               <label
-                htmlFor="meeting-description"
+                htmlFor="meeting-agenda"
                 className="mb-2 block text-sm font-medium text-[#101211]"
               >
                 회의 안건
@@ -335,9 +352,9 @@ function MeetingReservationModal({
               </label>
 
               <textarea
-                id="meeting-description"
-                name="description"
-                value={form.description}
+                id="meeting-agenda"
+                name="agenda"
+                value={form.agenda}
                 onChange={handleChange}
                 placeholder="회의에서 논의할 내용을 입력해주세요"
                 rows={4}
@@ -346,14 +363,14 @@ function MeetingReservationModal({
               />
 
               <p className="mt-1 text-right text-xs text-[#A7B0AC]">
-                {form.description.length}/200
+                {form.agenda.length}/200
               </p>
             </div>
 
-            {errorMessage && (
+            {visibleError && (
               <div className="rounded-lg bg-[#FFF1F0] px-4 py-3">
                 <p className="text-sm text-[#F64E42]">
-                  {errorMessage}
+                  {visibleError}
                 </p>
               </div>
             )}
@@ -362,22 +379,26 @@ function MeetingReservationModal({
           <div className="mt-7 flex justify-end gap-2">
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={onClose}
-              className="rounded-lg border border-[#D8DFDC] bg-white px-5 py-3 text-sm font-medium text-[#59625F] transition hover:bg-[#F5F7F6]"
+              className="rounded-lg border border-[#D8DFDC] bg-white px-5 py-3 text-sm font-medium text-[#59625F] transition hover:bg-[#F5F7F6] disabled:cursor-not-allowed disabled:opacity-50"
             >
               취소
             </button>
 
             <button
               type="submit"
-              disabled={!isFormFilled}
-              className={`rounded-lg px-5 py-3 text-sm font-semibold transition ${
-                isFormFilled
-                  ? 'bg-[#101211] text-white hover:opacity-80'
-                  : 'cursor-not-allowed bg-[#E4E9E7] text-[#A7B0AC]'
-              }`}
+              disabled={
+                !isFormFilled || isSubmitting
+              }
+              className={`rounded-lg px-5 py-3 text-sm font-semibold transition ${isFormFilled && !isSubmitting
+                ? 'bg-[#101211] text-white hover:opacity-80'
+                : 'cursor-not-allowed bg-[#E4E9E7] text-[#A7B0AC]'
+                }`}
             >
-              예약하기
+              {isSubmitting
+                ? '예약 중...'
+                : '예약하기'}
             </button>
           </div>
         </form>
