@@ -285,6 +285,7 @@ function MeetingPage() {
     useCallback(async () => {
       try {
         setIsLoadingMeetings(true);
+
         setMeetingLoadError('');
 
         const teamResponse =
@@ -396,6 +397,9 @@ function MeetingPage() {
 
   /*
    * 현재 진행 중인 회의
+   *
+   * 하나라도 IN_PROGRESS가 있으면
+   * 다른 SCHEDULED 회의는 시작하지 않는다.
    */
   const currentMeeting =
     meetings.find(
@@ -404,49 +408,75 @@ function MeetingPage() {
         'IN_PROGRESS',
     );
 
+  const hasActiveMeeting =
+    Boolean(currentMeeting);
+
   /*
-   * 현재 시작 가능한 회의
+   * 시작 가능한 회의
+   *
+   * 예정 시작 시간이 지났고
+   * 현재 진행 중인 회의가 없으면 가능.
+   *
+   * scheduledEndAt은 사용하지 않는다.
    */
   const startableMeeting =
-    meetings.find((meeting) => {
-      if (
-        meeting.status !==
-        'SCHEDULED'
-      ) {
-        return false;
-      }
+    hasActiveMeeting
+      ? null
+      : meetings.find(
+        (meeting) => {
+          if (
+            meeting.status !==
+            'SCHEDULED'
+          ) {
+            return false;
+          }
 
-      const scheduledStart =
-        parseMeetingDateTime(
-          meeting.scheduledStartAt,
-        );
+          const scheduledStart =
+            parseMeetingDateTime(
+              meeting.scheduledStartAt,
+            );
 
-      const scheduledEnd =
-        parseMeetingDateTime(
-          meeting.scheduledEndAt,
-        );
+          if (!scheduledStart) {
+            return false;
+          }
 
-      if (!scheduledStart) {
-        return false;
-      }
+          return (
+            now.getTime() >=
+            scheduledStart.getTime()
+          );
+        },
+      );
 
-      if (
-        now.getTime() <
-        scheduledStart.getTime()
-      ) {
-        return false;
-      }
+  /*
+   * 가장 최근 종료된 회의
+   */
+  const latestEndedMeeting =
+    [...meetings]
+      .filter(
+        (meeting) =>
+          meeting.status ===
+          'ENDED',
+      )
+      .sort(
+        (
+          meetingA,
+          meetingB,
+        ) => {
+          const timeA = new Date(
+            meetingA.endedAt ||
+            meetingA.scheduledEndAt ||
+            0,
+          ).getTime();
 
-      if (
-        scheduledEnd &&
-        now.getTime() >
-        scheduledEnd.getTime()
-      ) {
-        return false;
-      }
+          const timeB = new Date(
+            meetingB.endedAt ||
+            meetingB.scheduledEndAt ||
+            0,
+          ).getTime();
 
-      return true;
-    });
+          return timeB - timeA;
+        },
+      )[0] ?? null;
 
   /*
    * 팀 필터
@@ -490,7 +520,7 @@ function MeetingPage() {
     );
 
   /*
-   * 시간 표시
+   * 현재 시각 표시
    */
   const hours = now.getHours();
 
@@ -549,14 +579,41 @@ function MeetingPage() {
         return;
       }
 
+      /*
+       * 다른 회의가 진행 중이면
+       * 프론트에서도 시작 요청 차단
+       */
+      if (hasActiveMeeting) {
+        setStartMeetingError(
+          '진행 중인 회의를 먼저 종료해주세요.',
+        );
+
+        return;
+      }
+
+      const scheduledStart =
+        parseMeetingDateTime(
+          meeting.scheduledStartAt,
+        );
+
+      if (
+        !scheduledStart ||
+        now.getTime() <
+        scheduledStart.getTime()
+      ) {
+        setStartMeetingError(
+          '아직 회의 시작 시간이 되지 않았습니다.',
+        );
+
+        return;
+      }
+
       try {
         setStartingMeetingId(
           meeting.meetingId,
         );
 
-        setStartMeetingError(
-          '',
-        );
+        setStartMeetingError('');
 
         const response =
           await startMeeting(
@@ -601,6 +658,10 @@ function MeetingPage() {
           '회의를 시작하지 못했습니다.',
         );
 
+        /*
+         * 다른 사용자가 먼저 시작했을 수도
+         * 있으므로 서버 목록 재조회
+         */
         await loadMeetings();
       } finally {
         setStartingMeetingId(
@@ -610,7 +671,25 @@ function MeetingPage() {
     };
 
   /*
-   * 빠른 메뉴
+   * 회의록 상세
+   */
+  const handleOpenSummary = (
+    meeting,
+  ) => {
+    if (!meeting) {
+      return;
+    }
+
+    navigate(
+      `/meetings/${meeting.meetingId}/summary`,
+    );
+  };
+
+  /*
+   * 빠른 회의 액션
+   *
+   * 진행 중 회의가 있으면 참여,
+   * 없고 시작 가능한 회의가 있으면 시작.
    */
   const handleMeetingQuickAction =
     () => {
@@ -652,14 +731,17 @@ function MeetingPage() {
     }
 
     if (
-      actionId === 'records'
+      actionId === 'records' &&
+      latestEndedMeeting
     ) {
-      return;
+      handleOpenSummary(
+        latestEndedMeeting,
+      );
     }
   };
 
   /*
-   * 실제 회의 예약
+   * 회의 예약
    */
   const handleReserveMeeting =
     async (reservation) => {
@@ -668,9 +750,7 @@ function MeetingPage() {
           true,
         );
 
-        setReservationError(
-          '',
-        );
+        setReservationError('');
 
         const scheduledStartAt =
           toScheduledDateTime(
@@ -765,6 +845,9 @@ function MeetingPage() {
       );
     };
 
+  /*
+   * 빠른 액션 상태
+   */
   const meetingActionLabel =
     currentMeeting
       ? '참여하기'
@@ -810,7 +893,7 @@ function MeetingPage() {
             }`}
         >
           <div className="grid min-h-[520px] grid-cols-1 gap-8 xl:grid-cols-[0.9fr_1.15fr]">
-            {/* 왼쪽 영역 */}
+            {/* 왼쪽 */}
             <div className="flex items-center justify-center xl:border-r xl:border-[#EDF0EF]">
               <div className="w-full max-w-[360px]">
                 <div className="mb-7">
@@ -843,6 +926,10 @@ function MeetingPage() {
                         action.id ===
                         'reserve';
 
+                      const isRecordAction =
+                        action.id ===
+                        'records';
+
                       const isDisabled =
                         (isMeetingAction &&
                           (isLoadingMeetings ||
@@ -851,7 +938,9 @@ function MeetingPage() {
                         (isReserveAction &&
                           (isLoadingMeetings ||
                             teams.length ===
-                            0));
+                            0)) ||
+                        (isRecordAction &&
+                          !latestEndedMeeting);
 
                       const actionLabel =
                         isMeetingAction
@@ -938,20 +1027,19 @@ function MeetingPage() {
                 ) : startableMeeting ? (
                   <p className="mt-4 text-xs text-[#8A9490]">
                     예약된 회의를
-                    시작할 수
-                    있습니다.
+                    시작할 수 있습니다.
                   </p>
                 ) : (
                   <p className="mt-4 text-xs text-[#8A9490]">
                     현재 참여하거나
-                    시작할 수 있는
-                    회의가 없습니다.
+                    시작할 수 있는 회의가
+                    없습니다.
                   </p>
                 )}
               </div>
             </div>
 
-            {/* 오른쪽 영역 */}
+            {/* 오른쪽 */}
             <div className="min-w-0">
               <MeetingCalendar
                 selectedDate={
@@ -994,8 +1082,14 @@ function MeetingPage() {
                 onJoin={
                   handleJoinMeeting
                 }
+                onOpenSummary={
+                  handleOpenSummary
+                }
                 startingMeetingId={
                   startingMeetingId
+                }
+                hasActiveMeeting={
+                  hasActiveMeeting
                 }
               />
             </div>

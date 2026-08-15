@@ -37,6 +37,39 @@ function VideoIcon() {
   );
 }
 
+function FileIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M6 3H14L19 8V21H6V3Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+
+      <path
+        d="M14 3V8H19"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+
+      <path
+        d="M9 13H16M9 17H16"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function ClockIcon() {
   return (
     <svg
@@ -109,7 +142,9 @@ function MeetingScheduleList({
   now,
   onStart,
   onJoin,
+  onOpenSummary,
   startingMeetingId = null,
+  hasActiveMeeting = false,
 }) {
   const selectedMonth =
     selectedDate.getMonth() + 1;
@@ -154,22 +189,26 @@ function MeetingScheduleList({
                 meeting.scheduledStartAt,
               );
 
-            const scheduledEnd =
-              getMeetingDateTime(
-                meeting.scheduledEndAt,
-              );
+            const hasReachedStartTime =
+              Boolean(scheduledStart) &&
+              currentTime >=
+              scheduledStart.getTime();
 
+            /*
+             * 시작 가능 조건
+             *
+             * 1. SCHEDULED 상태
+             * 2. 예정 시작 시간이 지남
+             * 3. 현재 다른 회의가 진행 중이지 않음
+             *
+             * scheduledEndAt은 시작 가능 여부에
+             * 사용하지 않는다.
+             */
             const canStart =
-              meeting.status === 'SCHEDULED' &&
-              scheduledStart &&
-              currentTime >= scheduledStart.getTime() &&
-              (!scheduledEnd ||
-                currentTime <= scheduledEnd.getTime());
-
-            const hasPassedSchedule =
-              meeting.status === 'SCHEDULED' &&
-              scheduledEnd &&
-              currentTime > scheduledEnd.getTime();
+              meeting.status ===
+              'SCHEDULED' &&
+              hasReachedStartTime &&
+              !hasActiveMeeting;
 
             const isStarting =
               startingMeetingId ===
@@ -183,17 +222,20 @@ function MeetingScheduleList({
                 {/* 시간 */}
                 <div className="w-[92px] shrink-0">
                   <p className="text-sm font-semibold text-[#101211]">
-                    {meeting.startTime || '--:--'}
+                    {meeting.startTime ||
+                      '--:--'}
                   </p>
 
                   <p className="mt-1 text-xs text-[#8A9490]">
-                    ~ {meeting.endTime || '--:--'}
+                    ~{' '}
+                    {meeting.endTime ||
+                      '--:--'}
                   </p>
                 </div>
 
                 <div className="h-12 w-px shrink-0 bg-[#EDF0EF]" />
 
-                {/* 회의 내용 */}
+                {/* 회의 정보 */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <h4 className="truncate text-sm font-semibold text-[#101211]">
@@ -212,7 +254,9 @@ function MeetingScheduleList({
                   </div>
 
                   <div className="mt-1.5 flex items-center gap-2 text-xs text-[#7B8581]">
-                    <span>{meeting.team}</span>
+                    <span>
+                      {meeting.team}
+                    </span>
 
                     {meeting.agenda && (
                       <>
@@ -230,8 +274,7 @@ function MeetingScheduleList({
                   {meeting.status ===
                     'SCHEDULED' &&
                     scheduledStart &&
-                    currentTime <
-                    scheduledStart.getTime() && (
+                    !hasReachedStartTime && (
                       <div className="mt-2 flex items-center gap-1 text-[11px] text-[#8A9490]">
                         <ClockIcon />
 
@@ -242,14 +285,23 @@ function MeetingScheduleList({
                       </div>
                     )}
 
-                  {hasPassedSchedule && (
-                    <p className="mt-2 text-[11px] text-[#F64E42]">
-                      예약 시간이 종료되었습니다.
-                    </p>
-                  )}
+                  {meeting.status ===
+                    'SCHEDULED' &&
+                    hasReachedStartTime &&
+                    hasActiveMeeting && (
+                      <div className="mt-2 flex items-center gap-1 text-[11px] text-[#8A9490]">
+                        <ClockIcon />
+
+                        <span>
+                          진행 중인 회의가
+                          종료되면 시작할 수
+                          있습니다.
+                        </span>
+                      </div>
+                    )}
                 </div>
 
-                {/* 상태별 액션 */}
+                {/* 액션 */}
                 <div className="shrink-0">
                   {meeting.status ===
                     'IN_PROGRESS' ? (
@@ -268,12 +320,14 @@ function MeetingScheduleList({
                     <button
                       type="button"
                       disabled={
-                        !canStart || isStarting
+                        !canStart ||
+                        isStarting
                       }
                       onClick={() =>
                         onStart(meeting)
                       }
-                      className={`flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-xs font-semibold transition ${canStart && !isStarting
+                      className={`flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-xs font-semibold transition ${canStart &&
+                        !isStarting
                         ? 'bg-[#101211] text-white hover:opacity-80'
                         : 'cursor-not-allowed bg-[#E4E9E7] text-[#A7B0AC]'
                         }`}
@@ -285,9 +339,18 @@ function MeetingScheduleList({
                         : '시작하기'}
                     </button>
                   ) : (
-                    <span className="px-3 py-2 text-xs font-medium text-[#8A9490]">
-                      종료된 회의
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onOpenSummary(
+                          meeting,
+                        )
+                      }
+                      className="flex items-center gap-1.5 rounded-lg border border-[#D8DFDC] bg-white px-4 py-2.5 text-xs font-semibold text-[#303633] transition hover:bg-[#F5F7F6]"
+                    >
+                      <FileIcon />
+                      회의록 보기
+                    </button>
                   )}
                 </div>
               </div>

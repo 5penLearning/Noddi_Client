@@ -17,9 +17,12 @@ import {
 } from '../../api/meetingApi';
 
 import MeetingSidePanel from '../../components/feature/meeting/MeetingSidePanel';
+
 import useDailyCall from '../../hooks/useDailyCall';
 
-function MicrophoneIcon({ off = false }) {
+function MicrophoneIcon({
+  off = false,
+}) {
   return (
     <svg
       width="18"
@@ -64,7 +67,9 @@ function MicrophoneIcon({ off = false }) {
   );
 }
 
-function CameraIcon({ off = false }) {
+function CameraIcon({
+  off = false,
+}) {
   return (
     <svg
       width="19"
@@ -252,6 +257,64 @@ function FileIcon() {
   );
 }
 
+function RecordIcon({
+  recording = false,
+}) {
+  if (recording) {
+    return (
+      <svg
+        width="19"
+        height="19"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden="true"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="8"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        />
+
+        <rect
+          x="9"
+          y="9"
+          width="6"
+          height="6"
+          rx="1"
+          fill="currentColor"
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      width="19"
+      height="19"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="8"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+
+      <circle
+        cx="12"
+        cy="12"
+        r="4"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 function ChevronLeftIcon() {
   return (
     <svg
@@ -292,12 +355,17 @@ function ChevronRightIcon() {
   );
 }
 
-function getParticipantName(participant) {
+function getParticipantName(
+  participant,
+) {
   if (participant?.local) {
     return '나';
   }
 
-  return participant?.user_name || '참여자';
+  return (
+    participant?.user_name ||
+    '참여자'
+  );
 }
 
 function VideoTrack({
@@ -308,21 +376,29 @@ function VideoTrack({
   const videoRef = useRef(null);
 
   useEffect(() => {
-    const videoElement = videoRef.current;
+    const videoElement =
+      videoRef.current;
 
-    if (!videoElement || !track) {
+    if (
+      !videoElement ||
+      !track
+    ) {
       return undefined;
     }
 
-    const mediaStream = new MediaStream([track]);
+    const mediaStream =
+      new MediaStream([track]);
 
-    videoElement.srcObject = mediaStream;
+    videoElement.srcObject =
+      mediaStream;
 
     return () => {
       if (
-        videoElement.srcObject === mediaStream
+        videoElement.srcObject ===
+        mediaStream
       ) {
-        videoElement.srcObject = null;
+        videoElement.srcObject =
+          null;
       }
     };
   }, [track]);
@@ -348,7 +424,8 @@ function ParticipantAudio({
       ?.persistentTrack;
 
   useEffect(() => {
-    const audioElement = audioRef.current;
+    const audioElement =
+      audioRef.current;
 
     if (
       participant?.local ||
@@ -358,17 +435,21 @@ function ParticipantAudio({
       return undefined;
     }
 
-    const mediaStream = new MediaStream([
-      audioTrack,
-    ]);
+    const mediaStream =
+      new MediaStream([
+        audioTrack,
+      ]);
 
-    audioElement.srcObject = mediaStream;
+    audioElement.srcObject =
+      mediaStream;
 
     return () => {
       if (
-        audioElement.srcObject === mediaStream
+        audioElement.srcObject ===
+        mediaStream
       ) {
-        audioElement.srcObject = null;
+        audioElement.srcObject =
+          null;
       }
     };
   }, [
@@ -396,20 +477,22 @@ function ParticipantTile({
   participant,
 }) {
   const name =
-    getParticipantName(participant);
+    getParticipantName(
+      participant,
+    );
 
   const videoTrack =
     participant?.tracks?.video
       ?.persistentTrack;
 
   const isCameraOn =
-    participant?.tracks?.video?.state ===
-    'playable' &&
+    participant?.tracks?.video
+      ?.state === 'playable' &&
     Boolean(videoTrack);
 
   const isMicOn =
-    participant?.tracks?.audio?.state ===
-    'playable';
+    participant?.tracks?.audio
+      ?.state === 'playable';
 
   return (
     <div className="relative flex min-h-0 items-center justify-center overflow-hidden border border-[#444] bg-[#202422]">
@@ -420,7 +503,9 @@ function ParticipantTile({
       {isCameraOn ? (
         <VideoTrack
           track={videoTrack}
-          muted={participant.local}
+          muted={
+            participant.local
+          }
           className="h-full w-full object-cover"
         />
       ) : (
@@ -457,56 +542,66 @@ function ParticipantStrip({
       <div className="flex min-w-0 flex-1 overflow-hidden">
         {participants
           .slice(0, 6)
-          .map((participant) => {
-            const name =
-              getParticipantName(
-                participant,
-              );
+          .map(
+            (participant) => {
+              const name =
+                getParticipantName(
+                  participant,
+                );
 
-            const videoTrack =
-              participant?.tracks?.video
-                ?.persistentTrack;
+              const videoTrack =
+                participant?.tracks
+                  ?.video
+                  ?.persistentTrack;
 
-            const isCameraOn =
-              participant?.tracks?.video
-                ?.state === 'playable' &&
-              Boolean(videoTrack);
+              const isCameraOn =
+                participant?.tracks
+                  ?.video?.state ===
+                'playable' &&
+                Boolean(
+                  videoTrack,
+                );
 
-            return (
-              <div
-                key={
-                  participant.session_id
-                }
-                className="relative min-w-[128px] flex-1 overflow-hidden border-r border-[#444] bg-[#202422]"
-              >
-                <ParticipantAudio
-                  participant={
-                    participant
+              return (
+                <div
+                  key={
+                    participant.session_id
                   }
-                />
-
-                {isCameraOn ? (
-                  <VideoTrack
-                    track={videoTrack}
-                    muted={
-                      participant.local
+                  className="relative min-w-[128px] flex-1 overflow-hidden border-r border-[#444] bg-[#202422]"
+                >
+                  <ParticipantAudio
+                    participant={
+                      participant
                     }
-                    className="h-full w-full object-cover"
                   />
-                ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#353B38] text-xs font-semibold text-white">
-                      {name.charAt(0)}
-                    </div>
-                  </div>
-                )}
 
-                <span className="absolute bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold text-white">
-                  {name}
-                </span>
-              </div>
-            );
-          })}
+                  {isCameraOn ? (
+                    <VideoTrack
+                      track={
+                        videoTrack
+                      }
+                      muted={
+                        participant.local
+                      }
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#353B38] text-xs font-semibold text-white">
+                        {name.charAt(
+                          0,
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <span className="absolute bottom-2 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold text-white">
+                    {name}
+                  </span>
+                </div>
+              );
+            },
+          )}
       </div>
 
       <button
@@ -523,7 +618,8 @@ function ScreenShareView({
   participant,
 }) {
   const screenTrack =
-    participant?.tracks?.screenVideo
+    participant?.tracks
+      ?.screenVideo
       ?.persistentTrack;
 
   if (!screenTrack) {
@@ -545,6 +641,7 @@ function ToolbarButton({
   icon,
   label,
   active = false,
+  danger = false,
   disabled = false,
   onClick,
 }) {
@@ -554,7 +651,9 @@ function ToolbarButton({
       disabled={disabled}
       onClick={onClick}
       className={`flex min-w-[58px] flex-col items-center gap-1 text-[10px] transition ${disabled
-          ? 'cursor-not-allowed text-[#59625F]'
+        ? 'cursor-not-allowed text-[#59625F]'
+        : danger
+          ? 'text-[#F64E42]'
           : active
             ? 'text-[#31F5A0]'
             : 'text-[#D7DEDB] hover:text-white'
@@ -571,149 +670,175 @@ function ToolbarButton({
 
 function MeetingRoomPage() {
   const navigate = useNavigate();
+
   const location = useLocation();
-  const { meetingId } = useParams();
+
+  const { meetingId } =
+    useParams();
 
   const locationMeeting =
     location.state?.meeting;
 
   const [meeting, setMeeting] =
-    useState(locationMeeting ?? null);
+    useState(
+      locationMeeting ?? null,
+    );
 
   const [roomUrl, setRoomUrl] =
     useState(null);
 
-  const [activePanel, setActivePanel] =
-    useState(null);
+  const [
+    activePanel,
+    setActivePanel,
+  ] = useState(null);
 
   const [
     isLoadingMeeting,
     setIsLoadingMeeting,
   ] = useState(true);
 
-  const [isEnding, setIsEnding] =
-    useState(false);
+  const [
+    isEnding,
+    setIsEnding,
+  ] = useState(false);
 
-  const [roomError, setRoomError] =
-    useState(null);
+  const [
+    roomError,
+    setRoomError,
+  ] = useState(null);
 
   const {
     participants,
+
     isJoining,
     isJoined,
+
     isMicOn,
     isCameraOn,
     isSharing,
+
+    isRecording,
+    isRecordingStarting,
+    isRecordingStopping,
+    recordingError,
+
     error: dailyError,
+
     toggleMic,
     toggleCamera,
     toggleScreenShare,
+
+    startRecording,
+    stopRecording,
+
     leaveCall,
   } = useDailyCall(roomUrl);
 
   /*
-   * 회의방 진입
-   *
-   * 여기서는 회의를 "시작"하지 않는다.
-   *
-   * 이미 IN_PROGRESS 상태인 회의의
-   * roomUrl을 조회해서 Daily에 참여한다.
+   * 이미 시작된 회의의
+   * roomUrl 조회 후 참여
    */
   useEffect(() => {
     let cancelled = false;
 
-    const loadMeetingRoom = async () => {
-      try {
-        setIsLoadingMeeting(true);
-        setRoomError(null);
-
-        const response =
-          await getMeeting(meetingId);
-
-        if (cancelled) {
-          return;
-        }
-
-        const meetingData =
-          response?.result;
-
-        if (!meetingData) {
-          throw new Error(
-            '회의 정보를 불러오지 못했습니다.',
+    const loadMeetingRoom =
+      async () => {
+        try {
+          setIsLoadingMeeting(
+            true,
           );
-        }
 
-        setMeeting((previousMeeting) => ({
-          ...previousMeeting,
-          ...meetingData,
-        }));
+          setRoomError(null);
 
-        /*
-         * 예약 상태라면 아직 Daily Room이 없는 상태
-         */
-        if (
-          meetingData.status ===
-          'SCHEDULED'
-        ) {
-          throw new Error(
-            '아직 시작되지 않은 회의입니다.',
+          const response =
+            await getMeeting(
+              meetingId,
+            );
+
+          if (cancelled) {
+            return;
+          }
+
+          const meetingData =
+            response?.result;
+
+          if (!meetingData) {
+            throw new Error(
+              '회의 정보를 불러오지 못했습니다.',
+            );
+          }
+
+          setMeeting(
+            (
+              previousMeeting,
+            ) => ({
+              ...previousMeeting,
+              ...meetingData,
+            }),
           );
-        }
 
-        /*
-         * 종료된 회의는 재입장 불가
-         */
-        if (
-          meetingData.status === 'ENDED'
-        ) {
-          throw new Error(
-            '이미 종료된 회의입니다.',
+          if (
+            meetingData.status ===
+            'SCHEDULED'
+          ) {
+            throw new Error(
+              '아직 시작되지 않은 회의입니다.',
+            );
+          }
+
+          if (
+            meetingData.status ===
+            'ENDED'
+          ) {
+            throw new Error(
+              '이미 종료된 회의입니다.',
+            );
+          }
+
+          if (
+            meetingData.status !==
+            'IN_PROGRESS'
+          ) {
+            throw new Error(
+              '현재 참여할 수 없는 회의입니다.',
+            );
+          }
+
+          if (
+            !meetingData.roomUrl
+          ) {
+            throw new Error(
+              '회의방 URL을 불러오지 못했습니다.',
+            );
+          }
+
+          setRoomUrl(
+            meetingData.roomUrl,
           );
-        }
+        } catch (error) {
+          if (cancelled) {
+            return;
+          }
 
-        /*
-         * 실제 참여 가능한 상태
-         */
-        if (
-          meetingData.status !==
-          'IN_PROGRESS'
-        ) {
-          throw new Error(
-            '현재 참여할 수 없는 회의입니다.',
+          console.error(
+            'Failed to load meeting room:',
+            error,
           );
-        }
 
-        if (!meetingData.roomUrl) {
-          throw new Error(
-            '회의방 URL을 불러오지 못했습니다.',
+          setRoomError(
+            error?.response?.data
+              ?.message ??
+            error?.message ??
+            '회의방에 참여하지 못했습니다.',
           );
+        } finally {
+          if (!cancelled) {
+            setIsLoadingMeeting(
+              false,
+            );
+          }
         }
-
-        setRoomUrl(
-          meetingData.roomUrl,
-        );
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        console.error(
-          'Failed to load meeting room:',
-          error,
-        );
-
-        setRoomError(
-          error?.response?.data
-            ?.message ??
-          error?.message ??
-          '회의방에 참여하지 못했습니다.',
-        );
-      } finally {
-        if (!cancelled) {
-          setIsLoadingMeeting(false);
-        }
-      }
-    };
+      };
 
     loadMeetingRoom();
 
@@ -722,47 +847,46 @@ function MeetingRoomPage() {
     };
   }, [meetingId]);
 
-  /*
-   * 화면 공유 중인 참가자
-   */
   const screenSharingParticipant =
     participants.find(
       (participant) =>
-        participant?.tracks?.screenVideo
-          ?.state === 'playable' &&
-        participant?.tracks?.screenVideo
+        participant?.tracks
+          ?.screenVideo?.state ===
+        'playable' &&
+        participant?.tracks
+          ?.screenVideo
           ?.persistentTrack,
     );
 
-  /*
-   * 메인 화면에 표시할 참가자
-   */
   const visibleParticipants =
     participants.slice(0, 4);
 
-  const gridClassName = useMemo(() => {
-    if (
-      visibleParticipants.length <= 1
-    ) {
-      return 'grid-cols-1 grid-rows-1';
-    }
+  const gridClassName =
+    useMemo(() => {
+      if (
+        visibleParticipants.length <=
+        1
+      ) {
+        return 'grid-cols-1 grid-rows-1';
+      }
 
-    if (
-      visibleParticipants.length === 2
-    ) {
-      return 'grid-cols-2 grid-rows-1';
-    }
+      if (
+        visibleParticipants.length ===
+        2
+      ) {
+        return 'grid-cols-2 grid-rows-1';
+      }
 
-    return 'grid-cols-2 grid-rows-2';
-  }, [visibleParticipants.length]);
+      return 'grid-cols-2 grid-rows-2';
+    }, [
+      visibleParticipants.length,
+    ]);
 
-  /*
-   * 우측 참여자 패널용 데이터
-   */
   const sidePanelParticipants =
     participants.map(
       (participant) => ({
-        id: participant.session_id,
+        id:
+          participant.session_id,
 
         name:
           getParticipantName(
@@ -775,11 +899,14 @@ function MeetingRoomPage() {
           '참여자'
           : '참여자',
 
-        isMe: participant.local,
+        isMe:
+          participant.local,
       }),
     );
 
-  const togglePanel = (panel) => {
+  const togglePanel = (
+    panel,
+  ) => {
     setActivePanel(
       (previousPanel) =>
         previousPanel === panel
@@ -789,70 +916,126 @@ function MeetingRoomPage() {
   };
 
   /*
-   * 나가기
-   *
-   * Daily 연결만 종료한다.
-   * 전체 회의는 종료하지 않는다.
+   * 녹음 버튼
    */
-  const handleLeave = async () => {
-    try {
-      await leaveCall();
-    } catch (error) {
-      console.error(
-        'Failed to leave meeting:',
-        error,
-      );
-    } finally {
-      navigate('/meetings');
-    }
-  };
+  const handleRecording =
+    async () => {
+      if (
+        !isJoined ||
+        isRecordingStarting ||
+        isRecordingStopping
+      ) {
+        return;
+      }
+
+      try {
+        setRoomError(null);
+
+        if (isRecording) {
+          await stopRecording();
+
+          return;
+        }
+
+        await startRecording();
+      } catch (error) {
+        console.error(
+          'Recording action failed:',
+          error,
+        );
+      }
+    };
 
   /*
-   * 회의 종료
+   * 개인 나가기
    *
-   * 전체 회의를 종료하고
-   * 백엔드에서 Daily Room을 삭제한다.
+   * 녹음 중이어도 녹음을 끄지 않는다.
+   * 다른 참가자가 회의를 계속할 수 있다.
    */
-  const handleEndMeeting = async () => {
-    if (isEnding) {
-      return;
-    }
+  const handleLeave =
+    async () => {
+      try {
+        await leaveCall();
+      } catch (error) {
+        console.error(
+          'Failed to leave meeting:',
+          error,
+        );
+      } finally {
+        navigate('/meetings');
+      }
+    };
 
-    try {
-      setIsEnding(true);
-      setRoomError(null);
+  /*
+   * 전체 회의 종료
+   *
+   * 녹음 중이면
+   * 녹음을 먼저 종료하고,
+   * recording-stopped 확인 후
+   * 백엔드 회의를 종료한다.
+   */
+  const handleEndMeeting =
+    async () => {
+      if (isEnding) {
+        return;
+      }
 
-      await endMeeting(meetingId);
+      try {
+        setIsEnding(true);
 
-      await leaveCall();
+        setRoomError(null);
 
-      navigate('/meetings');
-    } catch (error) {
-      console.error(
-        'Failed to end meeting:',
-        error,
-      );
+        if (isRecording) {
+          await stopRecording();
+        }
 
-      setRoomError(
-        error?.response?.data
-          ?.message ??
-        error?.message ??
-        '회의를 종료하지 못했습니다.',
-      );
-    } finally {
-      setIsEnding(false);
-    }
-  };
+        await endMeeting(
+          meetingId,
+        );
+
+        await leaveCall();
+
+        navigate('/meetings');
+      } catch (error) {
+        console.error(
+          'Failed to end meeting:',
+          error,
+        );
+
+        setRoomError(
+          error?.message ??
+          error?.response?.data
+            ?.message ??
+          '회의를 종료하지 못했습니다.',
+        );
+      } finally {
+        setIsEnding(false);
+      }
+    };
 
   const connectionError =
-    roomError || dailyError;
+    roomError ||
+    dailyError ||
+    recordingError;
 
   const isLoading =
     isLoadingMeeting ||
-    Boolean(roomUrl && isJoining);
+    Boolean(
+      roomUrl &&
+      isJoining,
+    );
+
+  const recordingLabel =
+    isRecordingStarting
+      ? '녹음 시작 중'
+      : isRecordingStopping
+        ? '녹음 종료 중'
+        : isRecording
+          ? '녹음 종료'
+          : '녹음 시작';
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-[#101211]">
+    <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-[#101211]">
       {connectionError && (
         <div className="flex shrink-0 items-center justify-between bg-[#FFF1F0] px-5 py-3">
           <p className="text-sm text-[#F64E42]">
@@ -863,7 +1046,9 @@ function MeetingRoomPage() {
             <button
               type="button"
               onClick={() =>
-                navigate('/meetings')
+                navigate(
+                  '/meetings',
+                )
               }
               className="rounded-lg border border-[#D9DFDC] bg-white px-4 py-2 text-xs text-[#303633]"
             >
@@ -880,6 +1065,15 @@ function MeetingRoomPage() {
               다시 시도
             </button>
           </div>
+        </div>
+      )}
+
+      {/* 녹음 중 표시 */}
+      {isRecording && (
+        <div className="pointer-events-none absolute left-1/2 top-4 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/70 px-4 py-2 text-xs font-semibold text-white shadow-lg">
+          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#F64E42]" />
+
+          <span>녹음 중</span>
         </div>
       )}
 
@@ -945,7 +1139,9 @@ function MeetingRoomPage() {
               sidePanelParticipants
             }
             onClose={() =>
-              setActivePanel(null)
+              setActivePanel(
+                null,
+              )
             }
           />
         )}
@@ -953,6 +1149,7 @@ function MeetingRoomPage() {
 
       {/* 하단 툴바 */}
       <footer className="relative flex h-[64px] shrink-0 items-center bg-[#101211] px-4">
+        {/* 왼쪽 */}
         <div className="flex items-center gap-2">
           <ToolbarButton
             label={
@@ -978,15 +1175,20 @@ function MeetingRoomPage() {
             }
             icon={
               <CameraIcon
-                off={!isCameraOn}
+                off={
+                  !isCameraOn
+                }
               />
             }
             active={isCameraOn}
             disabled={!isJoined}
-            onClick={toggleCamera}
+            onClick={
+              toggleCamera
+            }
           />
         </div>
 
+        {/* 중앙 */}
         <div className="absolute left-1/2 flex -translate-x-1/2 items-center gap-4">
           <ToolbarButton
             label={`참여자 ${participants.length}`}
@@ -1027,7 +1229,8 @@ function MeetingRoomPage() {
             label="채팅"
             icon={<ChatIcon />}
             active={
-              activePanel === 'chat'
+              activePanel ===
+              'chat'
             }
             disabled={!isJoined}
             onClick={() =>
@@ -1039,19 +1242,51 @@ function MeetingRoomPage() {
             label="AI 회의록"
             icon={<FileIcon />}
             active={
-              activePanel === 'ai'
+              activePanel ===
+              'ai'
             }
+            disabled={!isJoined}
             onClick={() =>
               togglePanel('ai')
             }
           />
+
+          <ToolbarButton
+            label={
+              recordingLabel
+            }
+            icon={
+              <RecordIcon
+                recording={
+                  isRecording
+                }
+              />
+            }
+            danger={
+              isRecording ||
+              isRecordingStarting ||
+              isRecordingStopping
+            }
+            disabled={
+              !isJoined ||
+              isRecordingStarting ||
+              isRecordingStopping
+            }
+            onClick={
+              handleRecording
+            }
+          />
         </div>
 
+        {/* 오른쪽 */}
         <div className="ml-auto flex items-center gap-3">
           <button
             type="button"
             disabled={
-              isEnding || !isJoined
+              isEnding ||
+              !isJoined ||
+              isRecordingStarting ||
+              isRecordingStopping
             }
             onClick={
               handleEndMeeting
@@ -1066,7 +1301,9 @@ function MeetingRoomPage() {
           <button
             type="button"
             disabled={!isJoined}
-            onClick={handleLeave}
+            onClick={
+              handleLeave
+            }
             className="rounded-lg bg-[#F64E42] px-6 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             나가기

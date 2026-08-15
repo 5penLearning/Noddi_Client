@@ -61,12 +61,18 @@ function MeetingReservationModal({
     }
 
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && !isSubmitting) {
+      if (
+        event.key === 'Escape' &&
+        !isSubmitting
+      ) {
         onClose();
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener(
+      'keydown',
+      handleKeyDown,
+    );
 
     return () => {
       window.removeEventListener(
@@ -96,9 +102,11 @@ function MeetingReservationModal({
   };
 
   const validateReservation = () => {
-    const selectedOption = meetingFilters.find(
-      (filter) => filter.id === form.filterId,
-    );
+    const selectedOption =
+      meetingFilters.find(
+        (filter) =>
+          filter.id === form.filterId,
+      );
 
     if (!selectedOption) {
       return {
@@ -107,7 +115,22 @@ function MeetingReservationModal({
       };
     }
 
-    if (form.startTime >= form.endTime) {
+    if (
+      !form.title.trim() ||
+      !form.date ||
+      !form.startTime ||
+      !form.endTime
+    ) {
+      return {
+        valid: false,
+        message:
+          '필수 정보를 모두 입력해주세요.',
+      };
+    }
+
+    if (
+      form.startTime >= form.endTime
+    ) {
       return {
         valid: false,
         message:
@@ -121,7 +144,9 @@ function MeetingReservationModal({
 
     const now = new Date();
 
-    if (startDateTime <= now) {
+    if (
+      startDateTime <= now
+    ) {
       return {
         valid: false,
         message:
@@ -129,25 +154,42 @@ function MeetingReservationModal({
       };
     }
 
-    const hasOverlap = meetings.some((meeting) => {
-      if (
-        meeting.date !== form.date ||
-        meeting.teamId !== selectedOption.teamId
-      ) {
-        return false;
-      }
+    /*
+     * 종료된 회의는 중복 검사에서 제외
+     *
+     * SCHEDULED / IN_PROGRESS 회의만
+     * 같은 팀 + 같은 날짜에서 시간 충돌 여부 확인
+     */
+    const hasOverlap = meetings.some(
+      (meeting) => {
+        if (
+          meeting.status === 'ENDED'
+        ) {
+          return false;
+        }
 
-      return (
-        form.startTime < meeting.endTime &&
-        form.endTime > meeting.startTime
-      );
-    });
+        if (
+          meeting.date !== form.date ||
+          meeting.teamId !==
+          selectedOption.teamId
+        ) {
+          return false;
+        }
+
+        return (
+          form.startTime <
+          meeting.endTime &&
+          form.endTime >
+          meeting.startTime
+        );
+      },
+    );
 
     if (hasOverlap) {
       return {
         valid: false,
         message:
-          '선택한 시간에 이미 해당 팀의 회의가 있습니다.',
+          '선택한 시간에 이미 해당 팀의 예약 또는 진행 중인 회의가 있습니다.',
       };
     }
 
@@ -157,27 +199,43 @@ function MeetingReservationModal({
     };
   };
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (
+    event,
+  ) => {
     event.preventDefault();
 
     if (isSubmitting) {
       return;
     }
 
-    const validation = validateReservation();
+    const validation =
+      validateReservation();
 
     if (!validation.valid) {
-      setErrorMessage(validation.message);
+      setErrorMessage(
+        validation.message,
+      );
+
       return;
     }
 
     await onReserve({
-      teamId: validation.selectedOption.teamId,
-      team: validation.selectedOption.team,
+      teamId:
+        validation.selectedOption
+          .teamId,
+
+      team:
+        validation.selectedOption
+          .team,
+
       title: form.title.trim(),
+
       agenda: form.agenda.trim(),
+
       date: form.date,
+
       startTime: form.startTime,
+
       endTime: form.endTime,
     });
   };
@@ -190,14 +248,16 @@ function MeetingReservationModal({
     form.endTime;
 
   const visibleError =
-    errorMessage || submitError;
+    errorMessage ||
+    submitError;
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4"
       onMouseDown={(event) => {
         if (
-          event.target === event.currentTarget &&
+          event.target ===
+          event.currentTarget &&
           !isSubmitting
         ) {
           onClose();
@@ -212,7 +272,8 @@ function MeetingReservationModal({
             </h2>
 
             <p className="mt-1 text-sm text-[#7B8581]">
-              새로운 회의 일정을 등록해주세요.
+              새로운 회의 일정을
+              등록해주세요.
             </p>
           </div>
 
@@ -243,13 +304,16 @@ function MeetingReservationModal({
                 type="text"
                 maxLength={50}
                 value={form.title}
-                onChange={handleChange}
+                onChange={
+                  handleChange
+                }
                 placeholder="회의명을 입력해주세요"
                 className="h-11 w-full rounded-lg border border-[#D8DFDC] px-3 text-sm text-[#101211] outline-none transition placeholder:text-[#A7B0AC] focus:border-[#101211]"
               />
 
               <p className="mt-1 text-right text-xs text-[#A7B0AC]">
-                {form.title.length}/50
+                {form.title.length}
+                /50
               </p>
             </div>
 
@@ -264,22 +328,35 @@ function MeetingReservationModal({
               <select
                 id="meeting-filter"
                 name="filterId"
-                value={form.filterId}
-                onChange={handleChange}
+                value={
+                  form.filterId
+                }
+                onChange={
+                  handleChange
+                }
                 className="h-11 w-full rounded-lg border border-[#D8DFDC] bg-white px-3 text-sm text-[#101211] outline-none transition focus:border-[#101211]"
               >
                 <option value="">
-                  팀을 선택해주세요
+                  팀을
+                  선택해주세요
                 </option>
 
-                {meetingFilters.map((filter) => (
-                  <option
-                    key={filter.id}
-                    value={filter.id}
-                  >
-                    {filter.label}
-                  </option>
-                ))}
+                {meetingFilters.map(
+                  (filter) => (
+                    <option
+                      key={
+                        filter.id
+                      }
+                      value={
+                        filter.id
+                      }
+                    >
+                      {
+                        filter.label
+                      }
+                    </option>
+                  ),
+                )}
               </select>
             </div>
 
@@ -297,7 +374,9 @@ function MeetingReservationModal({
                 type="date"
                 min={minDate}
                 value={form.date}
-                onChange={handleChange}
+                onChange={
+                  handleChange
+                }
                 className="h-11 w-full rounded-lg border border-[#D8DFDC] px-3 text-sm text-[#101211] outline-none transition focus:border-[#101211]"
               />
             </div>
@@ -315,8 +394,12 @@ function MeetingReservationModal({
                   id="meeting-start-time"
                   name="startTime"
                   type="time"
-                  value={form.startTime}
-                  onChange={handleChange}
+                  value={
+                    form.startTime
+                  }
+                  onChange={
+                    handleChange
+                  }
                   className="h-11 w-full rounded-lg border border-[#D8DFDC] px-3 text-sm text-[#101211] outline-none transition focus:border-[#101211]"
                 />
               </div>
@@ -333,8 +416,12 @@ function MeetingReservationModal({
                   id="meeting-end-time"
                   name="endTime"
                   type="time"
-                  value={form.endTime}
-                  onChange={handleChange}
+                  value={
+                    form.endTime
+                  }
+                  onChange={
+                    handleChange
+                  }
                   className="h-11 w-full rounded-lg border border-[#D8DFDC] px-3 text-sm text-[#101211] outline-none transition focus:border-[#101211]"
                 />
               </div>
@@ -346,6 +433,7 @@ function MeetingReservationModal({
                 className="mb-2 block text-sm font-medium text-[#101211]"
               >
                 회의 안건
+
                 <span className="ml-1 font-normal text-[#A7B0AC]">
                   선택
                 </span>
@@ -355,7 +443,9 @@ function MeetingReservationModal({
                 id="meeting-agenda"
                 name="agenda"
                 value={form.agenda}
-                onChange={handleChange}
+                onChange={
+                  handleChange
+                }
                 placeholder="회의에서 논의할 내용을 입력해주세요"
                 rows={4}
                 maxLength={200}
@@ -363,14 +453,17 @@ function MeetingReservationModal({
               />
 
               <p className="mt-1 text-right text-xs text-[#A7B0AC]">
-                {form.agenda.length}/200
+                {form.agenda.length}
+                /200
               </p>
             </div>
 
             {visibleError && (
               <div className="rounded-lg bg-[#FFF1F0] px-4 py-3">
                 <p className="text-sm text-[#F64E42]">
-                  {visibleError}
+                  {
+                    visibleError
+                  }
                 </p>
               </div>
             )}
@@ -379,7 +472,9 @@ function MeetingReservationModal({
           <div className="mt-7 flex justify-end gap-2">
             <button
               type="button"
-              disabled={isSubmitting}
+              disabled={
+                isSubmitting
+              }
               onClick={onClose}
               className="rounded-lg border border-[#D8DFDC] bg-white px-5 py-3 text-sm font-medium text-[#59625F] transition hover:bg-[#F5F7F6] disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -389,9 +484,11 @@ function MeetingReservationModal({
             <button
               type="submit"
               disabled={
-                !isFormFilled || isSubmitting
+                !isFormFilled ||
+                isSubmitting
               }
-              className={`rounded-lg px-5 py-3 text-sm font-semibold transition ${isFormFilled && !isSubmitting
+              className={`rounded-lg px-5 py-3 text-sm font-semibold transition ${isFormFilled &&
+                !isSubmitting
                 ? 'bg-[#101211] text-white hover:opacity-80'
                 : 'cursor-not-allowed bg-[#E4E9E7] text-[#A7B0AC]'
                 }`}
