@@ -16,6 +16,7 @@ import MeetingSummaryPage from '../pages/meeting/MeetingSummaryPage';
 import ProjectCreatePage from '../pages/ProjectCreatePage';
 import ProjectPage from '../pages/ProjectPage';
 import TemporaryPage from '../pages/TemporaryPage';
+import MyPage from '../pages/mypage/MyPage';
 
 function AppRouter() {
   return (
@@ -83,7 +84,7 @@ function AppRouter() {
         <Route
           path="/mypage"
           element={
-            <TemporaryPage title="마이페이지" />
+            <MyPage />
           }
         />
 
