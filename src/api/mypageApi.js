@@ -79,6 +79,30 @@ export const respondProjectInvitation =
     return data;
   };
 
+export const getTeamInvitations =
+  async () => {
+    const { data } = await api.get(
+      '/api/v1/users/me/teams/invitations',
+    );
+
+    return data;
+  };
+
+export const respondTeamInvitation =
+  async (
+    inviteId,
+    isAccepted,
+  ) => {
+    const { data } = await api.post(
+      `/api/v1/teams/invitations/${inviteId}/respond`,
+      {
+        isAccepted,
+      },
+    );
+
+    return data;
+  };
+
 export const getOrganizationProjects =
   async () => {
     const { data } = await api.get(

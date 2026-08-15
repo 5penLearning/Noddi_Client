@@ -11,7 +11,9 @@ import {
   getOrganizationProjects,
   getProjectInvitations,
   getProjectMembers,
+  getTeamInvitations,
   respondProjectInvitation,
+  respondTeamInvitation,
   verifyCurrentPassword,
 } from '../../api/mypageApi';
 
@@ -117,6 +119,57 @@ function normalizeProjects(response) {
   return [];
 }
 
+function normalizeInvitations(
+  projectInvitations,
+  teamInvitations,
+) {
+  const projects =
+    projectInvitations.map(
+      (invitation) => ({
+        ...invitation,
+
+        key: `PROJECT-${invitation.inviteId}`,
+
+        type: 'PROJECT',
+
+        targetName:
+          invitation.projectName,
+
+        targetDescription:
+          invitation.projectDescription ??
+          '',
+
+        role:
+          invitation.offeredRole ??
+          null,
+      }),
+    );
+
+  const teams =
+    teamInvitations.map(
+      (invitation) => ({
+        ...invitation,
+
+        key: `TEAM-${invitation.inviteId}`,
+
+        type: 'TEAM',
+
+        targetName:
+          invitation.teamName,
+
+        targetDescription:
+          '팀 초대',
+
+        role: null,
+      }),
+    );
+
+  return [
+    ...projects,
+    ...teams,
+  ];
+}
+
 function MyPage() {
   const navigate = useNavigate();
 
@@ -141,8 +194,8 @@ function MyPage() {
   ] = useState(true);
 
   const [
-    respondingInviteId,
-    setRespondingInviteId,
+    respondingInvitationKey,
+    setRespondingInvitationKey,
   ] = useState(null);
 
   const [
@@ -196,15 +249,18 @@ function MyPage() {
     useCallback(async () => {
       try {
         setIsLoading(true);
+
         setPageError('');
 
         const [
           profileResponse,
-          invitationResponse,
+          projectInvitationResponse,
+          teamInvitationResponse,
           projectResponse,
         ] = await Promise.all([
           getMyProfile(),
           getProjectInvitations(),
+          getTeamInvitations(),
           getOrganizationProjects(),
         ]);
 
@@ -212,16 +268,23 @@ function MyPage() {
           profileResponse?.result ??
           null;
 
-        const invitationData =
-          invitationResponse?.result ??
-          [];
+        const projectInvitations =
+          projectInvitationResponse
+            ?.result ?? [];
+
+        const teamInvitations =
+          teamInvitationResponse
+            ?.result ?? [];
 
         setProfile(
           profileData,
         );
 
         setInvitations(
-          invitationData,
+          normalizeInvitations(
+            projectInvitations,
+            teamInvitations,
+          ),
         );
 
         if (
@@ -311,30 +374,42 @@ function MyPage() {
 
   const handleInvitation =
     async (
-      inviteId,
+      invitation,
       isAccepted,
     ) => {
-      if (respondingInviteId) {
+      if (
+        respondingInvitationKey
+      ) {
         return;
       }
 
       try {
-        setRespondingInviteId(
-          inviteId,
+        setRespondingInvitationKey(
+          invitation.key,
         );
 
         setPageError('');
         setSuccessMessage('');
 
-        await respondProjectInvitation(
-          inviteId,
-          isAccepted,
-        );
+        if (
+          invitation.type ===
+          'TEAM'
+        ) {
+          await respondTeamInvitation(
+            invitation.inviteId,
+            isAccepted,
+          );
+        } else {
+          await respondProjectInvitation(
+            invitation.inviteId,
+            isAccepted,
+          );
+        }
 
         setSuccessMessage(
           isAccepted
-            ? '프로젝트 초대를 수락했습니다.'
-            : '프로젝트 초대를 거절했습니다.',
+            ? '초대를 수락했습니다.'
+            : '초대를 거절했습니다.',
         );
 
         await loadMyPage();
@@ -350,7 +425,7 @@ function MyPage() {
           '초대 응답에 실패했습니다.',
         );
       } finally {
-        setRespondingInviteId(
+        setRespondingInvitationKey(
           null,
         );
       }
@@ -384,6 +459,7 @@ function MyPage() {
         setPasswordConfirmError(
           '사용자 이메일 정보를 확인할 수 없습니다.',
         );
+
         return;
       }
 
@@ -602,78 +678,97 @@ function MyPage() {
                   ) : (
                     <div className="space-y-2">
                       {invitations.map(
-                        (
-                          invitation,
-                        ) => (
-                          <div
-                            key={
-                              invitation.inviteId
-                            }
-                            className="flex items-center justify-between gap-4 rounded-xl bg-[#F1F6F3] px-4 py-5"
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="h-7 w-7 shrink-0 rounded-full bg-[#D7DDDA]" />
+                        (invitation) => {
+                          const isResponding =
+                            respondingInvitationKey ===
+                            invitation.key;
 
-                                <p className="truncate text-xs text-[#8A9490]">
+                          return (
+                            <div
+                              key={
+                                invitation.key
+                              }
+                              className="flex items-center justify-between gap-4 rounded-xl bg-[#F1F6F3] px-4 py-5"
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="h-7 w-7 shrink-0 rounded-full bg-[#D7DDDA]" />
+
+                                  <p className="truncate text-xs text-[#8A9490]">
+                                    {
+                                      invitation.inviterName
+                                    }{' '}
+                                    님의 초대
+                                  </p>
+                                </div>
+
+                                <p className="mt-3 truncate text-sm font-semibold text-[#101211]">
                                   {
-                                    invitation.inviterName
-                                  }{' '}
-                                  님의 초대
+                                    invitation.targetName
+                                  }
                                 </p>
+
+                                <div className="mt-1 flex items-center gap-2">
+                                  <span className="text-[11px] text-[#8A9490]">
+                                    {invitation.type ===
+                                      'TEAM'
+                                      ? '팀 초대'
+                                      : '프로젝트 초대'}
+                                  </span>
+
+                                  {invitation.role && (
+                                    <>
+                                      <span className="text-[10px] text-[#C0C6C3]">
+                                        ·
+                                      </span>
+
+                                      <span className="text-[11px] text-[#8A9490]">
+                                        역할{' '}
+                                        {getRoleLabel(
+                                          invitation.role,
+                                        )}
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
                               </div>
 
-                              <p className="mt-3 truncate text-sm font-semibold text-[#101211]">
-                                {
-                                  invitation.projectName
-                                }
-                              </p>
+                              <div className="flex shrink-0 items-center gap-4">
+                                <button
+                                  type="button"
+                                  disabled={
+                                    isResponding
+                                  }
+                                  onClick={() =>
+                                    handleInvitation(
+                                      invitation,
+                                      true,
+                                    )
+                                  }
+                                  className="text-xs font-semibold text-[#101211] disabled:opacity-40"
+                                >
+                                  수락
+                                </button>
 
-                              <p className="mt-1 text-[11px] text-[#8A9490]">
-                                역할 ·{' '}
-                                {getRoleLabel(
-                                  invitation.offeredRole,
-                                )}
-                              </p>
+                                <button
+                                  type="button"
+                                  disabled={
+                                    isResponding
+                                  }
+                                  onClick={() =>
+                                    handleInvitation(
+                                      invitation,
+                                      false,
+                                    )
+                                  }
+                                  className="text-xs font-medium text-[#59625F] disabled:opacity-40"
+                                >
+                                  거절
+                                </button>
+                              </div>
                             </div>
-
-                            <div className="flex shrink-0 items-center gap-4">
-                              <button
-                                type="button"
-                                disabled={
-                                  respondingInviteId ===
-                                  invitation.inviteId
-                                }
-                                onClick={() =>
-                                  handleInvitation(
-                                    invitation.inviteId,
-                                    true,
-                                  )
-                                }
-                                className="text-xs font-semibold text-[#101211] disabled:opacity-40"
-                              >
-                                수락
-                              </button>
-
-                              <button
-                                type="button"
-                                disabled={
-                                  respondingInviteId ===
-                                  invitation.inviteId
-                                }
-                                onClick={() =>
-                                  handleInvitation(
-                                    invitation.inviteId,
-                                    false,
-                                  )
-                                }
-                                className="text-xs font-medium text-[#59625F] disabled:opacity-40"
-                              >
-                                거절
-                              </button>
-                            </div>
-                          </div>
-                        ),
+                          );
+                        },
                       )}
                     </div>
                   )}
