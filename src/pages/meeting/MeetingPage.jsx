@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   createMeeting,
   getMeetings,
+  startMeeting,
 } from '../../api/meetingApi';
 
 import { getMyTeams } from '../../api/teamApi';
@@ -92,7 +93,6 @@ function FolderIcon() {
 const quickActions = [
   {
     id: 'join',
-    label: '참여하기',
     icon: <VideoIcon />,
   },
   {
@@ -117,37 +117,92 @@ const WEEK_DAYS = [
   '토요일',
 ];
 
+function getLocalDateKey(date) {
+  const year = date.getFullYear();
+
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, '0');
+
+  const day = String(
+    date.getDate(),
+  ).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function getLocalTime(date) {
+  const hours = String(
+    date.getHours(),
+  ).padStart(2, '0');
+
+  const minutes = String(
+    date.getMinutes(),
+  ).padStart(2, '0');
+
+  return `${hours}:${minutes}`;
+}
+
+function parseMeetingDateTime(value) {
+  if (!value) {
+    return null;
+  }
+
+  const parsedDate = new Date(value);
+
+  if (
+    Number.isNaN(parsedDate.getTime())
+  ) {
+    return null;
+  }
+
+  return parsedDate;
+}
+
 function formatServerMeeting(
   meeting,
   team,
 ) {
-  const scheduledStartAt =
-    meeting.scheduledStartAt ?? '';
+  const scheduledStart =
+    parseMeetingDateTime(
+      meeting.scheduledStartAt,
+    );
 
-  const scheduledEndAt =
-    meeting.scheduledEndAt ?? '';
+  const scheduledEnd =
+    parseMeetingDateTime(
+      meeting.scheduledEndAt,
+    );
 
   return {
     ...meeting,
 
     id: meeting.meetingId,
+
     teamId: meeting.teamId,
 
     project: '',
+
     team: team?.name ?? '팀',
 
-    description: meeting.agenda ?? '',
+    description:
+      meeting.agenda ?? '',
 
-    date: scheduledStartAt
-      ? scheduledStartAt.slice(0, 10)
+    date: scheduledStart
+      ? getLocalDateKey(
+        scheduledStart,
+      )
       : '',
 
-    startTime: scheduledStartAt
-      ? scheduledStartAt.slice(11, 16)
+    startTime: scheduledStart
+      ? getLocalTime(
+        scheduledStart,
+      )
       : '',
 
-    endTime: scheduledEndAt
-      ? scheduledEndAt.slice(11, 16)
+    endTime: scheduledEnd
+      ? getLocalTime(
+        scheduledEnd,
+      )
       : '',
   };
 }
@@ -164,9 +219,11 @@ function MeetingPage() {
 
   const now = useCurrentDateTime();
 
-  const [teams, setTeams] = useState([]);
+  const [teams, setTeams] =
+    useState([]);
 
-  const [meetings, setMeetings] = useState([]);
+  const [meetings, setMeetings] =
+    useState([]);
 
   const [
     isLoadingMeetings,
@@ -193,101 +250,155 @@ function MeetingPage() {
     setReservationError,
   ] = useState('');
 
-  const [selectedDate, setSelectedDate] =
-    useState(() => new Date());
+  const [
+    isStartingMeeting,
+    setIsStartingMeeting,
+  ] = useState(false);
 
-  const [viewDate, setViewDate] = useState(
-    () =>
-      new Date(
-        new Date().getFullYear(),
-        new Date().getMonth(),
-        1,
-      ),
-  );
+  const [
+    startMeetingError,
+    setStartMeetingError,
+  ] = useState('');
+
+  const [
+    selectedDate,
+    setSelectedDate,
+  ] = useState(() => new Date());
+
+  const [viewDate, setViewDate] =
+    useState(
+      () =>
+        new Date(
+          new Date().getFullYear(),
+          new Date().getMonth(),
+          1,
+        ),
+    );
 
   const [
     selectedFilter,
     setSelectedFilter,
   ] = useState('ALL');
 
-  const loadMeetings = useCallback(async () => {
-    try {
-      setIsLoadingMeetings(true);
-      setMeetingLoadError('');
+  /*
+   * 팀 + 회의 목록 조회
+   */
+  const loadMeetings =
+    useCallback(async () => {
+      try {
+        setIsLoadingMeetings(true);
 
-      const teamResponse =
-        await getMyTeams();
+        setMeetingLoadError('');
 
-      const nextTeams =
-        teamResponse?.result ?? [];
+        const teamResponse =
+          await getMyTeams();
 
-      setTeams(nextTeams);
+        const nextTeams =
+          teamResponse?.result ?? [];
 
-      if (nextTeams.length === 0) {
-        setMeetings([]);
-        return;
-      }
+        setTeams(nextTeams);
 
-      const meetingResponses =
-        await Promise.all(
-          nextTeams.map((team) =>
-            getMeetings(team.teamId),
-          ),
-        );
+        if (
+          nextTeams.length === 0
+        ) {
+          setMeetings([]);
+          return;
+        }
 
-      const nextMeetings =
-        meetingResponses.flatMap(
-          (response, index) => {
-            const team =
-              nextTeams[index];
+        const meetingResponses =
+          await Promise.all(
+            nextTeams.map(
+              (team) =>
+                getMeetings(
+                  team.teamId,
+                ),
+            ),
+          );
+
+        const nextMeetings =
+          meetingResponses.flatMap(
+            (
+              response,
+              index,
+            ) => {
+              const team =
+                nextTeams[index];
+
+              return (
+                response?.result ?? []
+              ).map((meeting) =>
+                formatServerMeeting(
+                  meeting,
+                  team,
+                ),
+              );
+            },
+          );
+
+        nextMeetings.sort(
+          (
+            meetingA,
+            meetingB,
+          ) => {
+            const startA =
+              parseMeetingDateTime(
+                meetingA.scheduledStartAt,
+              );
+
+            const startB =
+              parseMeetingDateTime(
+                meetingB.scheduledStartAt,
+              );
+
+            if (
+              !startA &&
+              !startB
+            ) {
+              return 0;
+            }
+
+            if (!startA) {
+              return 1;
+            }
+
+            if (!startB) {
+              return -1;
+            }
 
             return (
-              response?.result ?? []
-            ).map((meeting) =>
-              formatServerMeeting(
-                meeting,
-                team,
-              ),
+              startA.getTime() -
+              startB.getTime()
             );
           },
         );
 
-      nextMeetings.sort(
-        (meetingA, meetingB) => {
-          const dateTimeA =
-            `${meetingA.date} ${meetingA.startTime}`;
+        setMeetings(
+          nextMeetings,
+        );
+      } catch (error) {
+        console.error(
+          'Failed to load meetings:',
+          error,
+        );
 
-          const dateTimeB =
-            `${meetingB.date} ${meetingB.startTime}`;
-
-          return dateTimeA.localeCompare(
-            dateTimeB,
-          );
-        },
-      );
-
-      setMeetings(nextMeetings);
-    } catch (error) {
-      console.error(
-        'Failed to load meetings:',
-        error,
-      );
-
-      setMeetingLoadError(
-        error?.response?.data?.message ??
-        '회의 정보를 불러오지 못했습니다.',
-      );
-    } finally {
-      setIsLoadingMeetings(false);
-    }
-  }, []);
+        setMeetingLoadError(
+          error?.response?.data
+            ?.message ??
+          '회의 정보를 불러오지 못했습니다.',
+        );
+      } finally {
+        setIsLoadingMeetings(
+          false,
+        );
+      }
+    }, []);
 
   useEffect(() => {
     loadMeetings();
   }, [loadMeetings]);
 
   /*
-   * 현재 실제 진행 중인 회의
+   * 현재 진행 중인 실제 회의
    */
   const currentMeeting =
     meetings.find(
@@ -295,6 +406,58 @@ function MeetingPage() {
         meeting.status ===
         'IN_PROGRESS',
     );
+
+  /*
+   * 시작 가능한 예약 회의
+   *
+   * 예약 시작 시간이 지났고
+   * 예약 종료 시간 전인 SCHEDULED 회의
+   */
+  const startableMeeting =
+    meetings.find((meeting) => {
+      if (
+        meeting.status !==
+        'SCHEDULED'
+      ) {
+        return false;
+      }
+
+      const scheduledStart =
+        parseMeetingDateTime(
+          meeting.scheduledStartAt,
+        );
+
+      const scheduledEnd =
+        parseMeetingDateTime(
+          meeting.scheduledEndAt,
+        );
+
+      if (!scheduledStart) {
+        return false;
+      }
+
+      const currentTime =
+        now.getTime();
+
+      const startTime =
+        scheduledStart.getTime();
+
+      if (
+        currentTime < startTime
+      ) {
+        return false;
+      }
+
+      if (
+        scheduledEnd &&
+        currentTime >
+        scheduledEnd.getTime()
+      ) {
+        return false;
+      }
+
+      return true;
+    });
 
   /*
    * 팀 필터
@@ -305,18 +468,17 @@ function MeetingPage() {
       label: '전체',
     },
 
-    ...teams.map((team) => ({
-      id: `TEAM-${team.teamId}`,
-      label: team.name,
-      teamId: team.teamId,
-      team: team.name,
-      project: '',
-    })),
+    ...teams.map(
+      (team) => ({
+        id: `TEAM-${team.teamId}`,
+        label: team.name,
+        teamId: team.teamId,
+        team: team.name,
+        project: '',
+      }),
+    ),
   ];
 
-  /*
-   * 선택된 팀 필터
-   */
   const filteredMeetings =
     selectedFilter === 'ALL'
       ? meetings
@@ -326,11 +488,10 @@ function MeetingPage() {
           selectedFilter,
       );
 
-  /*
-   * 선택 날짜 회의
-   */
   const selectedDateKey =
-    formatDateKey(selectedDate);
+    formatDateKey(
+      selectedDate,
+    );
 
   const selectedMeetings =
     filteredMeetings.filter(
@@ -349,7 +510,9 @@ function MeetingPage() {
   ).padStart(2, '0');
 
   const period =
-    hours >= 12 ? 'pm' : 'am';
+    hours >= 12
+      ? 'pm'
+      : 'am';
 
   const displayHour =
     hours % 12 || 12;
@@ -370,32 +533,137 @@ function MeetingPage() {
 
   /*
    * 진행 중 회의 참여
+   *
+   * /start 호출하지 않음
    */
-  const handleJoinMeeting = () => {
-    if (!currentMeeting) {
-      return;
-    }
+  const handleJoinMeeting =
+    () => {
+      if (!currentMeeting) {
+        return;
+      }
 
-    navigate(
-      `/meetings/${currentMeeting.meetingId}/room`,
-      {
-        state: {
-          meeting:
-            currentMeeting,
+      navigate(
+        `/meetings/${currentMeeting.meetingId}/room`,
+        {
+          state: {
+            meeting:
+              currentMeeting,
+          },
         },
-      },
-    );
-  };
+      );
+    };
+
+  /*
+   * 예약된 회의 시작
+   *
+   * 여기서만 /start 호출
+   */
+  const handleStartMeeting =
+    async () => {
+      if (
+        !startableMeeting ||
+        isStartingMeeting
+      ) {
+        return;
+      }
+
+      try {
+        setIsStartingMeeting(
+          true,
+        );
+
+        setStartMeetingError(
+          '',
+        );
+
+        const response =
+          await startMeeting(
+            startableMeeting.meetingId,
+          );
+
+        const startedMeeting = {
+          ...startableMeeting,
+
+          status:
+            'IN_PROGRESS',
+
+          roomName:
+            response?.result
+              ?.roomName ??
+            startableMeeting.roomName,
+
+          roomUrl:
+            response?.result
+              ?.roomUrl ??
+            startableMeeting.roomUrl,
+        };
+
+        /*
+         * /start 성공 후
+         * MeetingRoomPage로 이동
+         *
+         * RoomPage에서는 GET 단건 조회 후
+         * 기존 roomUrl로 Daily에 참여
+         */
+        navigate(
+          `/meetings/${startableMeeting.meetingId}/room`,
+          {
+            state: {
+              meeting:
+                startedMeeting,
+            },
+          },
+        );
+      } catch (error) {
+        console.error(
+          'Failed to start meeting:',
+          error,
+        );
+
+        setStartMeetingError(
+          error?.response?.data
+            ?.message ??
+          '회의를 시작하지 못했습니다.',
+        );
+
+        /*
+         * 서버 상태가 이미 변경됐을 수 있으므로
+         * 목록 다시 조회
+         */
+        await loadMeetings();
+      } finally {
+        setIsStartingMeeting(
+          false,
+        );
+      }
+    };
+
+  /*
+   * 참여 / 시작 빠른 액션
+   */
+  const handleMeetingAction =
+    () => {
+      if (currentMeeting) {
+        handleJoinMeeting();
+        return;
+      }
+
+      if (startableMeeting) {
+        handleStartMeeting();
+      }
+    };
 
   const handleQuickAction = (
     actionId,
   ) => {
     if (actionId === 'join') {
-      handleJoinMeeting();
+      handleMeetingAction();
       return;
     }
 
-    if (actionId === 'reserve') {
+    if (
+      actionId === 'reserve'
+    ) {
       setReservationError('');
 
       setIsReservationModalOpen(
@@ -405,7 +673,9 @@ function MeetingPage() {
       return;
     }
 
-    if (actionId === 'records') {
+    if (
+      actionId === 'records'
+    ) {
       return;
     }
   };
@@ -416,8 +686,13 @@ function MeetingPage() {
   const handleReserveMeeting =
     async (reservation) => {
       try {
-        setIsCreatingMeeting(true);
-        setReservationError('');
+        setIsCreatingMeeting(
+          true,
+        );
+
+        setReservationError(
+          '',
+        );
 
         const scheduledStartAt =
           toScheduledDateTime(
@@ -432,10 +707,17 @@ function MeetingPage() {
           );
 
         await createMeeting({
-          teamId: reservation.teamId,
-          title: reservation.title,
-          agenda: reservation.agenda,
+          teamId:
+            reservation.teamId,
+
+          title:
+            reservation.title,
+
+          agenda:
+            reservation.agenda,
+
           scheduledStartAt,
+
           scheduledEndAt,
         });
 
@@ -479,17 +761,22 @@ function MeetingPage() {
         );
 
         setReservationError(
-          error?.response?.data?.message ??
+          error?.response?.data
+            ?.message ??
           '회의 예약에 실패했습니다.',
         );
       } finally {
-        setIsCreatingMeeting(false);
+        setIsCreatingMeeting(
+          false,
+        );
       }
     };
 
   const handleCloseReservationModal =
     () => {
-      if (isCreatingMeeting) {
+      if (
+        isCreatingMeeting
+      ) {
         return;
       }
 
@@ -499,6 +786,22 @@ function MeetingPage() {
         false,
       );
     };
+
+  /*
+   * 첫 번째 빠른 액션 표시 상태
+   */
+  const meetingActionLabel =
+    currentMeeting
+      ? '참여하기'
+      : startableMeeting
+        ? '시작하기'
+        : '참여하기';
+
+  const canUseMeetingAction =
+    Boolean(
+      currentMeeting ||
+      startableMeeting,
+    );
 
   return (
     <>
@@ -527,6 +830,7 @@ function MeetingPage() {
             }`}
         >
           <div className="grid min-h-[520px] grid-cols-1 gap-8 xl:grid-cols-[0.9fr_1.15fr]">
+            {/* 왼쪽 영역 */}
             <div className="flex items-center justify-center xl:border-r xl:border-[#EDF0EF]">
               <div className="w-full max-w-[360px]">
                 <div className="mb-7">
@@ -542,7 +846,8 @@ function MeetingPage() {
                   </div>
 
                   <p className="mt-3 text-base text-[#8C9692]">
-                    {month}. {date}{' '}
+                    {month}.{' '}
+                    {date}{' '}
                     {day}
                   </p>
                 </div>
@@ -550,7 +855,7 @@ function MeetingPage() {
                 <div className="flex gap-4">
                   {quickActions.map(
                     (action) => {
-                      const isJoinAction =
+                      const isMeetingAction =
                         action.id ===
                         'join';
 
@@ -559,13 +864,21 @@ function MeetingPage() {
                         'reserve';
 
                       const isDisabled =
-                        (isJoinAction &&
+                        (isMeetingAction &&
                           (isLoadingMeetings ||
-                            !currentMeeting)) ||
+                            !canUseMeetingAction ||
+                            isStartingMeeting)) ||
                         (isReserveAction &&
                           (isLoadingMeetings ||
                             teams.length ===
                             0));
+
+                      const actionLabel =
+                        isMeetingAction
+                          ? isStartingMeeting
+                            ? '시작 중'
+                            : meetingActionLabel
+                          : action.label;
 
                       return (
                         <button
@@ -604,7 +917,7 @@ function MeetingPage() {
                               }`}
                           >
                             {
-                              action.label
+                              actionLabel
                             }
                           </span>
                         </button>
@@ -616,12 +929,19 @@ function MeetingPage() {
                 {isLoadingMeetings ? (
                   <p className="mt-4 text-xs text-[#8A9490]">
                     회의 정보를
-                    확인하고 있습니다.
+                    확인하고
+                    있습니다.
                   </p>
                 ) : meetingLoadError ? (
                   <p className="mt-4 text-xs text-[#F64E42]">
                     {
                       meetingLoadError
+                    }
+                  </p>
+                ) : startMeetingError ? (
+                  <p className="mt-4 text-xs text-[#F64E42]">
+                    {
+                      startMeetingError
                     }
                   </p>
                 ) : teams.length ===
@@ -630,16 +950,29 @@ function MeetingPage() {
                     참여 중인 팀이
                     없습니다.
                   </p>
-                ) : !currentMeeting ? (
+                ) : currentMeeting ? (
                   <p className="mt-4 text-xs text-[#8A9490]">
-                    현재 참여할 수
-                    있는 회의가
-                    없습니다.
+                    현재 진행 중인
+                    회의에 참여할 수
+                    있습니다.
                   </p>
-                ) : null}
+                ) : startableMeeting ? (
+                  <p className="mt-4 text-xs text-[#8A9490]">
+                    예약된 회의를
+                    시작할 수
+                    있습니다.
+                  </p>
+                ) : (
+                  <p className="mt-4 text-xs text-[#8A9490]">
+                    현재 참여하거나
+                    시작할 수 있는
+                    회의가 없습니다.
+                  </p>
+                )}
               </div>
             </div>
 
+            {/* 오른쪽 영역 */}
             <div className="min-w-0">
               <MeetingCalendar
                 selectedDate={
