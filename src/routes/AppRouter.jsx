@@ -13,6 +13,8 @@ import Home from '../pages/Home';
 import MeetingPage from '../pages/meeting/MeetingPage';
 import MeetingRoomPage from '../pages/meeting/MeetingRoomPage';
 import MeetingSummaryPage from '../pages/meeting/MeetingSummaryPage';
+import MyPage from '../pages/mypage/MyPage';
+import ProfileSettingsPage from '../pages/mypage/ProfileSettingsPage';
 import ProjectCreatePage from '../pages/ProjectCreatePage';
 import ProjectPage from '../pages/ProjectPage';
 import TemporaryPage from '../pages/TemporaryPage';
@@ -82,9 +84,12 @@ function AppRouter() {
 
         <Route
           path="/mypage"
-          element={
-            <TemporaryPage title="마이페이지" />
-          }
+          element={<MyPage />}
+        />
+
+        <Route
+          path="/mypage/profile"
+          element={<ProfileSettingsPage />}
         />
 
         <Route
