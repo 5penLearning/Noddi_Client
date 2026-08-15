@@ -1,7 +1,4 @@
-import {
-  Route,
-  Routes,
-} from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 
 import LoginPage from '../pages/auth/LoginPage';
 import SignUpPage from '../pages/auth/SignUpPage';
@@ -17,75 +14,56 @@ import MyPage from '../pages/mypage/MyPage';
 import ProfileSettingsPage from '../pages/mypage/ProfileSettingsPage';
 import ProjectCreatePage from '../pages/ProjectCreatePage';
 import ProjectPage from '../pages/ProjectPage';
+import QAPage from '../pages/qa/QAPage';
 import TemporaryPage from '../pages/TemporaryPage';
+
+import ProtectedRoute from './ProtectedRoute';
 
 function AppRouter() {
   return (
     <Routes>
-      <Route
-        path="/"
-        element={<SplashPage />}
-      />
+      <Route path="/" element={<SplashPage />} />
 
-      <Route
-        path="/login"
-        element={<LoginPage />}
-      />
+      <Route path="/login" element={<LoginPage />} />
 
-      <Route
-        path="/signup"
-        element={<SignUpPage />}
-      />
+      <Route path="/signup" element={<SignUpPage />} />
 
-      {/* 화상회의는 전체 화면 */}
+      {/* 화상회의 전체 화면 */}
       <Route
         path="/meetings/:meetingId/room"
-        element={<MeetingRoomPage />}
+        element={
+          <ProtectedRoute>
+            <MeetingRoomPage />
+          </ProtectedRoute>
+        }
       />
 
-      {/* 일반 서비스 화면 */}
-      <Route element={<AppLayout />}>
-        <Route
-          path="/home"
-          element={<Home />}
-        />
+      {/* 로그인 필요 서비스 화면 */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/home" element={<Home />} />
 
-        <Route
-          path="/projects"
-          element={<ProjectPage />}
-        />
+        <Route path="/projects" element={<ProjectPage />} />
 
-        <Route
-          path="/projects/new"
-          element={<ProjectCreatePage />}
-        />
+        <Route path="/projects/new" element={<ProjectCreatePage />} />
 
-        <Route
-          path="/projects/:projectId"
-          element={<ProjectPage />}
-        />
+        <Route path="/projects/:projectId" element={<ProjectPage />} />
 
-        <Route
-          path="/meetings"
-          element={<MeetingPage />}
-        />
+        <Route path="/meetings" element={<MeetingPage />} />
 
         <Route
           path="/meetings/:meetingId/summary"
           element={<MeetingSummaryPage />}
         />
 
-        <Route
-          path="/chat"
-          element={
-            <TemporaryPage title="채팅" />
-          }
-        />
+        <Route path="/qa" element={<QAPage />} />
 
-        <Route
-          path="/mypage"
-          element={<MyPage />}
-        />
+        <Route path="/mypage" element={<MyPage />} />
 
         <Route
           path="/mypage/profile"
@@ -94,9 +72,7 @@ function AppRouter() {
 
         <Route
           path="/settings"
-          element={
-            <TemporaryPage title="설정" />
-          }
+          element={<TemporaryPage title="설정" />}
         />
 
         <Route

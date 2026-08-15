@@ -17,7 +17,7 @@ const navigationItems = [
   { id: 'home', label: '홈', icon: HomeIcon },
   { id: 'teams', label: '팀', icon: UsersIcon },
   { id: 'meetings', label: '화상 회의', icon: VideoIcon },
-  { id: 'messages', label: '메시지', icon: MessageIcon },
+  { id: 'qa', label: 'Q&A', icon: MessageIcon },
   { id: 'profile', label: '프로필', icon: UserIcon },
 ];
 
@@ -74,14 +74,15 @@ function VideoIcon({ isActive }) {
   return (
     <span className="relative block size-6" aria-hidden="true">
       <span
-        className={`absolute top-[5.5px] left-[2px] h-[13px] w-[14px] rounded-[3.5px] border-[1.5px] ${
-          isActive ? 'border-white' : 'border-[#2b3f6c]'
-        }`}
+        className={`absolute top-[5.5px] left-[2px] h-[13px] w-[14px] rounded-[3.5px] border-[1.5px] ${isActive ? 'border-white' : 'border-[#2b3f6c]'
+          }`}
       />
+
       <img
         src={videoIcon}
         alt=""
-        className={`absolute top-[6.75px] left-[15.25px] h-[10.34px] w-[7.5px] ${isActive ? 'brightness-0 invert' : ''}`}
+        className={`absolute top-[6.75px] left-[15.25px] h-[10.34px] w-[7.5px] ${isActive ? 'brightness-0 invert' : ''
+          }`}
       />
     </span>
   );
@@ -92,7 +93,12 @@ function MessageIcon({ isActive }) {
 
   return (
     <span className="relative block size-6" aria-hidden="true">
-      <img src={messageIcon} alt="" className={`absolute top-[1.25px] left-[1.25px] size-[21.5px] ${activeIconClass}`} />
+      <img
+        src={messageIcon}
+        alt=""
+        className={`absolute top-[1.25px] left-[1.25px] size-[21.5px] ${activeIconClass}`}
+      />
+
       {[5.8, 10.8, 15.8].map((left) => (
         <img
           key={left}
@@ -116,6 +122,7 @@ function UserIcon({ isActive }) {
         alt=""
         className={`absolute top-[2.25px] left-[7.25px] size-[9.5px] ${activeIconClass}`}
       />
+
       <img
         src={userBodyIcon}
         alt=""
@@ -133,6 +140,7 @@ function SettingsIcon() {
         alt=""
         className="absolute top-[1.25px] left-[1.77px] h-[21.5px] w-[20.47px] opacity-30"
       />
+
       <img
         src={settingsCenterIcon}
         alt=""
@@ -142,29 +150,42 @@ function SettingsIcon() {
   );
 }
 
-function SidebarNavigation({ activeItem = 'home', className = '', onNavigate, onSettingsClick }) {
+function SidebarNavigation({
+  activeItem = 'home',
+  className = '',
+  onNavigate,
+  onSettingsClick,
+}) {
   return (
     <aside
       className={`flex h-full w-16 shrink-0 flex-col items-center justify-between rounded-[10px] bg-[var(--color-white)] p-[10px] ${className}`}
     >
       <div className="flex size-11 items-center justify-center rounded-[30px] bg-[linear-gradient(180deg,#2affa3_0%,#37efd9_100%)]">
-        <img src={logoIcon} alt="Noddi" className="h-[26px] w-[21px]" />
+        <img
+          src={logoIcon}
+          alt="Noddi"
+          className="h-[26px] w-[21px]"
+        />
       </div>
 
-      <nav className="flex flex-col gap-5">
-        {navigationItems.map(({ id, icon: Icon }) => {
+      <nav
+        className="flex flex-col gap-5"
+        aria-label="주요 메뉴"
+      >
+        {navigationItems.map(({ id, label, icon: Icon }) => {
           const isActive = activeItem === id;
 
           return (
             <button
               key={id}
               type="button"
+              aria-label={label}
+              title={label}
               onClick={() => onNavigate?.(id)}
-              className={`flex size-11 items-center justify-center rounded-[30px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gray-400)] ${
-                isActive
-                  ? 'bg-[var(--color-gray-800)]'
-                  : 'bg-[var(--color-gray-100)] hover:bg-[var(--color-gray-200)]'
-              }`}
+              className={`flex size-11 items-center justify-center rounded-[30px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gray-400)] ${isActive
+                ? 'bg-[var(--color-gray-800)]'
+                : 'bg-[var(--color-gray-100)] hover:bg-[var(--color-gray-200)]'
+                }`}
             >
               <Icon isActive={isActive} />
             </button>
@@ -174,6 +195,8 @@ function SidebarNavigation({ activeItem = 'home', className = '', onNavigate, on
 
       <button
         type="button"
+        aria-label="설정"
+        title="설정"
         onClick={onSettingsClick}
         className="flex size-11 items-center justify-center rounded-[30px] transition-colors hover:bg-[var(--color-background-subtle)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gray-400)]"
       >
