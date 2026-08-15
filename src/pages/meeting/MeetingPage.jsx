@@ -15,6 +15,7 @@ import {
 import { getMyTeams } from '../../api/teamApi';
 
 import MeetingCalendar from '../../components/feature/meeting/MeetingCalendar';
+import MeetingHistoryModal from '../../components/feature/meeting/MeetingHistoryModal';
 import MeetingReservationModal from '../../components/feature/meeting/MeetingReservationModal';
 import MeetingScheduleList from '../../components/feature/meeting/MeetingScheduleList';
 import MeetingStatusBanner from '../../components/feature/meeting/MeetingStatusBanner';
@@ -239,6 +240,11 @@ function MeetingPage() {
   ] = useState(false);
 
   const [
+    isHistoryModalOpen,
+    setIsHistoryModalOpen,
+  ] = useState(false);
+
+  const [
     isCreatingMeeting,
     setIsCreatingMeeting,
   ] = useState(false);
@@ -448,35 +454,14 @@ function MeetingPage() {
       );
 
   /*
-   * 가장 최근 종료된 회의
+   * 종료된 회의
    */
-  const latestEndedMeeting =
-    [...meetings]
-      .filter(
-        (meeting) =>
-          meeting.status ===
-          'ENDED',
-      )
-      .sort(
-        (
-          meetingA,
-          meetingB,
-        ) => {
-          const timeA = new Date(
-            meetingA.endedAt ||
-            meetingA.scheduledEndAt ||
-            0,
-          ).getTime();
-
-          const timeB = new Date(
-            meetingB.endedAt ||
-            meetingB.scheduledEndAt ||
-            0,
-          ).getTime();
-
-          return timeB - timeA;
-        },
-      )[0] ?? null;
+  const endedMeetings =
+    meetings.filter(
+      (meeting) =>
+        meeting.status ===
+        'ENDED',
+    );
 
   /*
    * 팀 필터
@@ -680,6 +665,10 @@ function MeetingPage() {
       return;
     }
 
+    setIsHistoryModalOpen(
+      false,
+    );
+
     navigate(
       `/meetings/${meeting.meetingId}/summary`,
     );
@@ -731,11 +720,10 @@ function MeetingPage() {
     }
 
     if (
-      actionId === 'records' &&
-      latestEndedMeeting
+      actionId === 'records'
     ) {
-      handleOpenSummary(
-        latestEndedMeeting,
+      setIsHistoryModalOpen(
+        true,
       );
     }
   };
@@ -940,7 +928,8 @@ function MeetingPage() {
                             teams.length ===
                             0)) ||
                         (isRecordAction &&
-                          !latestEndedMeeting);
+                          endedMeetings.length ===
+                          0);
 
                       const actionLabel =
                         isMeetingAction
@@ -1122,6 +1111,23 @@ function MeetingPage() {
         }
         submitError={
           reservationError
+        }
+      />
+
+      <MeetingHistoryModal
+        isOpen={
+          isHistoryModalOpen
+        }
+        meetings={
+          meetings
+        }
+        onClose={() =>
+          setIsHistoryModalOpen(
+            false,
+          )
+        }
+        onOpenSummary={
+          handleOpenSummary
         }
       />
     </>

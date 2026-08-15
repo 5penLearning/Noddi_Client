@@ -28,9 +28,7 @@ export const updateMeetingSummary = async (
   return data;
 };
 
-export const retryMeetingSummary = async (
-  meetingId,
-) => {
+export const retryMeetingSummary = async (meetingId) => {
   const { data } = await api.post(
     `/api/v1/meetings/${meetingId}/summary/retry`,
   );

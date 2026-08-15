@@ -495,7 +495,7 @@ function useDailyCall(roomUrl) {
 
         await Promise.resolve(
           callObject.startRecording({
-            type: 'cloud',
+            type: 'cloud-audio-only',
           }),
         );
 
