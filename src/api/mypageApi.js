@@ -36,6 +36,25 @@ export const updateMyPassword = async ({
   return data;
 };
 
+export const verifyCurrentPassword =
+  async ({
+    email,
+    password,
+  }) => {
+    const { data } = await api.post(
+      '/api/v1/auth/login',
+      {
+        email,
+        password,
+      },
+      {
+        skipAuth: true,
+      },
+    );
+
+    return data;
+  };
+
 export const getProjectInvitations =
   async () => {
     const { data } = await api.get(

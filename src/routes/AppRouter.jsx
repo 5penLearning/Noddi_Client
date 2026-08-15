@@ -13,10 +13,11 @@ import Home from '../pages/Home';
 import MeetingPage from '../pages/meeting/MeetingPage';
 import MeetingRoomPage from '../pages/meeting/MeetingRoomPage';
 import MeetingSummaryPage from '../pages/meeting/MeetingSummaryPage';
+import MyPage from '../pages/mypage/MyPage';
+import ProfileSettingsPage from '../pages/mypage/ProfileSettingsPage';
 import ProjectCreatePage from '../pages/ProjectCreatePage';
 import ProjectPage from '../pages/ProjectPage';
 import TemporaryPage from '../pages/TemporaryPage';
-import MyPage from '../pages/mypage/MyPage';
 
 function AppRouter() {
   return (
@@ -83,9 +84,12 @@ function AppRouter() {
 
         <Route
           path="/mypage"
-          element={
-            <MyPage />
-          }
+          element={<MyPage />}
+        />
+
+        <Route
+          path="/mypage/profile"
+          element={<ProfileSettingsPage />}
         />
 
         <Route

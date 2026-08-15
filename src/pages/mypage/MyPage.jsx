@@ -12,11 +12,14 @@ import {
   getProjectInvitations,
   getProjectMembers,
   respondProjectInvitation,
+  verifyCurrentPassword,
 } from '../../api/mypageApi';
 
 import {
   clearAuthSession,
 } from '../../api/axios';
+
+import PasswordConfirmModal from '../../components/feature/mypage/PasswordConfirmModal';
 
 function MoreIcon() {
   return (
@@ -145,6 +148,26 @@ function MyPage() {
   const [
     pageError,
     setPageError,
+  ] = useState('');
+
+  const [
+    successMessage,
+    setSuccessMessage,
+  ] = useState('');
+
+  const [
+    isPasswordConfirmOpen,
+    setIsPasswordConfirmOpen,
+  ] = useState(false);
+
+  const [
+    isVerifyingPassword,
+    setIsVerifyingPassword,
+  ] = useState(false);
+
+  const [
+    passwordConfirmError,
+    setPasswordConfirmError,
   ] = useState('');
 
   const [
@@ -301,10 +324,17 @@ function MyPage() {
         );
 
         setPageError('');
+        setSuccessMessage('');
 
         await respondProjectInvitation(
           inviteId,
           isAccepted,
+        );
+
+        setSuccessMessage(
+          isAccepted
+            ? '프로젝트 초대를 수락했습니다.'
+            : '프로젝트 초대를 거절했습니다.',
         );
 
         await loadMyPage();
@@ -322,6 +352,100 @@ function MyPage() {
       } finally {
         setRespondingInviteId(
           null,
+        );
+      }
+    };
+
+  const handleOpenProfileSettings =
+    () => {
+      setPasswordConfirmError('');
+
+      setIsPasswordConfirmOpen(
+        true,
+      );
+    };
+
+  const handleClosePasswordConfirm =
+    () => {
+      if (isVerifyingPassword) {
+        return;
+      }
+
+      setPasswordConfirmError('');
+
+      setIsPasswordConfirmOpen(
+        false,
+      );
+    };
+
+  const handleVerifyPassword =
+    async (password) => {
+      if (!profile?.email) {
+        setPasswordConfirmError(
+          '사용자 이메일 정보를 확인할 수 없습니다.',
+        );
+        return;
+      }
+
+      try {
+        setIsVerifyingPassword(
+          true,
+        );
+
+        setPasswordConfirmError('');
+
+        const response =
+          await verifyCurrentPassword({
+            email:
+              profile.email,
+            password,
+          });
+
+        const verifiedUserId =
+          response?.result?.userId;
+
+        if (
+          verifiedUserId &&
+          Number(
+            verifiedUserId,
+          ) !==
+          Number(
+            profile.userId,
+          )
+        ) {
+          throw new Error(
+            '사용자 정보를 확인하지 못했습니다.',
+          );
+        }
+
+        setIsPasswordConfirmOpen(
+          false,
+        );
+
+        navigate(
+          '/mypage/profile',
+          {
+            state: {
+              passwordVerified:
+                true,
+            },
+          },
+        );
+      } catch (error) {
+        console.error(
+          'Failed to verify password:',
+          error,
+        );
+
+        setPasswordConfirmError(
+          error?.response?.data
+            ?.message ??
+          error?.message ??
+          '비밀번호가 일치하지 않습니다.',
+        );
+      } finally {
+        setIsVerifyingPassword(
+          false,
         );
       }
     };
@@ -372,335 +496,365 @@ function MyPage() {
       .charAt(0);
 
   return (
-    <div className="h-full w-full overflow-y-auto pb-12">
-      <header className="mb-4">
-        <h1 className="text-lg font-semibold text-[#101211]">
-          my
-        </h1>
-      </header>
+    <>
+      <div className="h-full w-full overflow-y-auto pb-12">
+        <header className="mb-4">
+          <h1 className="text-lg font-semibold text-[#101211]">
+            my
+          </h1>
+        </header>
 
-      <div className="mx-auto w-full max-w-[680px]">
-        {pageError && (
-          <div className="mb-5 rounded-xl bg-[#FFF1F0] px-4 py-3 text-sm text-[#F64E42]">
-            {pageError}
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="flex min-h-[500px] items-center justify-center">
-            <div className="text-center">
-              <div className="mx-auto h-7 w-7 animate-spin rounded-full border-[3px] border-[#DCE5E1] border-t-[#31F5A0]" />
-
-              <p className="mt-4 text-sm text-[#8A9490]">
-                내 정보를 불러오고
-                있습니다.
-              </p>
+        <div className="mx-auto w-full max-w-[680px]">
+          {pageError && (
+            <div className="mb-5 rounded-xl bg-[#FFF1F0] px-4 py-3 text-sm text-[#F64E42]">
+              {pageError}
             </div>
-          </div>
-        ) : (
-          <>
-            {/* 프로필 */}
-            <section className="flex flex-col items-center pt-6">
-              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#D8D8D8] text-2xl font-semibold text-[#59625F]">
-                {initial}
+          )}
+
+          {successMessage && (
+            <div className="mb-5 rounded-xl bg-[#EFFFF8] px-4 py-3 text-sm text-[#16885B]">
+              {successMessage}
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="flex min-h-[500px] items-center justify-center">
+              <div className="text-center">
+                <div className="mx-auto h-7 w-7 animate-spin rounded-full border-[3px] border-[#DCE5E1] border-t-[#31F5A0]" />
+
+                <p className="mt-4 text-sm text-[#8A9490]">
+                  내 정보를 불러오고
+                  있습니다.
+                </p>
               </div>
-
-              <button
-                type="button"
-                className="mt-4 flex items-center gap-2 text-base font-semibold text-[#101211]"
-              >
-                {displayName}
-
-                <span className="text-[#506B8F]">
-                  <EditIcon />
-                </span>
-              </button>
-
-              <p className="mt-1 text-xs text-[#8A9490]">
-                {profile?.organizationName ??
-                  '소속 조직'}
-              </p>
-            </section>
-
-            {/* 계정 정보 */}
-            <section className="mt-12">
-              <h2 className="text-sm font-semibold text-[#101211]">
-                계정 정보
-              </h2>
-
-              <div className="mt-4 space-y-3">
-                <div>
-                  <p className="text-xs text-[#8A9490]">
-                    이메일 주소
-                  </p>
-
-                  <p className="mt-1 text-sm font-medium text-[#303633]">
-                    {profile?.email ??
-                      '-'}
-                  </p>
+            </div>
+          ) : (
+            <>
+              <section className="flex flex-col items-center pt-6">
+                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#D8D8D8] text-2xl font-semibold text-[#59625F]">
+                  {initial}
                 </div>
 
-                <div>
-                  <p className="text-xs text-[#8A9490]">
-                    소속 조직
-                  </p>
+                <button
+                  type="button"
+                  onClick={
+                    handleOpenProfileSettings
+                  }
+                  className="mt-4 flex items-center gap-2 text-base font-semibold text-[#101211]"
+                >
+                  {displayName}
 
-                  <p className="mt-1 text-sm font-medium text-[#303633]">
-                    {profile?.organizationName ??
-                      '-'}
-                  </p>
-                </div>
-              </div>
-            </section>
+                  <span className="text-[#506B8F]">
+                    <EditIcon />
+                  </span>
+                </button>
 
-            {/* 초대장 */}
-            <section className="mt-10">
-              <h2 className="text-sm font-semibold text-[#101211]">
-                내가 받은 초대장
-              </h2>
+                <p className="mt-1 text-xs text-[#8A9490]">
+                  {profile?.organizationName ??
+                    '소속 조직'}
+                </p>
+              </section>
 
-              <div className="mt-3">
-                {invitations.length ===
-                  0 ? (
-                  <div className="rounded-xl bg-[#F3F7F5] px-5 py-6 text-center">
+              <section className="mt-12">
+                <h2 className="text-sm font-semibold text-[#101211]">
+                  계정 정보
+                </h2>
+
+                <div className="mt-4 space-y-3">
+                  <div>
                     <p className="text-xs text-[#8A9490]">
-                      받은 초대장이
-                      없습니다.
+                      이메일 주소
+                    </p>
+
+                    <p className="mt-1 text-sm font-medium text-[#303633]">
+                      {profile?.email ??
+                        '-'}
                     </p>
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    {invitations.map(
-                      (invitation) => (
-                        <div
-                          key={
-                            invitation.inviteId
-                          }
-                          className="flex items-center justify-between gap-4 rounded-xl bg-[#F1F6F3] px-4 py-5"
-                        >
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="h-7 w-7 shrink-0 rounded-full bg-[#D7DDDA]" />
 
-                              <p className="truncate text-xs text-[#8A9490]">
+                  <div>
+                    <p className="text-xs text-[#8A9490]">
+                      소속 조직
+                    </p>
+
+                    <p className="mt-1 text-sm font-medium text-[#303633]">
+                      {profile?.organizationName ??
+                        '-'}
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="mt-10">
+                <h2 className="text-sm font-semibold text-[#101211]">
+                  내가 받은 초대장
+                </h2>
+
+                <div className="mt-3">
+                  {invitations.length ===
+                    0 ? (
+                    <div className="rounded-xl bg-[#F3F7F5] px-5 py-6 text-center">
+                      <p className="text-xs text-[#8A9490]">
+                        받은 초대장이
+                        없습니다.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {invitations.map(
+                        (
+                          invitation,
+                        ) => (
+                          <div
+                            key={
+                              invitation.inviteId
+                            }
+                            className="flex items-center justify-between gap-4 rounded-xl bg-[#F1F6F3] px-4 py-5"
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="h-7 w-7 shrink-0 rounded-full bg-[#D7DDDA]" />
+
+                                <p className="truncate text-xs text-[#8A9490]">
+                                  {
+                                    invitation.inviterName
+                                  }{' '}
+                                  님의 초대
+                                </p>
+                              </div>
+
+                              <p className="mt-3 truncate text-sm font-semibold text-[#101211]">
                                 {
-                                  invitation.inviterName
-                                }{' '}
-                                님의 초대
+                                  invitation.projectName
+                                }
+                              </p>
+
+                              <p className="mt-1 text-[11px] text-[#8A9490]">
+                                역할 ·{' '}
+                                {getRoleLabel(
+                                  invitation.offeredRole,
+                                )}
                               </p>
                             </div>
 
-                            <p className="mt-3 truncate text-sm font-semibold text-[#101211]">
-                              {
-                                invitation.projectName
-                              }
-                            </p>
+                            <div className="flex shrink-0 items-center gap-4">
+                              <button
+                                type="button"
+                                disabled={
+                                  respondingInviteId ===
+                                  invitation.inviteId
+                                }
+                                onClick={() =>
+                                  handleInvitation(
+                                    invitation.inviteId,
+                                    true,
+                                  )
+                                }
+                                className="text-xs font-semibold text-[#101211] disabled:opacity-40"
+                              >
+                                수락
+                              </button>
 
-                            <p className="mt-1 text-[11px] text-[#8A9490]">
-                              역할 ·{' '}
-                              {getRoleLabel(
-                                invitation.offeredRole,
-                              )}
-                            </p>
-                          </div>
-
-                          <div className="flex shrink-0 items-center gap-4">
-                            <button
-                              type="button"
-                              disabled={
-                                respondingInviteId ===
-                                invitation.inviteId
-                              }
-                              onClick={() =>
-                                handleInvitation(
-                                  invitation.inviteId,
-                                  true,
-                                )
-                              }
-                              className="text-xs font-semibold text-[#101211] disabled:opacity-40"
-                            >
-                              수락
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={
-                                respondingInviteId ===
-                                invitation.inviteId
-                              }
-                              onClick={() =>
-                                handleInvitation(
-                                  invitation.inviteId,
-                                  false,
-                                )
-                              }
-                              className="text-xs font-medium text-[#59625F] disabled:opacity-40"
-                            >
-                              거절
-                            </button>
-                          </div>
-                        </div>
-                      ),
-                    )}
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* 참여 프로젝트 */}
-            <section className="mt-10">
-              <h2 className="text-sm font-semibold text-[#101211]">
-                현재 참여중인 프로젝트
-              </h2>
-
-              <div className="mt-3 rounded-xl bg-[#F1F6F3] px-5 py-3">
-                {myProjects.length ===
-                  0 ? (
-                  <div className="py-7 text-center">
-                    <p className="text-xs text-[#8A9490]">
-                      참여 중인 프로젝트가
-                      없습니다.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-[#E2E8E5]">
-                    {myProjects.map(
-                      (project) => (
-                        <div
-                          key={
-                            project.projectId
-                          }
-                          className="flex items-start justify-between gap-3 py-4"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-[#101211]">
-                              {
-                                project.name
-                              }
-                            </p>
-
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              <span className="rounded border border-[#D6DDDA] bg-white px-2 py-1 text-[10px] text-[#8A9490]">
-                                {getRoleLabel(
-                                  project.myRole,
-                                )}
-                              </span>
-
-                              <span className="rounded border border-[#D6DDDA] bg-white px-2 py-1 text-[10px] text-[#8A9490]">
-                                프로젝트
-                              </span>
+                              <button
+                                type="button"
+                                disabled={
+                                  respondingInviteId ===
+                                  invitation.inviteId
+                                }
+                                onClick={() =>
+                                  handleInvitation(
+                                    invitation.inviteId,
+                                    false,
+                                  )
+                                }
+                                className="text-xs font-medium text-[#59625F] disabled:opacity-40"
+                              >
+                                거절
+                              </button>
                             </div>
                           </div>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </div>
+              </section>
 
-                          <button
-                            type="button"
-                            className="flex h-8 w-8 shrink-0 items-center justify-center text-[#59625F]"
-                            aria-label="프로젝트 메뉴"
+              <section className="mt-10">
+                <h2 className="text-sm font-semibold text-[#101211]">
+                  현재 참여중인 프로젝트
+                </h2>
+
+                <div className="mt-3 rounded-xl bg-[#F1F6F3] px-5 py-3">
+                  {myProjects.length ===
+                    0 ? (
+                    <div className="py-7 text-center">
+                      <p className="text-xs text-[#8A9490]">
+                        참여 중인
+                        프로젝트가
+                        없습니다.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-[#E2E8E5]">
+                      {myProjects.map(
+                        (project) => (
+                          <div
+                            key={
+                              project.projectId
+                            }
+                            className="flex items-start justify-between gap-3 py-4"
                           >
-                            <MoreIcon />
-                          </button>
-                        </div>
-                      ),
-                    )}
-                  </div>
-                )}
-              </div>
-            </section>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-[#101211]">
+                                {
+                                  project.name
+                                }
+                              </p>
 
-            {/* 환경 설정 */}
-            <section className="mt-10">
-              <h2 className="text-sm font-semibold text-[#101211]">
-                환경 설정
-              </h2>
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <span className="rounded border border-[#D6DDDA] bg-white px-2 py-1 text-[10px] text-[#8A9490]">
+                                  {getRoleLabel(
+                                    project.myRole,
+                                  )}
+                                </span>
 
-              <div className="mt-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-[#101211]">
-                      자동 로그인 설정
-                    </p>
+                                <span className="rounded border border-[#D6DDDA] bg-white px-2 py-1 text-[10px] text-[#8A9490]">
+                                  프로젝트
+                                </span>
+                              </div>
+                            </div>
 
-                    <p className="mt-1 text-[11px] text-[#8A9490]">
-                      로그인 상태 유지 설정
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={
-                      autoLogin
-                    }
-                    onClick={
-                      handleAutoLoginChange
-                    }
-                    className={`relative h-6 w-11 rounded-full transition ${autoLogin
-                      ? 'bg-[#DDEAE4]'
-                      : 'bg-[#E4E8E6]'
-                      }`}
-                  >
-                    <span
-                      className={`absolute top-1 h-4 w-4 rounded-full bg-[#101211] transition ${autoLogin
-                        ? 'left-6'
-                        : 'left-1'
-                        }`}
-                    />
-                  </button>
+                            <button
+                              type="button"
+                              className="flex h-8 w-8 shrink-0 items-center justify-center text-[#59625F]"
+                              aria-label="프로젝트 메뉴"
+                            >
+                              <MoreIcon />
+                            </button>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  )}
                 </div>
+              </section>
 
-                <div className="mt-8">
-                  <label
-                    htmlFor="mypage-timezone"
-                    className="text-sm font-medium text-[#101211]"
-                  >
-                    나라/시간
-                  </label>
+              <section className="mt-10">
+                <h2 className="text-sm font-semibold text-[#101211]">
+                  환경 설정
+                </h2>
 
-                  <div className="relative mt-3">
-                    <select
-                      id="mypage-timezone"
-                      value={timezone}
-                      onChange={
-                        handleTimezoneChange
+                <div className="mt-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-[#101211]">
+                        자동 로그인 설정
+                      </p>
+
+                      <p className="mt-1 text-[11px] text-[#8A9490]">
+                        로그인 상태 유지
+                        설정
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={
+                        autoLogin
                       }
-                      className="h-11 w-full appearance-none rounded-lg border border-[#D8DFDC] bg-white px-4 pr-10 text-xs text-[#59625F] outline-none focus:border-[#101211]"
+                      onClick={
+                        handleAutoLoginChange
+                      }
+                      className={`relative h-6 w-11 rounded-full transition ${autoLogin
+                        ? 'bg-[#DDEAE4]'
+                        : 'bg-[#E4E8E6]'
+                        }`}
                     >
-                      <option value="Asia/Seoul">
-                        08:09 (대한민국)
-                      </option>
+                      <span
+                        className={`absolute top-1 h-4 w-4 rounded-full bg-[#101211] transition ${autoLogin
+                          ? 'left-6'
+                          : 'left-1'
+                          }`}
+                      />
+                    </button>
+                  </div>
 
-                      <option value="America/New_York">
-                        미국 동부
-                      </option>
+                  <div className="mt-8">
+                    <label
+                      htmlFor="mypage-timezone"
+                      className="text-sm font-medium text-[#101211]"
+                    >
+                      나라/시간
+                    </label>
 
-                      <option value="Europe/London">
-                        영국
-                      </option>
+                    <div className="relative mt-3">
+                      <select
+                        id="mypage-timezone"
+                        value={timezone}
+                        onChange={
+                          handleTimezoneChange
+                        }
+                        className="h-11 w-full appearance-none rounded-lg border border-[#D8DFDC] bg-white px-4 pr-10 text-xs text-[#59625F] outline-none focus:border-[#101211]"
+                      >
+                        <option value="Asia/Seoul">
+                          대한민국 (UTC+9)
+                        </option>
 
-                      <option value="Asia/Kolkata">
-                        인도
-                      </option>
-                    </select>
+                        <option value="America/New_York">
+                          미국 동부
+                        </option>
 
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#59708C]">
-                      <ChevronDownIcon />
-                    </span>
+                        <option value="Europe/London">
+                          영국
+                        </option>
+
+                        <option value="Asia/Kolkata">
+                          인도
+                        </option>
+                      </select>
+
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#59708C]">
+                        <ChevronDownIcon />
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </section>
+              </section>
 
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="mt-12 text-xs font-medium text-[#A7B0AC] transition hover:text-[#F64E42]"
-            >
-              로그아웃하기
-            </button>
-          </>
-        )}
+              <button
+                type="button"
+                onClick={
+                  handleLogout
+                }
+                className="mt-12 text-xs font-medium text-[#A7B0AC] transition hover:text-[#F64E42]"
+              >
+                로그아웃하기
+              </button>
+            </>
+          )}
+        </div>
       </div>
-    </div>
+
+      <PasswordConfirmModal
+        isOpen={
+          isPasswordConfirmOpen
+        }
+        isSubmitting={
+          isVerifyingPassword
+        }
+        error={
+          passwordConfirmError
+        }
+        onClose={
+          handleClosePasswordConfirm
+        }
+        onSubmit={
+          handleVerifyPassword
+        }
+      />
+    </>
   );
 }
 
