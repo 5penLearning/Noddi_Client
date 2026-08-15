@@ -9,6 +9,8 @@ import {
   useParams,
 } from 'react-router-dom';
 
+import ActionItemPanel from '../../components/feature/meeting/ActionItemPanel';
+
 import { getMeeting } from '../../api/meetingApi';
 
 import {
@@ -259,7 +261,9 @@ function StatusView({
 
 function MeetingSummaryPage() {
   const navigate = useNavigate();
-  const { meetingId } = useParams();
+
+  const { meetingId } =
+    useParams();
 
   const [meeting, setMeeting] =
     useState(null);
@@ -1011,90 +1015,21 @@ function MeetingSummaryPage() {
             </div>
 
             <aside className="min-w-0">
-              <section className="sticky top-6 rounded-2xl border border-[#E5EAE8] bg-white p-5">
-                <div className="mb-5 flex items-center justify-between">
-                  <h2 className="text-base font-semibold text-[#101211]">
-                    Action Items
-                  </h2>
-
-                  <span className="rounded-full bg-[#EFF3F1] px-2.5 py-1 text-xs font-semibold text-[#59625F]">
-                    {summaryData
-                      .actionItems
-                      ?.length ?? 0}
-                  </span>
-                </div>
-
-                {summaryData
-                  .actionItems
-                  ?.length > 0 ? (
-                  <div className="space-y-3">
-                    {summaryData.actionItems.map(
-                      (item) => (
-                        <div
-                          key={
-                            item.actionItemId
-                          }
-                          className="rounded-xl border border-[#E8ECEA] p-4"
-                        >
-                          <div className="flex items-start gap-2">
-                            <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#31F5A0]" />
-
-                            <p className="text-sm font-medium leading-6 text-[#303633]">
-                              {
-                                item.content
-                              }
-                            </p>
-                          </div>
-
-                          <div className="mt-3 space-y-1.5 pl-4 text-xs text-[#8A9490]">
-                            {item.assigneeName && (
-                              <p>
-                                담당자 ·{' '}
-                                {
-                                  item.assigneeName
-                                }
-                              </p>
-                            )}
-
-                            {item.dueDate && (
-                              <p>
-                                마감일 ·{' '}
-                                {
-                                  item.dueDate
-                                }
-                              </p>
-                            )}
-
-                            <p>
-                              상태 ·{' '}
-                              {item.status ===
-                                'COMPLETED'
-                                ? '완료'
-                                : item.status ===
-                                  'IN_PROGRESS'
-                                  ? '진행 중'
-                                  : '대기'}
-                            </p>
-
-                            {item.isUncertain && (
-                              <p className="text-[#D08B00]">
-                                AI 확인 필요
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ),
-                    )}
-                  </div>
-                ) : (
-                  <div className="rounded-xl bg-[#F7F9F8] px-4 py-8 text-center">
-                    <p className="text-sm text-[#8A9490]">
-                      등록된 할 일이
-                      없습니다.
-                    </p>
-                  </div>
-                )}
-              </section>
+              <ActionItemPanel
+                meetingId={
+                  meetingId
+                }
+                teamId={
+                  meeting?.teamId
+                }
+                actionItems={
+                  summaryData.actionItems ??
+                  []
+                }
+                onRefresh={
+                  loadSummary
+                }
+              />
             </aside>
           </div>
         )}

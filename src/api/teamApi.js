@@ -7,3 +7,13 @@ export const getMyTeams = async () => {
 
   return data;
 };
+
+export const getTeamMembers = async (
+  teamId,
+) => {
+  const { data } = await api.get(
+    `/api/v1/teams/${teamId}/members`,
+  );
+
+  return data;
+};
