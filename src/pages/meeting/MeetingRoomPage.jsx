@@ -373,7 +373,8 @@ function VideoTrack({
   muted = false,
   className = '',
 }) {
-  const videoRef = useRef(null);
+  const videoRef =
+    useRef(null);
 
   useEffect(() => {
     const videoElement =
@@ -387,7 +388,9 @@ function VideoTrack({
     }
 
     const mediaStream =
-      new MediaStream([track]);
+      new MediaStream([
+        track,
+      ]);
 
     videoElement.srcObject =
       mediaStream;
@@ -417,7 +420,8 @@ function VideoTrack({
 function ParticipantAudio({
   participant,
 }) {
-  const audioRef = useRef(null);
+  const audioRef =
+    useRef(null);
 
   const audioTrack =
     participant?.tracks?.audio
@@ -497,7 +501,9 @@ function ParticipantTile({
   return (
     <div className="relative flex min-h-0 items-center justify-center overflow-hidden border border-[#444] bg-[#202422]">
       <ParticipantAudio
-        participant={participant}
+        participant={
+          participant
+        }
       />
 
       {isCameraOn ? (
@@ -516,7 +522,9 @@ function ParticipantTile({
 
       <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-lg bg-black/50 px-3 py-2 text-white">
         {!isMicOn && (
-          <MicrophoneIcon off />
+          <MicrophoneIcon
+            off
+          />
         )}
 
         <span className="text-xs font-semibold">
@@ -710,6 +718,8 @@ function MeetingRoomPage() {
   const {
     participants,
 
+    chatMessages,
+
     isJoining,
     isJoined,
 
@@ -728,16 +738,14 @@ function MeetingRoomPage() {
     toggleCamera,
     toggleScreenShare,
 
+    sendChatMessage,
+
     startRecording,
     stopRecording,
 
     leaveCall,
   } = useDailyCall(roomUrl);
 
-  /*
-   * 이미 시작된 회의의
-   * roomUrl 조회 후 참여
-   */
   useEffect(() => {
     let cancelled = false;
 
@@ -915,9 +923,6 @@ function MeetingRoomPage() {
     );
   };
 
-  /*
-   * 녹음 버튼
-   */
   const handleRecording =
     async () => {
       if (
@@ -946,12 +951,6 @@ function MeetingRoomPage() {
       }
     };
 
-  /*
-   * 개인 나가기
-   *
-   * 녹음 중이어도 녹음을 끄지 않는다.
-   * 다른 참가자가 회의를 계속할 수 있다.
-   */
   const handleLeave =
     async () => {
       try {
@@ -966,14 +965,6 @@ function MeetingRoomPage() {
       }
     };
 
-  /*
-   * 전체 회의 종료
-   *
-   * 녹음 중이면
-   * 녹음을 먼저 종료하고,
-   * recording-stopped 확인 후
-   * 백엔드 회의를 종료한다.
-   */
   const handleEndMeeting =
     async () => {
       if (isEnding) {
@@ -1068,7 +1059,6 @@ function MeetingRoomPage() {
         </div>
       )}
 
-      {/* 녹음 중 표시 */}
       {isRecording && (
         <div className="pointer-events-none absolute left-1/2 top-4 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/70 px-4 py-2 text-xs font-semibold text-white shadow-lg">
           <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#F64E42]" />
@@ -1078,7 +1068,6 @@ function MeetingRoomPage() {
       )}
 
       <main className="flex min-h-0 flex-1">
-        {/* 영상 영역 */}
         <section className="flex min-w-0 flex-1 flex-col">
           {isLoading ? (
             <div className="flex h-full items-center justify-center bg-[#202422]">
@@ -1131,12 +1120,20 @@ function MeetingRoomPage() {
           )}
         </section>
 
-        {/* 우측 패널 */}
         {activePanel && (
           <MeetingSidePanel
             type={activePanel}
             participants={
               sidePanelParticipants
+            }
+            messages={
+              chatMessages
+            }
+            onSendMessage={
+              sendChatMessage
+            }
+            isRecording={
+              isRecording
             }
             onClose={() =>
               setActivePanel(
@@ -1147,9 +1144,7 @@ function MeetingRoomPage() {
         )}
       </main>
 
-      {/* 하단 툴바 */}
       <footer className="relative flex h-[64px] shrink-0 items-center bg-[#101211] px-4">
-        {/* 왼쪽 */}
         <div className="flex items-center gap-2">
           <ToolbarButton
             label={
@@ -1188,7 +1183,6 @@ function MeetingRoomPage() {
           />
         </div>
 
-        {/* 중앙 */}
         <div className="absolute left-1/2 flex -translate-x-1/2 items-center gap-4">
           <ToolbarButton
             label={`참여자 ${participants.length}`}
@@ -1278,7 +1272,6 @@ function MeetingRoomPage() {
           />
         </div>
 
-        {/* 오른쪽 */}
         <div className="ml-auto flex items-center gap-3">
           <button
             type="button"
