@@ -7,6 +7,7 @@ import ProjectNotice from '../components/common/ProjectNotice';
 import ProjectTeamCard from '../components/common/ProjectTeamCard';
 import { getApiErrorMessage } from '../api/axios';
 import { getProjects } from '../api/projects';
+import { getProjectTeams } from '../api/teams';
 import { projectPageMockData } from '../mocks/projectPageData';
 
 import chevronIcon from '../assets/icons/profile/chevron.svg';
@@ -47,7 +48,10 @@ function ProjectPage() {
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
-  const { description, notices, myTeams, teamCount, teams } = projectPageMockData;
+  const [projectTeams, setProjectTeams] = useState([]);
+  const [isTeamsLoading, setIsTeamsLoading] = useState(false);
+  const [teamsErrorMessage, setTeamsErrorMessage] = useState('');
+  const { description, notices, myTeams } = projectPageMockData;
   const currentProject = projects.find((project) => String(project.projectId) === projectId);
   const currentProjectIndex = projects.findIndex(
     (project) => String(project.projectId) === projectId,
@@ -98,6 +102,42 @@ function ProjectPage() {
   useEffect(() => {
     setIsBannerVisible(true);
   }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId || !currentProject) return;
+
+    let isCurrentRequest = true;
+
+    const fetchProjectTeams = async () => {
+      try {
+        setIsTeamsLoading(true);
+        setTeamsErrorMessage('');
+
+        const teamList = await getProjectTeams(projectId);
+
+        if (isCurrentRequest) {
+          setProjectTeams(teamList);
+        }
+      } catch (error) {
+        if (isCurrentRequest) {
+          setProjectTeams([]);
+          setTeamsErrorMessage(
+            getApiErrorMessage(error, '프로젝트 팀 목록을 불러오지 못했습니다.'),
+          );
+        }
+      } finally {
+        if (isCurrentRequest) {
+          setIsTeamsLoading(false);
+        }
+      }
+    };
+
+    fetchProjectTeams();
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [currentProject, projectId]);
 
   if (isLoading) {
     return (
@@ -172,7 +212,12 @@ function ProjectPage() {
               <h2 className="subhead-1 text-[var(--color-black)]">내 팀</h2>
               <div className="mt-[19px] flex [scrollbar-width:none] gap-[14px] overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden">
                 {visibleMyTeams.map((team) => (
-                  <MyTeamCard key={team.id} team={team} className="shrink-0" />
+                  <MyTeamCard
+                    key={team.id}
+                    team={team}
+                    onMove={(teamId) => navigate(`/projects/${projectId}/teams/${teamId}/meetings`)}
+                    className="shrink-0"
+                  />
                 ))}
               </div>
             </section>
@@ -180,8 +225,12 @@ function ProjectPage() {
             <section className="mt-[38px]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-[10px]">
-                  <h2 className="subhead-1 text-[var(--color-black)]">노디 프로젝트의 팀</h2>
-                  <span className="subhead-2 text-[var(--color-gray-500)]">{teamCount}개</span>
+                  <h2 className="subhead-1 text-[var(--color-black)]">
+                    {currentProject.name}의 팀
+                  </h2>
+                  <span className="subhead-2 text-[var(--color-gray-500)]">
+                    {projectTeams.length}개
+                  </span>
                 </div>
                 <OutlineButton className="h-[44px] w-[114px] !px-0 !py-0">
                   팀 추가하기
@@ -189,9 +238,24 @@ function ProjectPage() {
               </div>
 
               <div className="mt-[10px] flex [scrollbar-width:none] gap-[14px] overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden">
-                {teams.map((team) => (
-                  <ProjectTeamCard key={team.id} team={team} className="shrink-0" />
-                ))}
+                {isTeamsLoading && (
+                  <p className="body-4 py-10 text-[var(--color-gray-500)]">
+                    프로젝트 팀을 불러오는 중입니다.
+                  </p>
+                )}
+                {!isTeamsLoading && teamsErrorMessage && (
+                  <p className="body-4 py-10 text-[var(--color-red)]">{teamsErrorMessage}</p>
+                )}
+                {!isTeamsLoading && !teamsErrorMessage && projectTeams.length === 0 && (
+                  <p className="body-4 py-10 text-[var(--color-gray-500)]">
+                    아직 생성된 팀이 없습니다.
+                  </p>
+                )}
+                {!isTeamsLoading &&
+                  !teamsErrorMessage &&
+                  projectTeams.map((team) => (
+                    <ProjectTeamCard key={team.id} team={team} className="shrink-0" />
+                  ))}
               </div>
             </section>
           </div>
