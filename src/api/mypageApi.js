@@ -120,3 +120,14 @@ export const getProjectMembers =
 
     return data;
   };
+
+export const leaveProject = async (
+  projectId,
+  userId,
+) => {
+  const { data } = await api.delete(
+    `/api/v1/projects/${projectId}/members/${userId}`,
+  );
+
+  return data;
+};

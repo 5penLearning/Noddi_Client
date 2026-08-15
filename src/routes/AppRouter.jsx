@@ -17,7 +17,10 @@ import MyPage from '../pages/mypage/MyPage';
 import ProfileSettingsPage from '../pages/mypage/ProfileSettingsPage';
 import ProjectCreatePage from '../pages/ProjectCreatePage';
 import ProjectPage from '../pages/ProjectPage';
+import QAPage from '../pages/qa/QAPage';
 import TemporaryPage from '../pages/TemporaryPage';
+
+import ProtectedRoute from './ProtectedRoute';
 
 function AppRouter() {
   return (
@@ -37,14 +40,24 @@ function AppRouter() {
         element={<SignUpPage />}
       />
 
-      {/* 화상회의는 전체 화면 */}
+      {/* 화상회의 전체 화면 */}
       <Route
         path="/meetings/:meetingId/room"
-        element={<MeetingRoomPage />}
+        element={
+          <ProtectedRoute>
+            <MeetingRoomPage />
+          </ProtectedRoute>
+        }
       />
 
-      {/* 일반 서비스 화면 */}
-      <Route element={<AppLayout />}>
+      {/* 로그인 필요 서비스 화면 */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route
           path="/home"
           element={<Home />}
@@ -75,11 +88,18 @@ function AppRouter() {
           element={<MeetingSummaryPage />}
         />
 
+        {/* 채팅 */}
         <Route
           path="/chat"
           element={
             <TemporaryPage title="채팅" />
           }
+        />
+
+        {/* Q&A */}
+        <Route
+          path="/qa"
+          element={<QAPage />}
         />
 
         <Route
