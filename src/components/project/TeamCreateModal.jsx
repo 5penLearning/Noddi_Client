@@ -1,15 +1,23 @@
 import { useEffect, useState } from 'react';
 
-function TeamCreateModal({ isOpen, isSubmitting, errorMessage, onClose, onSubmit }) {
+function TeamCreateModal({
+  isOpen,
+  mode = 'create',
+  initialTeam,
+  isSubmitting,
+  errorMessage,
+  onClose,
+  onSubmit,
+}) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
 
-    setName('');
-    setDescription('');
-  }, [isOpen]);
+    setName(mode === 'edit' ? (initialTeam?.name ?? '') : '');
+    setDescription(mode === 'edit' ? (initialTeam?.description ?? '') : '');
+  }, [initialTeam, isOpen, mode]);
 
   if (!isOpen) return null;
 
@@ -33,7 +41,9 @@ function TeamCreateModal({ isOpen, isSubmitting, errorMessage, onClose, onSubmit
         className="w-[520px] rounded-[10px] bg-[var(--color-white)] px-7 py-6"
       >
         <div className="flex items-center border-b border-[var(--color-gray-300)] pb-4">
-          <h2 className="subhead-1 text-[var(--color-black)]">새 팀 만들기</h2>
+          <h2 className="subhead-1 text-[var(--color-black)]">
+            {mode === 'edit' ? '팀 정보 수정하기' : '새 팀 만들기'}
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -74,7 +84,13 @@ function TeamCreateModal({ isOpen, isSubmitting, errorMessage, onClose, onSubmit
           disabled={isSubmitting || !name.trim()}
           className="body-3 mx-auto mt-7 flex h-11 w-[180px] items-center justify-center rounded-[10px] bg-[var(--color-black)] text-[var(--color-white)] disabled:opacity-40"
         >
-          {isSubmitting ? '팀을 만드는 중입니다.' : '팀 만들기'}
+          {isSubmitting
+            ? mode === 'edit'
+              ? '수정하는 중입니다.'
+              : '팀을 만드는 중입니다.'
+            : mode === 'edit'
+              ? '수정하기'
+              : '팀 만들기'}
         </button>
       </form>
     </div>

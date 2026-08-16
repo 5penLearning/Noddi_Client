@@ -1,4 +1,15 @@
+import { useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+
+import { getApiErrorMessage } from '../api/axios';
+import {
+  getProjectInvitations,
+  getMyProfile,
+  getTeamInvitations,
+  respondProjectInvitation,
+  respondTeamInvitation,
+} from '../api/mypageApi';
+import NotificationModal from '../components/common/notification/NotificationModal';
 import SearchToolbar from '../components/common/SearchToolbar';
 import SidebarNavigation from '../components/common/SidebarNavigation';
 
@@ -22,6 +33,103 @@ const pageTitles = {
 function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [isNotificationLoading, setIsNotificationLoading] = useState(true);
+  const [respondingNotificationId, setRespondingNotificationId] = useState(null);
+  const [notificationErrorMessage, setNotificationErrorMessage] = useState('');
+  const [profile, setProfile] = useState(null);
+
+  useEffect(() => {
+    let isCurrentRequest = true;
+
+    const loadProfile = async () => {
+      try {
+        const response = await getMyProfile();
+
+        if (isCurrentRequest) {
+          setProfile(response?.result ?? null);
+        }
+      } catch (error) {
+        console.error('Failed to load header profile:', error);
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, []);
+
+  const loadNotifications = useCallback(async () => {
+    try {
+      setIsNotificationLoading(true);
+      setNotificationErrorMessage('');
+
+      const [projectResponse, teamResponse] = await Promise.all([
+        getProjectInvitations(),
+        getTeamInvitations(),
+      ]);
+      const projectInvitations = projectResponse?.result ?? [];
+      const teamInvitations = teamResponse?.result ?? [];
+      const invitationNotifications = projectInvitations.map((invitation) => ({
+        id: `project-invitation-${invitation.inviteId}`,
+        type: 'invitation',
+        invitationKind: 'project',
+        scope: invitation.projectName,
+        createdAt: '대기 중',
+        message: `${invitation.inviterName}님이 ${invitation.projectName} 프로젝트에 초대했어요.`,
+        inviteId: invitation.inviteId,
+        projectId: invitation.projectId,
+      }));
+      const teamInvitationNotifications = teamInvitations.map((invitation) => ({
+        id: `team-invitation-${invitation.inviteId}`,
+        type: 'invitation',
+        invitationKind: 'team',
+        scope: invitation.teamName,
+        createdAt: '대기 중',
+        message: `${invitation.inviterName}님이 ${invitation.teamName} 팀에 초대했어요.`,
+        inviteId: invitation.inviteId,
+        teamId: invitation.teamId,
+      }));
+
+      setNotifications([...invitationNotifications, ...teamInvitationNotifications]);
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+      setNotificationErrorMessage(getApiErrorMessage(error, '초대 알림을 불러오지 못했습니다.'));
+      setNotifications([]);
+    } finally {
+      setIsNotificationLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
+  const handleInvitationResponse = async (notification, isAccepted) => {
+    try {
+      setRespondingNotificationId(notification.id);
+      setNotificationErrorMessage('');
+
+      if (notification.invitationKind === 'team') {
+        await respondTeamInvitation(notification.inviteId, isAccepted);
+      } else {
+        await respondProjectInvitation(notification.inviteId, isAccepted);
+      }
+      setNotifications((currentNotifications) =>
+        currentNotifications.filter(
+          (currentNotification) => currentNotification.id !== notification.id,
+        ),
+      );
+    } catch (error) {
+      console.error('Failed to respond invitation:', error);
+      setNotificationErrorMessage(getApiErrorMessage(error, '초대 응답을 처리하지 못했습니다.'));
+    } finally {
+      setRespondingNotificationId(null);
+    }
+  };
 
   const activeItem = Object.entries(navigationPaths).find(
     ([, path]) => location.pathname === path || location.pathname.startsWith(`${path}/`),
@@ -48,7 +156,7 @@ function AppLayout() {
       />
 
       <main className="ml-[10px] flex min-w-0 flex-1 flex-col gap-[10px]">
-        <header className="mx-auto flex h-14 w-[1204px] shrink-0 items-center justify-between">
+        <header className="mx-auto flex h-14 w-full max-w-[1346px] shrink-0 items-center justify-between">
           <div className="flex items-center">
             {isTeamPage && (
               <button
@@ -65,8 +173,14 @@ function AppLayout() {
           </div>
 
           <SearchToolbar
-            onNotificationClick={() => console.log('알림 버튼 클릭됨')}
-            onProfileClick={() => console.log('프로필 버튼 클릭됨')}
+            notificationCount={notifications.length}
+            profileName={profile?.name}
+            profileOrganization={profile?.organizationName}
+            onNotificationClick={() => {
+              setIsNotificationModalOpen(true);
+              loadNotifications();
+            }}
+            onProfileClick={() => navigate('/mypage')}
           />
         </header>
 
@@ -74,6 +188,30 @@ function AppLayout() {
           <Outlet />
         </div>
       </main>
+
+      <NotificationModal
+        isOpen={isNotificationModalOpen}
+        notifications={notifications}
+        isLoading={isNotificationLoading}
+        respondingNotificationId={respondingNotificationId}
+        errorMessage={notificationErrorMessage}
+        onClose={() => setIsNotificationModalOpen(false)}
+        onDismiss={(notificationId) => {
+          setNotifications((currentNotifications) =>
+            currentNotifications.filter((notification) => notification.id !== notificationId),
+          );
+        }}
+        onDetail={(notification) => {
+          if (notification.type === 'invitation') {
+            setIsNotificationModalOpen(false);
+            navigate('/mypage');
+            return;
+          }
+
+          console.log('알림 자세히 보기', notification);
+        }}
+        onInvitationResponse={handleInvitationResponse}
+      />
     </div>
   );
 }

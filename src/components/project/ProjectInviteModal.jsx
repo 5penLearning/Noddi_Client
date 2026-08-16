@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import OutlineButton from '../common/OutlineButton';
 
@@ -6,46 +6,35 @@ import clearXIcon from '../../assets/icons/project-create/clear-x.svg';
 import defaultMemberAvatar from '../../assets/icons/project-create/modal-member-avatar.svg';
 import searchIcon from '../../assets/icons/project-create/search.svg';
 
-function TeamMemberInviteModal({
+function ProjectInviteModal({
   isOpen,
+  projectName,
+  members,
   projectMembers,
-  teamMembers,
   currentUserId,
+  keyword,
+  page,
+  totalElements,
+  totalPages,
   isLoading,
+  isProjectMembersLoading,
   isSubmitting,
   memberActionUserId,
   errorMessage,
   resultMessage,
+  onKeywordChange,
+  onPageChange,
   onClose,
   onInvite,
   onRoleChange,
   onRemoveMember,
 }) {
   const [activeTab, setActiveTab] = useState('invite');
-  const [keyword, setKeyword] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState([]);
-  const teamMemberIds = useMemo(
-    () => new Set(teamMembers.map((member) => String(member.userId))),
-    [teamMembers],
-  );
-  const availableMembers = useMemo(() => {
-    const normalizedKeyword = keyword.trim().toLowerCase();
-
-    return projectMembers.filter((member) => {
-      const isAlreadyMember = teamMemberIds.has(String(member.userId));
-      const matchesKeyword =
-        !normalizedKeyword ||
-        member.name.toLowerCase().includes(normalizedKeyword) ||
-        member.email.toLowerCase().includes(normalizedKeyword);
-
-      return !isAlreadyMember && matchesKeyword;
-    });
-  }, [keyword, projectMembers, teamMemberIds]);
 
   useEffect(() => {
     if (!isOpen) {
       setActiveTab('invite');
-      setKeyword('');
       setSelectedUserIds([]);
     }
   }, [isOpen]);
@@ -72,7 +61,7 @@ function TeamMemberInviteModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
       <section className="h-[562px] w-[647px] overflow-hidden rounded-[10px] bg-[var(--color-white)] px-[25px] pt-[23px]">
         <header className="flex h-[48px] items-start border-b border-[var(--color-gray-300)]">
-          <h2 className="subhead-1 text-[var(--color-black)]">팀 멤버 관리하기</h2>
+          <h2 className="subhead-1 text-[var(--color-black)]">[{projectName}]에 멤버 초대하기</h2>
           <button
             type="button"
             onClick={onClose}
@@ -115,14 +104,14 @@ function TeamMemberInviteModal({
                 <input
                   type="text"
                   value={keyword}
-                  onChange={(event) => setKeyword(event.target.value)}
-                  placeholder="프로젝트 멤버의 이름 또는 이메일 검색"
+                  onChange={(event) => onKeywordChange(event.target.value)}
+                  placeholder="이름 또는 이메일 검색"
                   className="body-4 min-w-0 flex-1 bg-transparent outline-none"
                 />
                 {keyword && (
                   <button
                     type="button"
-                    onClick={() => setKeyword('')}
+                    onClick={() => onKeywordChange('')}
                     className="mr-2 flex size-6 shrink-0 items-center justify-center"
                   >
                     <img src={clearXIcon} className="size-[6px]" />
@@ -140,9 +129,9 @@ function TeamMemberInviteModal({
             </div>
 
             <div className="mt-5 flex items-center">
-              <h3 className="subhead-1">초대 가능한 프로젝트 멤버</h3>
+              <h3 className="subhead-1">초대 가능한 조직원</h3>
               <span className="subhead-2 ml-[19px] text-[var(--color-gray-500)]">
-                {availableMembers.length}명
+                {totalElements}명
               </span>
             </div>
 
@@ -151,20 +140,20 @@ function TeamMemberInviteModal({
               <p className="body-4 mt-3 text-[var(--color-gray-600)]">{resultMessage}</p>
             )}
 
-            <div className="mt-4 h-[260px] [scrollbar-width:none] overflow-y-auto [&::-webkit-scrollbar]:hidden">
+            <div className="mt-4 h-[220px] [scrollbar-width:none] overflow-y-auto [&::-webkit-scrollbar]:hidden">
               {isLoading && (
                 <p className="body-4 py-10 text-center text-[var(--color-gray-500)]">
-                  멤버를 불러오는 중입니다.
+                  초대 가능한 조직원을 불러오는 중입니다.
                 </p>
               )}
-              {!isLoading && availableMembers.length === 0 && (
+              {!isLoading && members.length === 0 && (
                 <p className="body-4 py-10 text-center text-[var(--color-gray-500)]">
-                  초대할 수 있는 프로젝트 멤버가 없습니다.
+                  초대할 수 있는 조직원이 없습니다.
                 </p>
               )}
               {!isLoading && (
                 <ul className="space-y-2">
-                  {availableMembers.map((member) => {
+                  {members.map((member) => {
                     const isSelected = selectedUserIds.includes(member.userId);
 
                     return (
@@ -190,15 +179,39 @@ function TeamMemberInviteModal({
                 </ul>
               )}
             </div>
+
+            {totalPages > 1 && (
+              <div className="mt-3 flex items-center justify-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => onPageChange(page - 1)}
+                  disabled={page === 0 || isLoading}
+                  className="body-4 disabled:opacity-30"
+                >
+                  이전
+                </button>
+                <span className="body-4 text-[var(--color-gray-500)]">
+                  {page + 1} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onPageChange(page + 1)}
+                  disabled={page + 1 >= totalPages || isLoading}
+                  className="body-4 disabled:opacity-30"
+                >
+                  다음
+                </button>
+              </div>
+            )}
           </>
         )}
 
         {activeTab === 'manage' && (
           <div className="mt-5">
             <div className="flex items-center">
-              <h3 className="subhead-1">현재 팀 멤버</h3>
+              <h3 className="subhead-1">현재 프로젝트 멤버</h3>
               <span className="subhead-2 ml-[19px] text-[var(--color-gray-500)]">
-                {teamMembers.length}명
+                {projectMembers.length}명
               </span>
             </div>
 
@@ -208,17 +221,17 @@ function TeamMemberInviteModal({
             )}
 
             <ul className="mt-4 h-[350px] [scrollbar-width:none] space-y-2 overflow-y-auto [&::-webkit-scrollbar]:hidden">
-              {isLoading && (
+              {isProjectMembersLoading && (
                 <li className="body-4 py-10 text-center text-[var(--color-gray-500)]">
-                  팀 멤버를 불러오는 중입니다.
+                  프로젝트 멤버를 불러오는 중입니다.
                 </li>
               )}
-              {!isLoading && teamMembers.length === 0 && (
+              {!isProjectMembersLoading && projectMembers.length === 0 && (
                 <li className="body-4 py-10 text-center text-[var(--color-gray-500)]">
-                  팀 멤버가 없습니다.
+                  프로젝트 멤버가 없습니다.
                 </li>
               )}
-              {teamMembers.map((member) => {
+              {projectMembers.map((member) => {
                 const isMe = String(member.userId) === String(currentUserId);
                 const isProcessing = String(memberActionUserId) === String(member.userId);
 
@@ -268,4 +281,4 @@ function TeamMemberInviteModal({
   );
 }
 
-export default TeamMemberInviteModal;
+export default ProjectInviteModal;
