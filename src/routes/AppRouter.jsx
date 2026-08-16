@@ -16,6 +16,7 @@ import ProjectCreatePage from '../pages/project/ProjectCreatePage';
 import ProjectPage from '../pages/project/ProjectPage';
 import QAPage from '../pages/qa/QAPage';
 import TeamMeetingRecordsPage from '../pages/project/TeamMeetingRecordsPage';
+import TeamMeetingRecordDetailPage from '../pages/project/TeamMeetingRecordDetailPage';
 import TemporaryPage from '../pages/TemporaryPage';
 
 import ProtectedRoute from './ProtectedRoute';
@@ -58,6 +59,11 @@ function AppRouter() {
         <Route
           path="/projects/:projectId/teams/:teamId/meetings"
           element={<TeamMeetingRecordsPage />}
+        />
+
+        <Route
+          path="/projects/:projectId/teams/:teamId/meetings/:meetingId"
+          element={<TeamMeetingRecordDetailPage />}
         />
 
         <Route path="/meetings" element={<MeetingPage />} />
