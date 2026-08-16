@@ -1,15 +1,10 @@
-import OutlineButton from './OutlineButton';
+import OutlineButton from '../common/OutlineButton';
 
 import closeXIcon from '../../assets/icons/project-create/modal-close-x.svg';
 import defaultMemberAvatar from '../../assets/icons/project-create/modal-member-avatar.svg';
 import searchIcon from '../../assets/icons/project-create/search.svg';
 
-function ProjectMemberModal({
-  data,
-  onClose,
-  onInvite,
-  onEditMembers,
-}) {
+function ProjectMemberModal({ data, onClose, onInvite, onEditMembers }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
       <section className="h-[562px] w-[647px] overflow-hidden rounded-[10px] bg-[var(--color-white)] px-[17px] pt-[23px]">
@@ -22,7 +17,7 @@ function ProjectMemberModal({
             onClick={onClose}
             className="relative ml-auto flex size-6 items-center justify-center"
           >
-            <span className="absolute left-0.5 top-0.5 size-5 rounded-[5px] border-[1.5px] border-[#2B3F6C]" />
+            <span className="absolute top-0.5 left-0.5 size-5 rounded-[5px] border-[1.5px] border-[#2B3F6C]" />
             <img src={closeXIcon} className="size-[6px]" />
           </button>
         </header>
@@ -35,15 +30,12 @@ function ProjectMemberModal({
                 className="body-3 relative mr-2 flex h-8 items-center rounded-[10px] bg-[var(--color-white)] px-5"
               >
                 {member.name}
-                <span className="absolute -right-0.5 top-0.5 size-2 rounded-full bg-[var(--color-black)]" />
+                <span className="absolute top-0.5 -right-0.5 size-2 rounded-full bg-[var(--color-black)]" />
               </span>
             ))}
             <img src={searchIcon} className="ml-auto size-6 shrink-0" />
           </div>
-          <OutlineButton
-            onClick={onInvite}
-            className="h-11 w-[114px] !px-0 !py-0"
-          >
+          <OutlineButton onClick={onInvite} className="h-11 w-[114px] !px-0 !py-0">
             초대장 보내기
           </OutlineButton>
         </div>
@@ -53,11 +45,7 @@ function ProjectMemberModal({
           <span className="subhead-2 ml-[19px] text-[var(--color-gray-500)]">
             {data.totalCount}명
           </span>
-          <button
-            type="button"
-            onClick={onEditMembers}
-            className="body-3 ml-auto"
-          >
+          <button type="button" onClick={onEditMembers} className="body-3 ml-auto">
             멤버 수정하기
           </button>
         </div>
@@ -65,10 +53,7 @@ function ProjectMemberModal({
         <ul className="mt-[25px] space-y-[19px] px-4">
           {data.members.map((member) => (
             <li key={member.id} className="flex h-11 items-center">
-              <img
-                src={member.avatarUrl || defaultMemberAvatar}
-                className="size-11 rounded-full"
-              />
+              <img src={member.avatarUrl || defaultMemberAvatar} className="size-11 rounded-full" />
               <span className="subhead-2 ml-[21px]">{member.name}</span>
               <span className="body-3 ml-[19px] text-[var(--color-gray-500)]">
                 {member.position}

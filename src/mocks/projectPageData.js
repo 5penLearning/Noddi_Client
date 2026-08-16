@@ -35,16 +35,11 @@ export const projectCreateTeamMockData = {
   },
 };
 
-export const projectCreateTeamsMockData = Array.from(
-  { length: 5 },
-  (_, index) => ({
-    ...projectCreateTeamMockData,
-    id: `project-create-team-${index + 1}`,
-    leader: index === 0 || index === 3
-      ? projectCreateTeamMockData.leader
-      : null,
-  }),
-);
+export const projectCreateTeamsMockData = Array.from({ length: 5 }, (_, index) => ({
+  ...projectCreateTeamMockData,
+  id: `project-create-team-${index + 1}`,
+  leader: index === 0 || index === 3 ? projectCreateTeamMockData.leader : null,
+}));
 
 export const projectMemberModalMockData = {
   projectName: '노디 프로젝트',
@@ -59,6 +54,36 @@ export const projectMemberModalMockData = {
     position: '디자인팀 과장',
   })),
 };
+
+export const meetingRecordMockData = [
+  {
+    id: 'meeting-record-1',
+    title: '2026년 10월 03일 - 매거진 확정 회의',
+    createdDate: '2026. 10. 03',
+    createdTime: '10:05',
+    date: '2026-10-03',
+    teams: ['마케팅팀', '제품팀'],
+    summary: '내용 한 줄 정리',
+  },
+  {
+    id: 'meeting-record-2',
+    title: '2026년 10월 04일 - 디자인 검토 회의',
+    createdDate: '2026. 10. 04',
+    createdTime: '14:30',
+    date: '2026-10-04',
+    teams: ['마케팅팀', '개발팀'],
+    summary: '디자인 피드백 정리',
+  },
+  {
+    id: 'meeting-record-3',
+    title: '2026년 10월 05일 - 사용자 조사 결과 발표',
+    createdDate: '2026. 10. 05',
+    createdTime: '11:00',
+    date: '2026-10-05',
+    teams: ['마케팅팀'],
+    summary: '조사 결과 요약',
+  },
+];
 
 export const projectPageMockData = {
   projects: [2, 1, 3, 1, 2, 4].map((myTeamCount, index) => ({

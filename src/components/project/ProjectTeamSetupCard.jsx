@@ -4,13 +4,7 @@ import editIcon from '../../assets/icons/project-create/edit.svg';
 import defaultMemberAvatar from '../../assets/icons/project-create/member-avatar.svg';
 import searchIcon from '../../assets/icons/project-create/search.svg';
 
-function ProjectTeamSetupCard({
-  team,
-  onEdit,
-  onRemove,
-  onSearchLeader,
-  className = '',
-}) {
+function ProjectTeamSetupCard({ team, onEdit, onRemove, onSearchLeader, className = '' }) {
   const leader = team.leader;
 
   return (
@@ -18,9 +12,7 @@ function ProjectTeamSetupCard({
       className={`h-[137px] w-[287px] overflow-hidden rounded-[10px] border border-[var(--color-gray-200)] bg-[var(--color-white)] px-[14px] pt-[13px] ${className}`}
     >
       <div className="flex h-6 items-center">
-        <span className="body-3 tracking-[-0.16px] text-[var(--color-black)]">
-          {team.name}
-        </span>
+        <span className="body-3 tracking-[-0.16px] text-[var(--color-black)]">{team.name}</span>
 
         <button
           type="button"
@@ -37,18 +29,16 @@ function ProjectTeamSetupCard({
         >
           <img
             src={closeLineLeftIcon}
-            className="absolute left-[7px] top-[11px] h-[1.5px] w-[10px] rotate-45"
+            className="absolute top-[11px] left-[7px] h-[1.5px] w-[10px] rotate-45"
           />
           <img
             src={closeLineRightIcon}
-            className="absolute left-[7px] top-[11px] h-[1.5px] w-[10px] -rotate-45"
+            className="absolute top-[11px] left-[7px] h-[1.5px] w-[10px] -rotate-45"
           />
         </button>
       </div>
 
-      <p className="body-5 mt-[16px] tracking-[-0.21px] text-[var(--color-black)]">
-        팀장 설정
-      </p>
+      <p className="body-5 mt-[16px] tracking-[-0.21px] text-[var(--color-black)]">팀장 설정</p>
 
       <button
         type="button"
