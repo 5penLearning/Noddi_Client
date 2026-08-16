@@ -1,0 +1,114 @@
+:root {
+  /* =========================
+     Brand
+  ========================= */
+  --color-primary: #31f5a0;
+  --color-primary-mint: #31f7c0;
+
+  /* =========================
+     Neutral
+  ========================= */
+  --color-white: #ffffff;
+  --color-black: #101211;
+
+  --color-gray-50: #f2f7f4;
+  --color-gray-100: #e9efec;
+  --color-gray-200: #d7dedb;
+  --color-gray-300: #c5ccc9;
+  --color-gray-400: #a9b0ad;
+  --color-gray-500: #8e9592;
+  --color-gray-600: #707673;
+  --color-gray-700: #515654;
+  --color-gray-800: #343836;
+  --color-gray-900: #0c0d0d;
+
+  /* =========================
+     Accent
+  ========================= */
+  --color-red: #f64e42;
+  --color-yellow: #fbf83e;
+  --color-lime: #a0e452;
+
+  /* =========================
+     Semantic
+  ========================= */
+  --color-text-primary: var(--color-black);
+  --color-text-secondary: var(--color-gray-600);
+  --color-text-tertiary: var(--color-gray-500);
+  --color-text-disabled: var(--color-gray-400);
+
+  --color-background: var(--color-white);
+  --color-background-subtle: var(--color-gray-50);
+
+  --color-border: var(--color-gray-200);
+  --color-border-strong: var(--color-gray-300);
+
+  --color-action-primary: var(--color-primary);
+  --color-action-disabled: var(--color-gray-200);
+
+  /* =========================
+     Typography
+  ========================= */
+  --font-family-primary:
+    'Pretendard',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+
+  --font-headline-1-size: 36px;
+  --font-headline-1-line-height: 1.2;
+  --font-headline-1-weight: 600;
+
+  --font-headline-2-size: 32px;
+  --font-headline-2-line-height: 1.2;
+  --font-headline-2-weight: 600;
+
+  --font-headline-3-size: 24px;
+  --font-headline-3-line-height: 1.3;
+  --font-headline-3-weight: 600;
+
+  --font-subhead-1-size: 24px;
+  --font-subhead-1-line-height: 1.3;
+  --font-subhead-1-weight: 500;
+
+  --font-subhead-2-size: 24px;
+  --font-subhead-2-line-height: 1.3;
+  --font-subhead-2-weight: 400;
+
+  --font-subhead-3-size: 20px;
+  --font-subhead-3-line-height: 1.3;
+  --font-subhead-3-weight: 500;
+
+  --font-subhead-4-size: 16px;
+  --font-subhead-4-line-height: 1.3;
+  --font-subhead-4-weight: 400;
+
+  --font-body-1-size: 20px;
+  --font-body-1-line-height: 1.4;
+  --font-body-1-weight: 500;
+
+  --font-body-2-size: 20px;
+  --font-body-2-line-height: 1.4;
+  --font-body-2-weight: 400;
+
+  --font-body-3-size: 16px;
+  --font-body-3-line-height: 1.4;
+  --font-body-3-weight: 500;
+
+  --font-body-4-size: 16px;
+  --font-body-4-line-height: 1.4;
+  --font-body-4-weight: 400;
+
+  --font-body-5-size: 14px;
+  --font-body-5-line-height: 1.4;
+  --font-body-5-weight: 400;
+
+  --font-caption-1-size: 14px;
+  --font-caption-1-line-height: 1.3;
+  --font-caption-1-weight: 400;
+
+  --font-caption-2-size: 12px;
+  --font-caption-2-line-height: 1.3;
+  --font-caption-2-weight: 400;
+}
