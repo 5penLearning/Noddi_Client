@@ -273,6 +273,7 @@ function ProjectPage() {
       setIsTeamCreateModalOpen(false);
       navigate(`/projects/${projectId}/teams/${createdTeamId}/meetings`, {
         state: {
+          projectName: currentProject.name,
           teamName: name,
         },
       });
@@ -385,6 +386,17 @@ function ProjectPage() {
             </section>
           )}
 
+          {!isBannerVisible && (
+            <button
+              type="button"
+              onClick={() => setIsBannerVisible(true)}
+              className="body-4 absolute top-[22px] right-[21px] z-10 flex items-center gap-[7px] tracking-[-0.16px] text-[var(--color-gray-600)]"
+            >
+              <img src={chevronIcon} alt="" className="h-[7px] w-[15px] rotate-180" />
+              설명 보기
+            </button>
+          )}
+
           <div className="px-[22px] pt-10">
             <ProjectNotice
               key={projectId}
@@ -418,7 +430,12 @@ function ProjectPage() {
                       key={team.id}
                       team={team}
                       onMove={(teamId) =>
-                        navigate(`/projects/${projectId}/teams/${teamId}/meetings`)
+                        navigate(`/projects/${projectId}/teams/${teamId}/meetings`, {
+                          state: {
+                            projectName: currentProject.name,
+                            teamName: team.name,
+                          },
+                        })
                       }
                       className="shrink-0"
                     />
