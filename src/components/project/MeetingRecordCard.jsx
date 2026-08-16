@@ -1,4 +1,4 @@
-import chevronIcon from '../../../assets/icons/profile/chevron.svg';
+import chevronIcon from '../../assets/icons/profile/chevron.svg';
 
 function MeetingRecordCard({
   title,

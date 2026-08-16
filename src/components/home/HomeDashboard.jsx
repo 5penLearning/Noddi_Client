@@ -1,13 +1,13 @@
 import { useState } from 'react';
 
-import logo from '../assets/logo-green.svg';
-import { homePageMockData } from '../mocks/homePageData';
+import logo from '../../assets/logo-green.svg';
+import { homePageMockData } from '../../mocks/homePageData';
 
-import calendarArrowIcon from '../assets/icons/home-meeting/calendar-arrow.svg';
-import meetingSymbolIcon from '../assets/icons/home-meeting/meeting-symbol.svg';
-import meetingSymbolSecondaryIcon from '../assets/icons/home-meeting/meeting-symbol-secondary.svg';
-import scheduleDotPrimaryIcon from '../assets/icons/home-meeting/schedule-dot-primary.svg';
-import scheduleDotSecondaryIcon from '../assets/icons/home-meeting/schedule-dot-secondary.svg';
+import calendarArrowIcon from '../../assets/icons/home-meeting/calendar-arrow.svg';
+import meetingSymbolIcon from '../../assets/icons/home-meeting/meeting-symbol.svg';
+import meetingSymbolSecondaryIcon from '../../assets/icons/home-meeting/meeting-symbol-secondary.svg';
+import scheduleDotPrimaryIcon from '../../assets/icons/home-meeting/schedule-dot-primary.svg';
+import scheduleDotSecondaryIcon from '../../assets/icons/home-meeting/schedule-dot-secondary.svg';
 
 const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
@@ -242,7 +242,7 @@ function TodoList({ description, items }) {
   );
 }
 
-function Home() {
+function HomeDashboard() {
   const { hero, meetingSchedule, aiReplies, todoList } = homePageMockData;
 
   return (
@@ -265,4 +265,4 @@ function Home() {
   );
 }
 
-export default Home;
+export default HomeDashboard;

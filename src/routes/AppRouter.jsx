@@ -6,16 +6,16 @@ import SplashPage from '../pages/splash/SplashPage';
 
 import AppLayout from '../layouts/AppLayout';
 
-import Home from '../pages/Home';
+import Home from '../pages/home/Home';
 import MeetingPage from '../pages/meeting/MeetingPage';
 import MeetingRoomPage from '../pages/meeting/MeetingRoomPage';
 import MeetingSummaryPage from '../pages/meeting/MeetingSummaryPage';
 import MyPage from '../pages/mypage/MyPage';
 import ProfileSettingsPage from '../pages/mypage/ProfileSettingsPage';
-import ProjectCreatePage from '../pages/ProjectCreatePage';
-import ProjectPage from '../pages/ProjectPage';
+import ProjectCreatePage from '../pages/project/ProjectCreatePage';
+import ProjectPage from '../pages/project/ProjectPage';
 import QAPage from '../pages/qa/QAPage';
-import TeamMeetingRecordsPage from '../pages/TeamMeetingRecordsPage';
+import TeamMeetingRecordsPage from '../pages/project/TeamMeetingRecordsPage';
 import TemporaryPage from '../pages/TemporaryPage';
 
 import ProtectedRoute from './ProtectedRoute';

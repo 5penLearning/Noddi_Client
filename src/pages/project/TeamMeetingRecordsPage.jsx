@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState } from 'react';
 
-import MeetingRecordCard from '../components/feature/meeting/MeetingRecordCard';
-import { meetingRecordMockData } from '../mocks/projectPageData';
+import MeetingRecordCard from '../../components/project/MeetingRecordCard';
+import { meetingRecordMockData } from '../../mocks/projectPageData';
 
-import calendarIcon from '../assets/icons/meeting-records/calendar.svg';
-import searchIcon from '../assets/icons/search/search.svg';
+import calendarIcon from '../../assets/icons/meeting-records/calendar.svg';
+import searchIcon from '../../assets/icons/search/search.svg';
 
 function TeamMeetingRecordsPage() {
   const dateInputRef = useRef(null);

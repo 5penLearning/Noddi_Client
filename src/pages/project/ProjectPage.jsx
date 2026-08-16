@@ -1,16 +1,26 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import MyTeamCard from '../components/common/MyTeamCard';
-import OutlineButton from '../components/common/OutlineButton';
-import ProjectCreateButton from '../components/common/ProjectCreateButton';
-import ProjectNotice from '../components/common/ProjectNotice';
-import ProjectTeamCard from '../components/common/ProjectTeamCard';
-import { getApiErrorMessage } from '../api/axios';
-import { getProjects } from '../api/projects';
-import { getProjectTeams } from '../api/teams';
-import { projectPageMockData } from '../mocks/projectPageData';
 
-import chevronIcon from '../assets/icons/profile/chevron.svg';
+import OutlineButton from '../../components/common/OutlineButton';
+import AnnouncementDetailModal from '../../components/project/AnnouncementDetailModal';
+import AnnouncementFormModal from '../../components/project/AnnouncementFormModal';
+import MyTeamCard from '../../components/project/MyTeamCard';
+import ProjectCreateButton from '../../components/project/ProjectCreateButton';
+import ProjectNotice from '../../components/project/ProjectNotice';
+import ProjectTeamCard from '../../components/project/ProjectTeamCard';
+import {
+  createAnnouncement,
+  deleteAnnouncement,
+  getAnnouncement,
+  getProjectAnnouncements,
+  updateAnnouncement,
+} from '../../api/announcements';
+import { getApiErrorMessage, getUserId } from '../../api/axios';
+import { getMemberProjects } from '../../api/projects';
+import { getProjectTeams } from '../../api/teams';
+import { projectPageMockData } from '../../mocks/projectPageData';
+
+import chevronIcon from '../../assets/icons/profile/chevron.svg';
 
 const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
 
@@ -51,7 +61,17 @@ function ProjectPage() {
   const [projectTeams, setProjectTeams] = useState([]);
   const [isTeamsLoading, setIsTeamsLoading] = useState(false);
   const [teamsErrorMessage, setTeamsErrorMessage] = useState('');
-  const { description, notices, myTeams } = projectPageMockData;
+  const [announcements, setAnnouncements] = useState([]);
+  const [isAnnouncementsLoading, setIsAnnouncementsLoading] = useState(false);
+  const [announcementsErrorMessage, setAnnouncementsErrorMessage] = useState('');
+  const [announcementFormMode, setAnnouncementFormMode] = useState(null);
+  const [isAnnouncementDetailOpen, setIsAnnouncementDetailOpen] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const [isAnnouncementDetailLoading, setIsAnnouncementDetailLoading] = useState(false);
+  const [isAnnouncementSubmitting, setIsAnnouncementSubmitting] = useState(false);
+  const [isAnnouncementDeleting, setIsAnnouncementDeleting] = useState(false);
+  const [announcementModalError, setAnnouncementModalError] = useState('');
+  const { description, myTeams } = projectPageMockData;
   const currentProject = projects.find((project) => String(project.projectId) === projectId);
   const currentProjectIndex = projects.findIndex(
     (project) => String(project.projectId) === projectId,
@@ -66,7 +86,7 @@ function ProjectPage() {
       try {
         setIsLoading(true);
         setErrorMessage('');
-        const projectList = await getProjects();
+        const projectList = await getMemberProjects(getUserId());
         setProjects(projectList);
 
         // 백엔드 데이터가 없어서 임시로 목데이터 사용
@@ -101,6 +121,10 @@ function ProjectPage() {
 
   useEffect(() => {
     setIsBannerVisible(true);
+    setAnnouncementFormMode(null);
+    setIsAnnouncementDetailOpen(false);
+    setSelectedAnnouncement(null);
+    setAnnouncementModalError('');
   }, [projectId]);
 
   useEffect(() => {
@@ -133,6 +157,132 @@ function ProjectPage() {
     };
 
     fetchProjectTeams();
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [currentProject, projectId]);
+
+  const refreshProjectAnnouncements = async () => {
+    const announcementPage = await getProjectAnnouncements(projectId);
+    setAnnouncements(announcementPage.announcements);
+    setAnnouncementsErrorMessage('');
+  };
+
+  const handleOpenCreateAnnouncement = () => {
+    setSelectedAnnouncement(null);
+    setAnnouncementModalError('');
+    setAnnouncementFormMode('create');
+  };
+
+  const handleOpenAnnouncementDetail = async (announcementId) => {
+    try {
+      setIsAnnouncementDetailOpen(true);
+      setIsAnnouncementDetailLoading(true);
+      setSelectedAnnouncement(null);
+      setAnnouncementModalError('');
+
+      const announcement = await getAnnouncement(projectId, announcementId);
+      setSelectedAnnouncement(announcement);
+    } catch (error) {
+      setAnnouncementModalError(getApiErrorMessage(error, '공지 상세 내용을 불러오지 못했습니다.'));
+    } finally {
+      setIsAnnouncementDetailLoading(false);
+    }
+  };
+
+  const handleSubmitAnnouncement = async ({ teamId, title, content }) => {
+    try {
+      setIsAnnouncementSubmitting(true);
+      setAnnouncementModalError('');
+
+      if (announcementFormMode === 'edit' && selectedAnnouncement) {
+        await updateAnnouncement(projectId, selectedAnnouncement.id, {
+          title,
+          content,
+        });
+      } else {
+        await createAnnouncement(projectId, teamId, {
+          title,
+          content,
+        });
+      }
+
+      await refreshProjectAnnouncements();
+      setAnnouncementFormMode(null);
+      setSelectedAnnouncement(null);
+    } catch (error) {
+      setAnnouncementModalError(
+        getApiErrorMessage(
+          error,
+          announcementFormMode === 'edit'
+            ? '공지를 수정하지 못했습니다.'
+            : '공지를 등록하지 못했습니다.',
+        ),
+      );
+    } finally {
+      setIsAnnouncementSubmitting(false);
+    }
+  };
+
+  const handleEditAnnouncement = () => {
+    setIsAnnouncementDetailOpen(false);
+    setAnnouncementModalError('');
+    setAnnouncementFormMode('edit');
+  };
+
+  const handleDeleteAnnouncement = async () => {
+    if (!selectedAnnouncement) return;
+
+    const shouldDelete = window.confirm('이 공지를 삭제할까요?');
+
+    if (!shouldDelete) return;
+
+    try {
+      setIsAnnouncementDeleting(true);
+      setAnnouncementModalError('');
+
+      await deleteAnnouncement(projectId, selectedAnnouncement.id);
+      await refreshProjectAnnouncements();
+      setIsAnnouncementDetailOpen(false);
+      setSelectedAnnouncement(null);
+    } catch (error) {
+      setAnnouncementModalError(getApiErrorMessage(error, '공지를 삭제하지 못했습니다.'));
+    } finally {
+      setIsAnnouncementDeleting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!projectId || !currentProject) return;
+
+    let isCurrentRequest = true;
+
+    const fetchProjectAnnouncements = async () => {
+      try {
+        setIsAnnouncementsLoading(true);
+        setAnnouncementsErrorMessage('');
+
+        const announcementPage = await getProjectAnnouncements(projectId);
+
+        if (isCurrentRequest) {
+          setAnnouncements(announcementPage.announcements);
+        }
+      } catch (error) {
+        if (isCurrentRequest) {
+          setAnnouncements([]);
+          setAnnouncementsErrorMessage(
+            getApiErrorMessage(error, '프로젝트 공지를 불러오지 못했습니다.'),
+          );
+        }
+      } finally {
+        if (isCurrentRequest) {
+          setIsAnnouncementsLoading(false);
+        }
+      }
+    };
+
+    fetchProjectAnnouncements();
 
     return () => {
       isCurrentRequest = false;
@@ -206,7 +356,14 @@ function ProjectPage() {
           )}
 
           <div className="px-[22px] pt-10">
-            <ProjectNotice key={projectId} notices={notices} />
+            <ProjectNotice
+              key={projectId}
+              notices={announcements}
+              isLoading={isAnnouncementsLoading}
+              errorMessage={announcementsErrorMessage}
+              onCreateClick={handleOpenCreateAnnouncement}
+              onDetailClick={handleOpenAnnouncementDetail}
+            />
 
             <section className="mt-[38px]">
               <h2 className="subhead-1 text-[var(--color-black)]">내 팀</h2>
@@ -261,6 +418,40 @@ function ProjectPage() {
           </div>
         </main>
       </div>
+
+      <AnnouncementFormModal
+        isOpen={Boolean(announcementFormMode)}
+        mode={announcementFormMode ?? 'create'}
+        teams={projectTeams}
+        initialAnnouncement={selectedAnnouncement}
+        isSubmitting={isAnnouncementSubmitting}
+        errorMessage={announcementModalError}
+        onClose={() => {
+          setAnnouncementFormMode(null);
+          setSelectedAnnouncement(null);
+          setAnnouncementModalError('');
+        }}
+        onSubmit={handleSubmitAnnouncement}
+      />
+
+      <AnnouncementDetailModal
+        isOpen={isAnnouncementDetailOpen}
+        announcement={selectedAnnouncement}
+        isLoading={isAnnouncementDetailLoading}
+        isDeleting={isAnnouncementDeleting}
+        errorMessage={announcementModalError}
+        canManage={
+          Boolean(selectedAnnouncement?.authorId) &&
+          String(selectedAnnouncement.authorId) === String(getUserId())
+        }
+        onClose={() => {
+          setIsAnnouncementDetailOpen(false);
+          setSelectedAnnouncement(null);
+          setAnnouncementModalError('');
+        }}
+        onEdit={handleEditAnnouncement}
+        onDelete={handleDeleteAnnouncement}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import OutlineButton from './OutlineButton';
+import OutlineButton from '../common/OutlineButton';
 
 const MAX_VISIBLE_MEMBERS = 4;
 
