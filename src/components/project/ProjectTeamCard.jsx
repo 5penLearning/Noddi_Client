@@ -1,5 +1,7 @@
 import OutlineButton from '../common/OutlineButton';
 
+import defaultTeamAvatar from '../../assets/icons/my-team-avatar.svg';
+
 const MAX_VISIBLE_MEMBERS = 4;
 
 function ProjectTeamCard({ team, onAsk, className = '' }) {
@@ -18,7 +20,7 @@ function ProjectTeamCard({ team, onAsk, className = '' }) {
             {visibleMembers.map((member, index) => (
               <img
                 key={member.id}
-                src={member.avatarUrl}
+                src={member.avatarUrl || defaultTeamAvatar}
                 alt=""
                 className={`size-7 rounded-full ${index === 0 ? '' : '-ml-[7px]'}`}
               />

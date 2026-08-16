@@ -1,5 +1,7 @@
-import teamLogo from '../../assets/icons/my-team-logo.svg';
 import OutlineButton from '../common/OutlineButton';
+
+import defaultTeamAvatar from '../../assets/icons/my-team-avatar.svg';
+import teamLogo from '../../assets/icons/my-team-logo.svg';
 
 const MAX_VISIBLE_MEMBERS = 4; // 지금 화면에 동그라미 4개 있어서 4로 함
 
@@ -20,7 +22,7 @@ function MyTeamCard({ team, onMove, onTodoToggle, className = '' }) {
             {visibleMembers.map((member, index) => (
               <img
                 key={member.id}
-                src={member.avatarUrl}
+                src={member.avatarUrl || defaultTeamAvatar}
                 alt=""
                 className={`size-7 rounded-full ${index === 0 ? '' : '-ml-[7px]'}`}
               />
