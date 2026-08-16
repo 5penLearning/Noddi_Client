@@ -10,10 +10,15 @@ import Home from '../pages/Home';
 import MeetingPage from '../pages/meeting/MeetingPage';
 import MeetingRoomPage from '../pages/meeting/MeetingRoomPage';
 import MeetingSummaryPage from '../pages/meeting/MeetingSummaryPage';
+import MyPage from '../pages/mypage/MyPage';
+import ProfileSettingsPage from '../pages/mypage/ProfileSettingsPage';
 import ProjectCreatePage from '../pages/ProjectCreatePage';
 import ProjectPage from '../pages/ProjectPage';
+import QAPage from '../pages/qa/QAPage';
 import TeamMeetingRecordsPage from '../pages/TeamMeetingRecordsPage';
 import TemporaryPage from '../pages/TemporaryPage';
+
+import ProtectedRoute from './ProtectedRoute';
 
 function AppRouter() {
   return (
@@ -24,11 +29,24 @@ function AppRouter() {
 
       <Route path="/signup" element={<SignUpPage />} />
 
-      {/* 화상회의는 전체 화면 */}
-      <Route path="/meetings/:meetingId/room" element={<MeetingRoomPage />} />
+      {/* 화상회의 전체 화면 */}
+      <Route
+        path="/meetings/:meetingId/room"
+        element={
+          <ProtectedRoute>
+            <MeetingRoomPage />
+          </ProtectedRoute>
+        }
+      />
 
-      {/* 일반 서비스 화면 */}
-      <Route element={<AppLayout />}>
+      {/* 로그인 필요 서비스 화면 */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route path="/home" element={<Home />} />
 
         <Route path="/projects" element={<ProjectPage />} />
@@ -48,7 +66,11 @@ function AppRouter() {
 
         <Route path="/chat" element={<TemporaryPage title="채팅" />} />
 
-        <Route path="/mypage" element={<TemporaryPage title="마이페이지" />} />
+        <Route path="/qa" element={<QAPage />} />
+
+        <Route path="/mypage" element={<MyPage />} />
+
+        <Route path="/mypage/profile" element={<ProfileSettingsPage />} />
 
         <Route path="/settings" element={<TemporaryPage title="설정" />} />
 
