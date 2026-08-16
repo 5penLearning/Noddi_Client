@@ -8,6 +8,7 @@ import MyTeamCard from '../../components/project/MyTeamCard';
 import ProjectCreateButton from '../../components/project/ProjectCreateButton';
 import ProjectNotice from '../../components/project/ProjectNotice';
 import ProjectTeamCard from '../../components/project/ProjectTeamCard';
+import TeamCreateModal from '../../components/project/TeamCreateModal';
 import {
   createAnnouncement,
   deleteAnnouncement,
@@ -17,7 +18,7 @@ import {
 } from '../../api/announcements';
 import { getApiErrorMessage, getUserId } from '../../api/axios';
 import { getMemberProjects } from '../../api/projects';
-import { getProjectTeams } from '../../api/teams';
+import { createTeam, getMyTeams, getProjectTeams } from '../../api/teams';
 import { projectPageMockData } from '../../mocks/projectPageData';
 
 import chevronIcon from '../../assets/icons/profile/chevron.svg';
@@ -59,8 +60,12 @@ function ProjectPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [projectTeams, setProjectTeams] = useState([]);
+  const [myTeams, setMyTeams] = useState([]);
   const [isTeamsLoading, setIsTeamsLoading] = useState(false);
   const [teamsErrorMessage, setTeamsErrorMessage] = useState('');
+  const [isTeamCreateModalOpen, setIsTeamCreateModalOpen] = useState(false);
+  const [isTeamCreating, setIsTeamCreating] = useState(false);
+  const [teamCreateErrorMessage, setTeamCreateErrorMessage] = useState('');
   const [announcements, setAnnouncements] = useState([]);
   const [isAnnouncementsLoading, setIsAnnouncementsLoading] = useState(false);
   const [announcementsErrorMessage, setAnnouncementsErrorMessage] = useState('');
@@ -71,15 +76,8 @@ function ProjectPage() {
   const [isAnnouncementSubmitting, setIsAnnouncementSubmitting] = useState(false);
   const [isAnnouncementDeleting, setIsAnnouncementDeleting] = useState(false);
   const [announcementModalError, setAnnouncementModalError] = useState('');
-  const { description, myTeams } = projectPageMockData;
+  const { description } = projectPageMockData;
   const currentProject = projects.find((project) => String(project.projectId) === projectId);
-  const currentProjectIndex = projects.findIndex(
-    (project) => String(project.projectId) === projectId,
-  );
-  const visibleMyTeams = myTeams.slice(
-    0,
-    projectPageMockData.projects[currentProjectIndex]?.myTeamCount ?? 0,
-  );
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -137,14 +135,23 @@ function ProjectPage() {
         setIsTeamsLoading(true);
         setTeamsErrorMessage('');
 
-        const teamList = await getProjectTeams(projectId);
+        const [teamList, myTeamList] = await Promise.all([
+          getProjectTeams(projectId),
+          getMyTeams(),
+        ]);
+        const currentProjectTeamIds = new Set(teamList.map((team) => String(team.id)));
+        const currentProjectMyTeams = myTeamList.filter((team) =>
+          currentProjectTeamIds.has(String(team.id)),
+        );
 
         if (isCurrentRequest) {
           setProjectTeams(teamList);
+          setMyTeams(currentProjectMyTeams);
         }
       } catch (error) {
         if (isCurrentRequest) {
           setProjectTeams([]);
+          setMyTeams([]);
           setTeamsErrorMessage(
             getApiErrorMessage(error, '프로젝트 팀 목록을 불러오지 못했습니다.'),
           );
@@ -250,6 +257,29 @@ function ProjectPage() {
       setAnnouncementModalError(getApiErrorMessage(error, '공지를 삭제하지 못했습니다.'));
     } finally {
       setIsAnnouncementDeleting(false);
+    }
+  };
+
+  const handleCreateTeam = async ({ name, description: teamDescription }) => {
+    try {
+      setIsTeamCreating(true);
+      setTeamCreateErrorMessage('');
+
+      const createdTeamId = await createTeam(projectId, {
+        name,
+        description: teamDescription,
+      });
+
+      setIsTeamCreateModalOpen(false);
+      navigate(`/projects/${projectId}/teams/${createdTeamId}/meetings`, {
+        state: {
+          teamName: name,
+        },
+      });
+    } catch (error) {
+      setTeamCreateErrorMessage(getApiErrorMessage(error, '팀을 생성하지 못했습니다.'));
+    } finally {
+      setIsTeamCreating(false);
     }
   };
 
@@ -368,14 +398,31 @@ function ProjectPage() {
             <section className="mt-[38px]">
               <h2 className="subhead-1 text-[var(--color-black)]">내 팀</h2>
               <div className="mt-[19px] flex [scrollbar-width:none] gap-[14px] overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden">
-                {visibleMyTeams.map((team) => (
-                  <MyTeamCard
-                    key={team.id}
-                    team={team}
-                    onMove={(teamId) => navigate(`/projects/${projectId}/teams/${teamId}/meetings`)}
-                    className="shrink-0"
-                  />
-                ))}
+                {isTeamsLoading && (
+                  <p className="body-4 py-10 text-[var(--color-gray-500)]">
+                    내 팀을 불러오는 중입니다.
+                  </p>
+                )}
+                {!isTeamsLoading && teamsErrorMessage && (
+                  <p className="body-4 py-10 text-[var(--color-red)]">{teamsErrorMessage}</p>
+                )}
+                {!isTeamsLoading && !teamsErrorMessage && myTeams.length === 0 && (
+                  <p className="body-4 py-10 text-[var(--color-gray-500)]">
+                    아직 가입한 팀이 없습니다.
+                  </p>
+                )}
+                {!isTeamsLoading &&
+                  !teamsErrorMessage &&
+                  myTeams.map((team) => (
+                    <MyTeamCard
+                      key={team.id}
+                      team={team}
+                      onMove={(teamId) =>
+                        navigate(`/projects/${projectId}/teams/${teamId}/meetings`)
+                      }
+                      className="shrink-0"
+                    />
+                  ))}
               </div>
             </section>
 
@@ -389,7 +436,13 @@ function ProjectPage() {
                     {projectTeams.length}개
                   </span>
                 </div>
-                <OutlineButton className="h-[44px] w-[114px] !px-0 !py-0">
+                <OutlineButton
+                  onClick={() => {
+                    setTeamCreateErrorMessage('');
+                    setIsTeamCreateModalOpen(true);
+                  }}
+                  className="h-[44px] w-[114px] !px-0 !py-0"
+                >
                   팀 추가하기
                 </OutlineButton>
               </div>
@@ -451,6 +504,17 @@ function ProjectPage() {
         }}
         onEdit={handleEditAnnouncement}
         onDelete={handleDeleteAnnouncement}
+      />
+
+      <TeamCreateModal
+        isOpen={isTeamCreateModalOpen}
+        isSubmitting={isTeamCreating}
+        errorMessage={teamCreateErrorMessage}
+        onClose={() => {
+          setIsTeamCreateModalOpen(false);
+          setTeamCreateErrorMessage('');
+        }}
+        onSubmit={handleCreateTeam}
       />
     </div>
   );
