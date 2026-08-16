@@ -6,15 +6,16 @@ import SplashPage from '../pages/splash/SplashPage';
 
 import AppLayout from '../layouts/AppLayout';
 
-import Home from '../pages/Home';
+import Home from '../pages/home/Home';
 import MeetingPage from '../pages/meeting/MeetingPage';
 import MeetingRoomPage from '../pages/meeting/MeetingRoomPage';
 import MeetingSummaryPage from '../pages/meeting/MeetingSummaryPage';
 import MyPage from '../pages/mypage/MyPage';
 import ProfileSettingsPage from '../pages/mypage/ProfileSettingsPage';
-import ProjectCreatePage from '../pages/ProjectCreatePage';
-import ProjectPage from '../pages/ProjectPage';
+import ProjectCreatePage from '../pages/project/ProjectCreatePage';
+import ProjectPage from '../pages/project/ProjectPage';
 import QAPage from '../pages/qa/QAPage';
+import TeamMeetingRecordsPage from '../pages/project/TeamMeetingRecordsPage';
 import TemporaryPage from '../pages/TemporaryPage';
 
 import ProtectedRoute from './ProtectedRoute';
@@ -54,33 +55,26 @@ function AppRouter() {
 
         <Route path="/projects/:projectId" element={<ProjectPage />} />
 
+        <Route
+          path="/projects/:projectId/teams/:teamId/meetings"
+          element={<TeamMeetingRecordsPage />}
+        />
+
         <Route path="/meetings" element={<MeetingPage />} />
 
-        <Route
-          path="/meetings/:meetingId/summary"
-          element={<MeetingSummaryPage />}
-        />
+        <Route path="/meetings/:meetingId/summary" element={<MeetingSummaryPage />} />
+
+        <Route path="/chat" element={<TemporaryPage title="채팅" />} />
 
         <Route path="/qa" element={<QAPage />} />
 
         <Route path="/mypage" element={<MyPage />} />
 
-        <Route
-          path="/mypage/profile"
-          element={<ProfileSettingsPage />}
-        />
+        <Route path="/mypage/profile" element={<ProfileSettingsPage />} />
 
-        <Route
-          path="/settings"
-          element={<TemporaryPage title="설정" />}
-        />
+        <Route path="/settings" element={<TemporaryPage title="설정" />} />
 
-        <Route
-          path="*"
-          element={
-            <TemporaryPage title="페이지를 찾을 수 없습니다." />
-          }
-        />
+        <Route path="*" element={<TemporaryPage title="페이지를 찾을 수 없습니다." />} />
       </Route>
     </Routes>
   );

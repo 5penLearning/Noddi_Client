@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import OutlineButton from '../components/common/OutlineButton';
-import ProjectMemberModal from '../components/common/ProjectMemberModal';
-import ProjectTeamSetupCard from '../components/common/ProjectTeamSetupCard';
-import { getApiErrorMessage } from '../api/axios';
-import { createProject } from '../api/projects';
-import { projectCreateTeamsMockData, projectMemberModalMockData } from '../mocks/projectPageData';
+import OutlineButton from '../../components/common/OutlineButton';
+import ProjectMemberModal from '../../components/project/ProjectMemberModal';
+import ProjectTeamSetupCard from '../../components/project/ProjectTeamSetupCard';
+import { getApiErrorMessage } from '../../api/axios';
+import { createProject } from '../../api/projects';
+import {
+  projectCreateTeamsMockData,
+  projectMemberModalMockData,
+} from '../../mocks/projectPageData';
 
-import chevronIcon from '../assets/icons/profile/chevron.svg';
-import clearXIcon from '../assets/icons/project-create/clear-x.svg';
-import addHorizontalIcon from '../assets/icons/project-create/add-horizontal.svg';
-import addVerticalIcon from '../assets/icons/project-create/add-vertical.svg';
+import chevronIcon from '../../assets/icons/profile/chevron.svg';
+import clearXIcon from '../../assets/icons/project-create/clear-x.svg';
+import addHorizontalIcon from '../../assets/icons/project-create/add-horizontal.svg';
+import addVerticalIcon from '../../assets/icons/project-create/add-vertical.svg';
 
 const projectColors = Array.from({ length: 12 }, (_, index) => ({
   id: `project-color-${index + 1}`,

@@ -1,5 +1,5 @@
 import teamLogo from '../../assets/icons/my-team-logo.svg';
-import OutlineButton from './OutlineButton';
+import OutlineButton from '../common/OutlineButton';
 
 const MAX_VISIBLE_MEMBERS = 4; // 지금 화면에 동그라미 4개 있어서 4로 함
 
