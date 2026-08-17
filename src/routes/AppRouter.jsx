@@ -70,6 +70,8 @@ function AppRouter() {
 
         <Route path="/meetings/:meetingId/summary" element={<MeetingSummaryPage />} />
 
+        <Route path="/meetings/:meetingId/record" element={<TeamMeetingRecordDetailPage />} />
+
         <Route path="/chat" element={<TemporaryPage title="채팅" />} />
 
         <Route path="/qa" element={<QAPage />} />
