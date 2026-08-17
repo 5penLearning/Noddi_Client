@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
-import playIcon from '../../assets/icons/meeting-records/detail-play.svg';
-import swapIcon from '../../assets/icons/meeting-records/detail-swap.svg';
+import forwardFiveIcon from '../../assets/icons/meeting-records/detail-forward-5.svg';
+import playControlIcon from '../../assets/icons/meeting-records/detail-play-control.svg';
+import rewindFiveIcon from '../../assets/icons/meeting-records/detail-rewind-5.svg';
 
 const formatTime = (seconds) => {
   if (!Number.isFinite(seconds)) return '00:00';
@@ -19,16 +20,16 @@ function MeetingAudioPlayer({ recordingUrl, onRequestRecording }) {
   const [duration, setDuration] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
 
-  useEffect(() => {
-    if (!recordingUrl || !audioRef.current) return;
-
-    audioRef.current.play().catch(() => setIsPlaying(false));
-    setIsPlaying(true);
-  }, [recordingUrl]);
-
   const togglePlay = async () => {
     if (!recordingUrl) {
-      await onRequestRecording();
+      const nextRecordingUrl = await onRequestRecording();
+
+      if (nextRecordingUrl && audioRef.current) {
+        audioRef.current.src = nextRecordingUrl;
+        await audioRef.current.play();
+        setIsPlaying(true);
+      }
+
       return;
     }
 
@@ -48,6 +49,18 @@ function MeetingAudioPlayer({ recordingUrl, onRequestRecording }) {
     audioRef.current.playbackRate = nextRate;
   };
 
+  const seekBy = (seconds) => {
+    if (!audioRef.current) return;
+
+    const nextTime = Math.min(
+      Math.max(audioRef.current.currentTime + seconds, 0),
+      audioRef.current.duration || 0,
+    );
+
+    audioRef.current.currentTime = nextTime;
+    setCurrentTime(nextTime);
+  };
+
   return (
     <div className="sticky bottom-0 mt-auto w-full bg-white">
       <audio
@@ -63,19 +76,37 @@ function MeetingAudioPlayer({ recordingUrl, onRequestRecording }) {
           style={{ width: duration ? `${(currentTime / duration) * 100}%` : '0%' }}
         />
       </div>
-      <div className="relative flex h-[53px] items-center px-8">
-        <span className="text-[16px] leading-[1.4] font-medium tracking-[-0.16px] text-black">
+      <div className="relative flex h-[53px] items-center justify-between px-8">
+        <span className="text-[16px] leading-[1.4] font-medium tracking-[-0.16px] text-[var(--color-gray-500)]">
           {formatTime(currentTime)}
         </span>
-        <button type="button" onClick={changeRate} className="ml-[260px] text-[16px] font-medium">
-          {playbackRate}x
-        </button>
-        <button type="button" onClick={() => (audioRef.current.currentTime = 0)} className="ml-28">
-          <img src={swapIcon} className="size-6" />
-        </button>
-        <button type="button" onClick={togglePlay} className="absolute left-1/2 -translate-x-1/2">
-          <img src={playIcon} className={`size-6 ${isPlaying ? 'opacity-50' : ''}`} />
-        </button>
+
+        <div className="absolute left-1/2 flex -translate-x-1/2 items-center gap-6">
+          <button
+            type="button"
+            onClick={changeRate}
+            className="mr-8 text-[16px] leading-[1.4] font-medium tracking-[-0.16px] whitespace-nowrap text-[var(--color-gray-600)]"
+          >
+            {playbackRate}x
+          </button>
+          <button
+            type="button"
+            onClick={() => seekBy(-5)}
+            className="flex size-[26px] items-center"
+          >
+            <img src={rewindFiveIcon} className="size-[26px]" />
+          </button>
+          <button type="button" onClick={togglePlay} className="flex size-6 items-center">
+            <img src={playControlIcon} className={`size-6 ${isPlaying ? 'opacity-50' : ''}`} />
+          </button>
+          <button type="button" onClick={() => seekBy(5)} className="flex size-[26px] items-center">
+            <img src={forwardFiveIcon} className="size-[26px] -scale-x-100" />
+          </button>
+        </div>
+
+        <span className="text-[16px] leading-[1.4] font-medium tracking-[-0.16px] text-[var(--color-gray-500)]">
+          {formatTime(duration)}
+        </span>
       </div>
     </div>
   );

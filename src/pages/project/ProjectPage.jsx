@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import AnnouncementDetailModal from '../../components/project/AnnouncementDetailModal';
 import AnnouncementFormModal from '../../components/project/AnnouncementFormModal';
 import AddUserIcon from '../../components/project/AddUserIcon';
+import ContentVisibilityToggle from '../../components/project/ContentVisibilityToggle';
 import MyTeamCard from '../../components/project/MyTeamCard';
 import ProjectCreateButton from '../../components/project/ProjectCreateButton';
 import ProjectInviteModal from '../../components/project/ProjectInviteModal';
@@ -34,8 +35,6 @@ import {
   inviteTeamMember,
 } from '../../api/teams';
 import { projectPageMockData } from '../../mocks/projectPageData';
-
-import chevronIcon from '../../assets/icons/profile/chevron.svg';
 
 const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
 
@@ -593,26 +592,21 @@ function ProjectPage() {
               <p className="subhead-3 ml-5 min-w-0 flex-1 truncate text-[var(--color-gray-700)]">
                 {currentProject.description || description}
               </p>
-              <button
-                type="button"
+              <ContentVisibilityToggle
+                isVisible
                 onClick={() => setIsBannerVisible(false)}
-                className="body-4 ml-4 flex shrink-0 items-center gap-[7px] tracking-[-0.16px] text-[var(--color-gray-600)]"
-              >
-                <img src={chevronIcon} alt="" className="h-[7px] w-[15px]" />
-                숨기기
-              </button>
+                className="ml-4"
+              />
             </section>
           )}
 
           {!isBannerVisible && (
-            <button
-              type="button"
+            <ContentVisibilityToggle
+              isVisible={false}
               onClick={() => setIsBannerVisible(true)}
-              className="body-4 absolute top-[22px] right-[21px] z-10 flex items-center gap-[7px] tracking-[-0.16px] text-[var(--color-gray-600)]"
-            >
-              <img src={chevronIcon} alt="" className="h-[7px] w-[15px] rotate-180" />
-              설명 보기
-            </button>
+              showLabel="설명 보기"
+              className="absolute top-[22px] right-[21px] z-10"
+            />
           )}
 
           <div className="px-[22px] pt-10">

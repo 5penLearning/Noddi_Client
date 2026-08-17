@@ -8,7 +8,7 @@ import MeetingParticipants from '../../components/project/MeetingParticipants';
 import MeetingTranscriptPanel from '../../components/project/MeetingTranscriptPanel';
 import { getApiErrorMessage } from '../../api/axios';
 import { getMeeting, getMeetingParticipants, getMeetingRecordingUrl } from '../../api/meetingApi';
-import { getMeetingSummary } from '../../api/summaryApi';
+import { getMeetingSummary, updateMeetingSummary } from '../../api/summaryApi';
 
 const formatMeetingDate = (dateValue) => {
   const date = new Date(dateValue);
@@ -44,6 +44,13 @@ const formatDuration = (startValue, endValue) => {
   return `${hours ? `${hours}시간 ` : ''}${minutes}분 ${seconds}초`;
 };
 
+const getRecordingUrlFromResponse = (response) => {
+  const result = response?.result ?? response;
+  const url = result?.recordingUrl ?? result?.url ?? result;
+
+  return typeof url === 'string' ? url : '';
+};
+
 function TeamMeetingRecordDetailPage() {
   const location = useLocation();
   const { meetingId } = useParams();
@@ -54,6 +61,10 @@ function TeamMeetingRecordDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [recordingErrorMessage, setRecordingErrorMessage] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editErrorMessage, setEditErrorMessage] = useState('');
+  const [editForm, setEditForm] = useState({ summary: '', decisions: [], issues: [] });
 
   useEffect(() => {
     let isCurrentRequest = true;
@@ -63,11 +74,13 @@ function TeamMeetingRecordDetailPage() {
         setIsLoading(true);
         setErrorMessage('');
 
-        const [meetingResult, participantResult, summaryResult] = await Promise.allSettled([
-          getMeeting(meetingId),
-          getMeetingParticipants(meetingId),
-          getMeetingSummary(meetingId),
-        ]);
+        const [meetingResult, participantResult, summaryResult, recordingResult] =
+          await Promise.allSettled([
+            getMeeting(meetingId),
+            getMeetingParticipants(meetingId),
+            getMeetingSummary(meetingId),
+            getMeetingRecordingUrl(meetingId),
+          ]);
 
         if (!isCurrentRequest) return;
 
@@ -85,6 +98,11 @@ function TeamMeetingRecordDetailPage() {
           summaryResult.status === 'fulfilled'
             ? (summaryResult.value.result ?? summaryResult.value ?? null)
             : null,
+        );
+        setRecordingUrl(
+          recordingResult.status === 'fulfilled'
+            ? getRecordingUrlFromResponse(recordingResult.value)
+            : '',
         );
       } catch (error) {
         if (isCurrentRequest) {
@@ -113,6 +131,7 @@ function TeamMeetingRecordDetailPage() {
     () => ({
       ...summaryData,
       summary: summaryData?.summary ?? displayMeeting?.agenda ?? '',
+      keywords: summaryData?.keywords ?? summaryData?.issues ?? [],
     }),
     [displayMeeting?.agenda, summaryData],
   );
@@ -121,37 +140,59 @@ function TeamMeetingRecordDetailPage() {
     try {
       setRecordingErrorMessage('');
       const response = await getMeetingRecordingUrl(meetingId);
-      const result = response.result ?? response;
-      const nextRecordingUrl = result.recordingUrl ?? result.url ?? result;
+      const nextRecordingUrl = getRecordingUrlFromResponse(response);
 
-      if (typeof nextRecordingUrl !== 'string' || !nextRecordingUrl) {
+      if (!nextRecordingUrl) {
         throw new Error('녹음 파일 URL이 없습니다.');
       }
 
       setRecordingUrl(nextRecordingUrl);
+      return nextRecordingUrl;
     } catch (error) {
       setRecordingErrorMessage(getApiErrorMessage(error, '녹음 파일을 불러오지 못했습니다.'));
+      return '';
     }
   };
 
-  const handleDownloadRecording = async () => {
+  const handleStartEdit = () => {
+    setEditErrorMessage('');
+    setEditForm({
+      summary: summary.summary ?? '',
+      decisions: [...(summary.decisions ?? [])],
+      issues: [...(summary.keywords ?? [])],
+    });
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    const nextSummary = editForm.summary.trim();
+    const nextDecisions = editForm.decisions.map((item) => item.trim()).filter(Boolean);
+    const nextIssues = editForm.issues.map((item) => item.trim()).filter(Boolean);
+
+    if (!nextSummary) {
+      setEditErrorMessage('회의 요약을 입력해주세요.');
+      return;
+    }
+
     try {
-      setRecordingErrorMessage('');
-      const response = await getMeetingRecordingUrl(meetingId);
-      const result = response.result ?? response;
-      const nextRecordingUrl = result.recordingUrl ?? result.url ?? result;
-
-      if (typeof nextRecordingUrl !== 'string' || !nextRecordingUrl) {
-        throw new Error('녹음 파일 URL이 없습니다.');
-      }
-
-      const downloadLink = document.createElement('a');
-      downloadLink.href = nextRecordingUrl;
-      downloadLink.target = '_blank';
-      downloadLink.rel = 'noopener noreferrer';
-      downloadLink.click();
+      setIsSaving(true);
+      setEditErrorMessage('');
+      await updateMeetingSummary(meetingId, {
+        summary: nextSummary,
+        decisions: nextDecisions,
+        issues: nextIssues,
+      });
+      setSummaryData((currentSummary) => ({
+        ...currentSummary,
+        summary: nextSummary,
+        decisions: nextDecisions,
+        issues: nextIssues,
+      }));
+      setIsEditing(false);
     } catch (error) {
-      setRecordingErrorMessage(getApiErrorMessage(error, '녹음 파일을 내려받지 못했습니다.'));
+      setEditErrorMessage(getApiErrorMessage(error, '회의록을 수정하지 못했습니다.'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -169,22 +210,128 @@ function TeamMeetingRecordDetailPage() {
             title={displayMeeting.title ?? '회의록 상세'}
             dateLabel={formatMeetingDate(startAt)}
             durationLabel={formatDuration(startAt, endAt)}
-            onDownload={handleDownloadRecording}
+            isEditing={isEditing}
+            isSaving={isSaving}
+            onEdit={handleStartEdit}
+            onCancel={() => setIsEditing(false)}
+            onSave={handleSave}
           />
           <MeetingParticipants participants={participants} teamName={teamName} />
 
-          <div className="mt-6 flex items-start gap-6 px-[29px] pb-8">
-            <MeetingTranscriptPanel
-              transcript={summary.rawTranscript ?? ''}
+          <div className="mt-6 grid grid-cols-[310px_minmax(0,1fr)] items-start gap-6 px-[29px] pb-8">
+            <aside className="min-w-0">
+              <section>
+                <h2 className="text-[16px] leading-[1.3] font-semibold text-[var(--color-gray-900)]">
+                  주요 이슈
+                </h2>
+                <div className="mt-4 flex flex-wrap gap-1">
+                  {isEditing ? (
+                    <div className="w-full space-y-2">
+                      {editForm.issues.map((issue, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <input
+                            value={issue}
+                            onChange={(event) =>
+                              setEditForm((currentForm) => ({
+                                ...currentForm,
+                                issues: currentForm.issues.map((item, itemIndex) =>
+                                  itemIndex === index ? event.target.value : item,
+                                ),
+                              }))
+                            }
+                            placeholder="주요 이슈를 입력해주세요."
+                            className="h-10 min-w-0 flex-1 rounded-[8px] border border-[var(--color-gray-300)] bg-[var(--color-gray-50)] px-3 text-[14px] outline-none focus:border-[var(--color-primary)] focus:bg-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditForm((currentForm) => ({
+                                ...currentForm,
+                                issues: currentForm.issues.filter(
+                                  (_, itemIndex) => itemIndex !== index,
+                                ),
+                              }))
+                            }
+                            className="size-8 shrink-0 text-[18px] text-[var(--color-gray-500)]"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditForm((currentForm) => ({
+                            ...currentForm,
+                            issues: [...currentForm.issues, ''],
+                          }))
+                        }
+                        className="text-[13px] text-[var(--color-gray-600)]"
+                      >
+                        + 항목 추가
+                      </button>
+                    </div>
+                  ) : (summary.keywords ?? []).length > 0 ? (
+                    summary.keywords.map((keyword) => (
+                      <span
+                        key={keyword}
+                        className="rounded-[10px] bg-[#e8fff5] px-[10px] py-[5px] text-[14px] leading-[1.3] tracking-[-0.28px] text-[var(--color-primary-700,#11e489)]"
+                      >
+                        {keyword}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-[14px] text-[var(--color-gray-500)]">
+                      등록된 주요 이슈가 없습니다.
+                    </p>
+                  )}
+                </div>
+              </section>
+
+              <div className="mt-8">
+                <MeetingTranscriptPanel transcript={summary.rawTranscript ?? ''} />
+              </div>
+            </aside>
+
+            <MeetingAiResult
+              summaryData={summary}
+              meetingId={meetingId}
               participants={participants}
+              isEditing={isEditing}
+              editForm={editForm}
+              onSummaryChange={(value) =>
+                setEditForm((currentForm) => ({ ...currentForm, summary: value }))
+              }
+              onDecisionChange={(index, value) =>
+                setEditForm((currentForm) => ({
+                  ...currentForm,
+                  decisions: currentForm.decisions.map((item, itemIndex) =>
+                    itemIndex === index ? value : item,
+                  ),
+                }))
+              }
+              onAddDecision={() =>
+                setEditForm((currentForm) => ({
+                  ...currentForm,
+                  decisions: [...currentForm.decisions, ''],
+                }))
+              }
+              onRemoveDecision={(index) =>
+                setEditForm((currentForm) => ({
+                  ...currentForm,
+                  decisions: currentForm.decisions.filter((_, itemIndex) => itemIndex !== index),
+                }))
+              }
             />
-            <MeetingAiResult summaryData={summary} />
           </div>
         </div>
       )}
 
       {recordingErrorMessage && (
         <p className="px-8 py-2 text-[12px] text-[var(--color-red)]">{recordingErrorMessage}</p>
+      )}
+      {editErrorMessage && (
+        <p className="px-8 py-2 text-[12px] text-[var(--color-red)]">{editErrorMessage}</p>
       )}
       <MeetingAudioPlayer recordingUrl={recordingUrl} onRequestRecording={requestRecording} />
     </main>

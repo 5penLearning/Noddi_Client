@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { getMyActionItems, updateActionItem } from '../../api/actionItemApi';
+import { deleteActionItem, getMyActionItems, updateActionItem } from '../../api/actionItemApi';
 import { getApiErrorMessage, getUserId } from '../../api/axios';
 import { getMeetings } from '../../api/meetingApi';
 import { getMemberProjects } from '../../api/projects';
-import { getMyTeams } from '../../api/teams';
+import { getMyTeams, getTeamMembers } from '../../api/teams';
+import { ActionItemForm, EditIcon, TrashIcon } from '../feature/meeting/ActionItemPanel';
 import logo from '../../assets/logo-green.svg';
 import { homePageMockData } from '../../mocks/homePageData';
 
@@ -401,11 +402,23 @@ function AiReplyStatus({ replies, projects }) {
   );
 }
 
-function TodoList({ description, projects }) {
+const INITIAL_ACTION_ITEM_FORM = {
+  content: '',
+  assigneeUserId: '',
+  dueDate: '',
+  status: 'PENDING',
+};
+
+function TodoList({ description, projects, meetings }) {
   const [todoItems, setTodoItems] = useState([]);
   const [selectedProject, setSelectedProject] = useState(projects[0]);
   const [isLoading, setIsLoading] = useState(true);
   const [updatingItemId, setUpdatingItemId] = useState(null);
+  const [deletingItemId, setDeletingItemId] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
+  const [editingForm, setEditingForm] = useState(INITIAL_ACTION_ITEM_FORM);
+  const [editingMembers, setEditingMembers] = useState([]);
+  const [isEditingMembersLoading, setIsEditingMembersLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
@@ -478,24 +491,122 @@ function TodoList({ description, projects }) {
     }
   };
 
+  const openEditModal = async (actionItem) => {
+    setEditingItem(actionItem);
+    setEditingForm({
+      content: actionItem.content ?? '',
+      assigneeUserId: actionItem.assigneeUserId ? String(actionItem.assigneeUserId) : '',
+      dueDate: actionItem.dueDate ?? '',
+      status: actionItem.status ?? 'PENDING',
+    });
+    setEditingMembers([]);
+    setErrorMessage('');
+
+    const matchingMeeting = meetings.find(
+      (meeting) => String(meeting.meetingId) === String(actionItem.meetingId),
+    );
+    const teamId = matchingMeeting?.rawMeeting?.teamId;
+
+    if (!teamId) return;
+
+    try {
+      setIsEditingMembersLoading(true);
+      const members = await getTeamMembers(teamId);
+      setEditingMembers(members);
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, '담당자 목록을 불러오지 못했습니다.'));
+    } finally {
+      setIsEditingMembersLoading(false);
+    }
+  };
+
+  const closeEditModal = () => {
+    if (updatingItemId) return;
+
+    setEditingItem(null);
+    setEditingForm(INITIAL_ACTION_ITEM_FORM);
+    setEditingMembers([]);
+  };
+
+  const handleEditChange = (event) => {
+    const { name, value } = event.target;
+
+    setEditingForm((currentForm) => ({
+      ...currentForm,
+      [name]: value,
+    }));
+    setErrorMessage('');
+  };
+
+  const handleUpdateTodo = async () => {
+    const content = editingForm.content.trim();
+
+    if (!editingItem || !content) {
+      setErrorMessage('할 일 내용을 입력해주세요.');
+      return;
+    }
+
+    try {
+      setUpdatingItemId(editingItem.actionItemId);
+      setErrorMessage('');
+      await updateActionItem(editingItem.actionItemId, {
+        content,
+        assigneeUserId: editingForm.assigneeUserId ? Number(editingForm.assigneeUserId) : null,
+        dueDate: editingForm.dueDate || null,
+        status: editingForm.status,
+      });
+      setTodoItems((currentItems) =>
+        currentItems.map((item) =>
+          item.actionItemId === editingItem.actionItemId
+            ? {
+                ...item,
+                content,
+                assigneeUserId: editingForm.assigneeUserId
+                  ? Number(editingForm.assigneeUserId)
+                  : null,
+                dueDate: editingForm.dueDate || null,
+                status: editingForm.status,
+              }
+            : item,
+        ),
+      );
+      setEditingItem(null);
+      setEditingForm(INITIAL_ACTION_ITEM_FORM);
+      setEditingMembers([]);
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, '할 일을 수정하지 못했습니다.'));
+    } finally {
+      setUpdatingItemId(null);
+    }
+  };
+
+  const handleDeleteTodo = async (actionItem) => {
+    if (!window.confirm('이 할 일을 삭제할까요?')) return;
+
+    try {
+      setDeletingItemId(actionItem.actionItemId);
+      setErrorMessage('');
+      await deleteActionItem(actionItem.actionItemId);
+      setTodoItems((currentItems) =>
+        currentItems.filter((item) => item.actionItemId !== actionItem.actionItemId),
+      );
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, '할 일을 삭제하지 못했습니다.'));
+    } finally {
+      setDeletingItemId(null);
+    }
+  };
+
   const visibleItems = todoItems.slice(0, 10);
 
   return (
     <section className="flex h-[311px] min-h-0 flex-col justify-between overflow-hidden rounded-[10px] bg-white p-5">
       <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-end gap-2">
-            <h2 className="text-[20px] leading-[1.3] font-semibold text-black">To-do list</h2>
-            <p className="text-[16px] leading-[1.4] font-medium tracking-[-0.16px] text-[#8E9592]">
-              {description}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="text-[14px] leading-[1.4] tracking-[-0.21px] text-[#525654] underline"
-          >
-            편집하기
-          </button>
+        <div className="flex items-end gap-2">
+          <h2 className="text-[20px] leading-[1.3] font-semibold text-black">To-do list</h2>
+          <p className="text-[16px] leading-[1.4] font-medium tracking-[-0.16px] text-[#8E9592]">
+            {description}
+          </p>
         </div>
 
         <div className="flex [scrollbar-width:none] gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden">
@@ -549,7 +660,7 @@ function TodoList({ description, projects }) {
                     <span className="absolute top-[3px] left-[7px] h-[11px] w-[7px] rotate-45 border-r-2 border-b-2 border-white" />
                   )}
                 </button>
-                <div className="flex min-w-0 items-center gap-1">
+                <div className="flex min-w-0 flex-1 items-center gap-1">
                   <span
                     className={`truncate text-[14px] leading-[1.4] tracking-[-0.21px] ${
                       isCompleted ? 'text-[#A9B0AD] line-through' : 'text-[#343836]'
@@ -558,6 +669,19 @@ function TodoList({ description, projects }) {
                     {item.content}
                   </span>
                   <TodoLinkIcon isCompleted={isCompleted} />
+                </div>
+                <div className="ml-auto flex shrink-0 items-center gap-1 text-[#707673]">
+                  <button type="button" onClick={() => openEditModal(item)} className="size-5">
+                    <EditIcon />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deletingItemId === item.actionItemId}
+                    onClick={() => handleDeleteTodo(item)}
+                    className="size-5 disabled:opacity-40"
+                  >
+                    <TrashIcon />
+                  </button>
                 </div>
               </div>
             );
@@ -568,6 +692,37 @@ function TodoList({ description, projects }) {
           </p>
         )}
       </div>
+
+      {editingItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeEditModal();
+          }}
+        >
+          <div className="w-[440px] rounded-[16px] bg-white p-5 shadow-xl">
+            <h3 className="mb-4 text-[20px] leading-[1.3] font-semibold text-black">할 일 수정</h3>
+            {isEditingMembersLoading && (
+              <p className="mb-3 text-[12px] text-[var(--color-gray-500)]">
+                담당자 목록을 불러오는 중입니다.
+              </p>
+            )}
+            {errorMessage && (
+              <p className="mb-3 text-[12px] text-[var(--color-red)]">{errorMessage}</p>
+            )}
+            <ActionItemForm
+              form={editingForm}
+              members={editingMembers}
+              isSubmitting={Boolean(updatingItemId)}
+              submitLabel="저장"
+              showStatus
+              onChange={handleEditChange}
+              onSubmit={handleUpdateTodo}
+              onCancel={closeEditModal}
+            />
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -665,7 +820,7 @@ function HomeDashboard() {
               errorMessage={meetingErrorMessage}
               onJoin={handleJoinMeeting}
             />
-            <TodoList {...todoList} projects={projectNames} />
+            <TodoList {...todoList} projects={projectNames} meetings={meetings} />
           </div>
           <AiReplyStatus replies={aiReplies} projects={projectNames} />
         </div>

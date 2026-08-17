@@ -28,7 +28,7 @@ const STATUS_OPTIONS = [
 
 function PlusIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
       <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
@@ -36,7 +36,7 @@ function PlusIcon() {
 
 function EditIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
       <path
         d="M13.5 6.5L17.5 10.5M4 20L8.2 19.2L19 8.4C20.1 7.3 20.1 5.5 19 4.4C17.9 3.3 16.1 3.3 15 4.4L4.2 15.2L4 20Z"
         stroke="currentColor"
@@ -50,7 +50,7 @@ function EditIcon() {
 
 function TrashIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
       <path
         d="M4 7H20M9 7V4H15V7M7 7L8 20H16L17 7"
         stroke="currentColor"
@@ -64,7 +64,7 @@ function TrashIcon() {
 
 function CloseIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
       <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
@@ -581,4 +581,5 @@ function ActionItemPanel({ meetingId, teamId, actionItems = [], onRefresh }) {
   );
 }
 
+export { ActionItemForm, EditIcon, TrashIcon };
 export default ActionItemPanel;
