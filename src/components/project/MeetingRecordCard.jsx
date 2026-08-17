@@ -1,48 +1,41 @@
 import chevronIcon from '../../assets/icons/profile/chevron.svg';
 
-function MeetingRecordCard({
-  title,
-  createdDate,
-  createdTime,
-  teams = [],
-  summary,
-  onClick,
-  className = '',
-}) {
+function MeetingRecordCard({ meetingDate, title, teams = [], summary, onClick, className = '' }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`relative h-[190px] w-full border border-[var(--color-border)] bg-white text-left ${className}`}
+      className={`flex w-full flex-col items-start gap-5 rounded-[10px] border border-[var(--color-border)] bg-white p-5 text-left ${className}`}
     >
-      <strong className="subhead-3 absolute top-[17px] left-[14px] font-medium whitespace-nowrap text-black">
-        {title}
-      </strong>
+      <div className="flex w-full items-start justify-between">
+        <div className="flex flex-col items-start gap-3">
+          <div className="flex flex-col items-start gap-1">
+            <time className="text-[16px] leading-[1.3] font-medium text-[var(--color-gray-700)]">
+              {meetingDate}
+            </time>
+            <strong className="text-[20px] leading-[1.3] font-semibold text-black">{title}</strong>
+          </div>
 
-      <div className="subhead-4 absolute top-[53px] left-[14px] flex items-center font-medium whitespace-nowrap">
-        <span className="text-black">생성날짜</span>
-        <span className="ml-[18px] text-[var(--color-text-secondary)]">{createdDate}</span>
-        <span className="ml-[18px] text-[var(--color-text-secondary)]">{createdTime}</span>
+          <div className="flex items-center gap-1">
+            {teams.map((team) => (
+              <span
+                key={team}
+                className="flex h-7 items-center justify-center rounded-[4px] border border-[var(--color-border)] bg-white px-[6px] py-[5px] text-[14px] leading-[1.4] tracking-[-0.21px] whitespace-nowrap text-[var(--color-gray-600)]"
+              >
+                {team}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <span className="flex size-6 shrink-0 items-center justify-center py-1">
+          <img src={chevronIcon} alt="" className="h-[6px] w-[14px] rotate-90" />
+        </span>
       </div>
 
-      <div className="absolute top-[84px] left-[14px] flex items-center gap-[8px]">
-        {teams.map((team) => (
-          <span
-            key={team}
-            className="subhead-4 flex h-[32px] items-center justify-center border border-[var(--color-border)] bg-white px-[10px] font-medium whitespace-nowrap text-[var(--color-text-secondary)]"
-          >
-            {team}
-          </span>
-        ))}
-      </div>
-
-      <p className="subhead-4 absolute top-[151px] left-[14px] font-medium whitespace-nowrap text-[var(--color-text-secondary)]">
+      <p className="w-full text-[16px] leading-[1.4] tracking-[-0.16px] text-[var(--color-gray-600)]">
         {summary}
       </p>
-
-      <span className="absolute top-[19px] right-[14px] flex size-[24px] items-center justify-center">
-        <img src={chevronIcon} alt="" className="h-[7.12px] w-[15.5px] rotate-90" />
-      </span>
     </button>
   );
 }

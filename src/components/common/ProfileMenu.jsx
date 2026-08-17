@@ -18,7 +18,7 @@ function ProfileMenu({ name = '사용자', department = '소속 조직', onClick
         </span>
       </span>
       <span className="flex size-6 items-center justify-center">
-        <img src={chevronIcon} alt="" className="h-[7.12px] w-[15.5px] -rotate-90" />
+        <img src={chevronIcon} alt="" className="h-[7.12px] w-[15.5px] rotate-180" />
       </span>
     </button>
   );

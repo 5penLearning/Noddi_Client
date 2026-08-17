@@ -1,14 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
-import { getApiErrorMessage } from '../api/axios';
-import {
-  getProjectInvitations,
-  getMyProfile,
-  getTeamInvitations,
-  respondProjectInvitation,
-  respondTeamInvitation,
-} from '../api/mypageApi';
+import { clearAuthSession, getApiErrorMessage } from '../api/axios';
+import { getProjectInvitations, getMyProfile, getTeamInvitations } from '../api/mypageApi';
 import NotificationModal from '../components/common/notification/NotificationModal';
 import SearchToolbar from '../components/common/SearchToolbar';
 import SidebarNavigation from '../components/common/SidebarNavigation';
@@ -36,7 +30,6 @@ function AppLayout() {
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [isNotificationLoading, setIsNotificationLoading] = useState(true);
-  const [respondingNotificationId, setRespondingNotificationId] = useState(null);
   const [notificationErrorMessage, setNotificationErrorMessage] = useState('');
   const [profile, setProfile] = useState(null);
 
@@ -78,7 +71,8 @@ function AppLayout() {
         type: 'invitation',
         invitationKind: 'project',
         scope: invitation.projectName,
-        createdAt: '대기 중',
+        createdAt: '방금 전',
+        title: '프로젝트 초대장이 날라왔어요',
         message: `${invitation.inviterName}님이 ${invitation.projectName} 프로젝트에 초대했어요.`,
         inviteId: invitation.inviteId,
         projectId: invitation.projectId,
@@ -88,7 +82,8 @@ function AppLayout() {
         type: 'invitation',
         invitationKind: 'team',
         scope: invitation.teamName,
-        createdAt: '대기 중',
+        createdAt: '방금 전',
+        title: '팀 초대장이 날라왔어요',
         message: `${invitation.inviterName}님이 ${invitation.teamName} 팀에 초대했어요.`,
         inviteId: invitation.inviteId,
         teamId: invitation.teamId,
@@ -107,29 +102,6 @@ function AppLayout() {
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
-
-  const handleInvitationResponse = async (notification, isAccepted) => {
-    try {
-      setRespondingNotificationId(notification.id);
-      setNotificationErrorMessage('');
-
-      if (notification.invitationKind === 'team') {
-        await respondTeamInvitation(notification.inviteId, isAccepted);
-      } else {
-        await respondProjectInvitation(notification.inviteId, isAccepted);
-      }
-      setNotifications((currentNotifications) =>
-        currentNotifications.filter(
-          (currentNotification) => currentNotification.id !== notification.id,
-        ),
-      );
-    } catch (error) {
-      console.error('Failed to respond invitation:', error);
-      setNotificationErrorMessage(getApiErrorMessage(error, '초대 응답을 처리하지 못했습니다.'));
-    } finally {
-      setRespondingNotificationId(null);
-    }
-  };
 
   const activeItem = Object.entries(navigationPaths).find(
     ([, path]) => location.pathname === path || location.pathname.startsWith(`${path}/`),
@@ -176,11 +148,19 @@ function AppLayout() {
             notificationCount={notifications.length}
             profileName={profile?.name}
             profileOrganization={profile?.organizationName}
+            profileEmail={profile?.email}
             onNotificationClick={() => {
               setIsNotificationModalOpen(true);
               loadNotifications();
             }}
             onProfileClick={() => navigate('/mypage')}
+            onProjectClick={() => navigate('/projects')}
+            onActivityClick={() => navigate('/mypage')}
+            onHelpClick={() => {}}
+            onLogoutClick={() => {
+              clearAuthSession();
+              navigate('/login', { replace: true });
+            }}
           />
         </header>
 
@@ -193,24 +173,30 @@ function AppLayout() {
         isOpen={isNotificationModalOpen}
         notifications={notifications}
         isLoading={isNotificationLoading}
-        respondingNotificationId={respondingNotificationId}
         errorMessage={notificationErrorMessage}
         onClose={() => setIsNotificationModalOpen(false)}
-        onDismiss={(notificationId) => {
-          setNotifications((currentNotifications) =>
-            currentNotifications.filter((notification) => notification.id !== notificationId),
-          );
-        }}
-        onDetail={(notification) => {
+        onNotificationClick={(notification) => {
+          setIsNotificationModalOpen(false);
+
           if (notification.type === 'invitation') {
-            setIsNotificationModalOpen(false);
             navigate('/mypage');
             return;
           }
 
-          console.log('알림 자세히 보기', notification);
+          if (notification.type === 'reply') {
+            navigate('/qa', {
+              state: {
+                questionId: notification.questionId,
+                teamId: notification.teamId,
+              },
+            });
+            return;
+          }
+
+          if (notification.type === 'meeting' || notification.type === 'meeting-summary') {
+            navigate('/meetings');
+          }
         }}
-        onInvitationResponse={handleInvitationResponse}
       />
     </div>
   );

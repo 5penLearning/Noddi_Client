@@ -1,5 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
+import { getMyActionItems, updateActionItem } from '../../api/actionItemApi';
+import { getApiErrorMessage, getUserId } from '../../api/axios';
+import { getMeetings } from '../../api/meetingApi';
+import { getMemberProjects } from '../../api/projects';
+import { getMyTeams } from '../../api/teams';
 import logo from '../../assets/logo-green.svg';
 import { homePageMockData } from '../../mocks/homePageData';
 
@@ -8,13 +14,38 @@ import meetingSymbolIcon from '../../assets/icons/home-meeting/meeting-symbol.sv
 import meetingSymbolSecondaryIcon from '../../assets/icons/home-meeting/meeting-symbol-secondary.svg';
 import scheduleDotPrimaryIcon from '../../assets/icons/home-meeting/schedule-dot-primary.svg';
 import scheduleDotSecondaryIcon from '../../assets/icons/home-meeting/schedule-dot-secondary.svg';
+import todoLinkChainIcon from '../../assets/icons/home-todo/link-chain.svg';
+import todoLinkLineIcon from '../../assets/icons/home-todo/link-line.svg';
+import chevronIcon from '../../assets/icons/profile/chevron.svg';
+import logoSimpleIcon from '../../assets/icons/sidebar/logo-simple.svg';
 
 const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
 const formatDateKey = (year, month, day) =>
   `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-function MeetingSchedule({ initialDate, meetings }) {
+const formatMeetingScheduleItem = (meeting, team) => {
+  const startDate = new Date(meeting.scheduledStartAt);
+
+  if (Number.isNaN(startDate.getTime())) return null;
+
+  return {
+    id: meeting.meetingId,
+    meetingId: meeting.meetingId,
+    date: formatDateKey(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()),
+    time: `${String(startDate.getHours()).padStart(2, '0')}:${String(
+      startDate.getMinutes(),
+    ).padStart(2, '0')}`,
+    title: meeting.title,
+    projectName: meeting.projectName ?? team.projectName ?? '프로젝트',
+    teams: [team.name],
+    isOngoing: meeting.status === 'IN_PROGRESS',
+    canJoin: meeting.status === 'IN_PROGRESS',
+    rawMeeting: meeting,
+  };
+};
+
+function MeetingSchedule({ initialDate, meetings, isLoading, errorMessage, onJoin }) {
   const initial = new Date(`${initialDate}T00:00:00`);
   const [visibleMonth, setVisibleMonth] = useState(
     () => new Date(initial.getFullYear(), initial.getMonth(), 1),
@@ -126,6 +157,21 @@ function MeetingSchedule({ initialDate, meetings }) {
           <div
             className={`mt-2 [scrollbar-width:none] overflow-y-auto px-1 py-5 pr-4 [&::-webkit-scrollbar]:hidden ${isLongMonth ? 'h-[311px]' : 'h-[263px]'}`}
           >
+            {isLoading && (
+              <p className="py-10 text-center text-[14px] text-[var(--color-gray-500)]">
+                회의 일정을 불러오는 중입니다.
+              </p>
+            )}
+            {!isLoading && errorMessage && (
+              <p className="py-10 text-center text-[14px] text-[var(--color-gray-500)]">
+                {errorMessage}
+              </p>
+            )}
+            {!isLoading && !errorMessage && selectedMeetings.length === 0 && (
+              <p className="py-10 text-center text-[14px] text-[var(--color-gray-500)]">
+                선택한 날짜에 회의가 없습니다.
+              </p>
+            )}
             {selectedMeetings.map((meeting, index) => (
               <article
                 key={meeting.id}
@@ -163,6 +209,7 @@ function MeetingSchedule({ initialDate, meetings }) {
                 <button
                   type="button"
                   disabled={!meeting.canJoin}
+                  onClick={() => onJoin(meeting)}
                   className="ml-3 h-11 w-[110px] shrink-0 rounded-[10px] bg-[var(--color-action-primary)] text-[16px] leading-[1.3] font-semibold disabled:bg-[var(--color-gray-100)] disabled:text-[var(--color-gray-300)]"
                 >
                   참여하기
@@ -176,66 +223,349 @@ function MeetingSchedule({ initialDate, meetings }) {
   );
 }
 
-function AiReplyStatus({ replies }) {
+function TodoLinkIcon({ isCompleted }) {
   return (
-    <section className="h-full overflow-hidden rounded-[10px] bg-[var(--color-white)] p-6">
-      <h2 className="subhead-1">AI 답변 현황</h2>
+    <span className={`relative block size-5 shrink-0 ${isCompleted ? 'opacity-30' : ''}`}>
+      <span className="absolute top-[0.83px] left-[0.71px] flex size-[17.68px] items-center justify-center">
+        <img src={todoLinkChainIcon} className="h-[16.67px] w-[8.33px] rotate-45" />
+      </span>
+      <img
+        src={todoLinkLineIcon}
+        className="absolute top-[8.2px] left-[7.8px] h-[1.5px] w-[6px] -rotate-45"
+      />
+    </span>
+  );
+}
 
-      <div className="mt-5 divide-y divide-[var(--color-gray-100)]">
-        {replies.map((reply) => (
-          <article key={reply.id} className="py-6 first:pt-0">
-            <div className="flex items-center gap-2">
-              <span className="size-6 shrink-0 rounded-full bg-[var(--color-gray-200)]" />
-              <p className="body-5 font-medium">{reply.name}</p>
-              <p className="caption-1 text-[var(--color-text-tertiary)]">{reply.role}</p>
-              <time className="caption-2 ml-auto whitespace-nowrap text-[var(--color-gray-800)]">
-                {reply.time}
-              </time>
+function AiReplyStatus({ replies, projects }) {
+  const [selectedReplyIndex, setSelectedReplyIndex] = useState(0);
+  const [isAnswerOverflowing, setIsAnswerOverflowing] = useState(false);
+  const answerRef = useRef(null);
+  const selectedReply = replies[selectedReplyIndex];
+  const projectCounts = replies.reduce((counts, reply) => {
+    counts[reply.projectName] = (counts[reply.projectName] ?? 0) + 1;
+
+    return counts;
+  }, {});
+
+  const moveReply = (direction) => {
+    setSelectedReplyIndex((currentIndex) => {
+      const nextIndex = currentIndex + direction;
+
+      if (nextIndex < 0) return replies.length - 1;
+      if (nextIndex >= replies.length) return 0;
+
+      return nextIndex;
+    });
+  };
+
+  useEffect(() => {
+    const answerElement = answerRef.current;
+
+    if (!answerElement) return;
+
+    setIsAnswerOverflowing(answerElement.scrollHeight > 240);
+  }, [selectedReply]);
+
+  if (!selectedReply) return null;
+
+  return (
+    <section className="flex h-full min-h-[712px] flex-col overflow-hidden rounded-[10px] bg-white">
+      <div className="shrink-0 px-4 pt-5">
+        <div className="flex items-end gap-2">
+          <h2 className="text-[20px] leading-[1.3] font-semibold text-black">AI 답변 현황</h2>
+          <p className="text-[16px] leading-[1.4] font-medium tracking-[-0.16px] text-[#8E9592]">
+            내가 없는 동안 쌓인 답변이에요.
+          </p>
+        </div>
+
+        <div className="mt-3 flex [scrollbar-width:none] gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden">
+          {projects.map((project) => {
+            const count = projectCounts[project] ?? 0;
+
+            return (
+              <button
+                key={project}
+                type="button"
+                onClick={() => {
+                  const replyIndex = replies.findIndex((reply) => reply.projectName === project);
+
+                  if (replyIndex >= 0) setSelectedReplyIndex(replyIndex);
+                }}
+                className={`flex h-[30px] shrink-0 items-center gap-2 rounded-[30px] py-1.5 pr-1.5 pl-3 text-[14px] leading-[1.3] tracking-[-0.28px] ${
+                  selectedReply.projectName === project
+                    ? 'bg-[#101211] text-white'
+                    : 'bg-[#F2F7F4] text-[#343836]'
+                }`}
+              >
+                {project}
+                <span
+                  className={`flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[12px] font-medium tracking-[-0.24px] ${
+                    selectedReply.projectName === project
+                      ? 'bg-[#6EFFC0] text-[#101211]'
+                      : 'bg-[#C5CCC9] text-white'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-6 flex min-h-0 flex-1 flex-col gap-8 rounded-[10px] bg-gradient-to-b from-[#FAFAFA] to-white p-5">
+        <div className="flex h-6 shrink-0 items-center justify-between">
+          <button
+            type="button"
+            onClick={() => moveReply(-1)}
+            className="flex size-6 items-center justify-center text-[30px] leading-none text-[#343836]"
+          >
+            <img src={chevronIcon} className="h-[7px] w-[15px] -rotate-90" />
+          </button>
+          <strong className="text-[16px] leading-[1.3] font-semibold text-[#343836]">
+            {selectedReplyIndex + 1}/{replies.length}
+          </strong>
+          <button
+            type="button"
+            onClick={() => moveReply(1)}
+            className="flex size-6 items-center justify-center text-[30px] leading-none text-[#343836]"
+          >
+            <img src={chevronIcon} className="h-[7px] w-[15px] rotate-90" />
+          </button>
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex items-center gap-2">
+            <span className="flex size-6 items-center justify-center rounded-full border border-[#D7DEDB] bg-[#E9EFED]">
+              <img src={logoSimpleIcon} className="h-[14px] w-[11px] opacity-30" />
+            </span>
+            <strong className="text-[16px] leading-[1.3] font-medium text-black">
+              {selectedReply.name}
+            </strong>
+            <span className="text-[16px] leading-[1.4] font-medium tracking-[-0.16px] text-[#8E9592]">
+              {selectedReply.role}
+            </span>
+          </div>
+
+          <div className="mt-[10px] ml-8 w-[min(328px,calc(100%-32px))] rounded-[10px] bg-[#E9EFED] px-3 py-2">
+            <p className="text-[16px] leading-[1.4] font-medium tracking-[-0.16px] text-[#101211]">
+              {selectedReply.question}
+            </p>
+            <time className="mt-1 block text-[14px] leading-[1.3] tracking-[-0.28px] text-[#A9B0AD]">
+              {selectedReply.time}
+            </time>
+          </div>
+
+          <div className="mt-5 ml-auto flex min-h-0 w-[84%] flex-1 flex-col">
+            <p className="text-right text-[14px] leading-[1.3] tracking-[-0.28px] text-[#A9B0AD]">
+              {selectedReply.projectName}/{selectedReply.teamName}
+            </p>
+            <div className="relative mt-3">
+              <p
+                ref={answerRef}
+                className={`text-[14px] leading-[1.4] tracking-[-0.21px] whitespace-pre-line text-[#343836] ${
+                  isAnswerOverflowing ? 'line-clamp-[12] max-h-[240px] overflow-hidden' : ''
+                }`}
+              >
+                {selectedReply.answer}
+              </p>
+              {isAnswerOverflowing && (
+                <span className="pointer-events-none absolute right-0 bottom-0 left-0 h-16 bg-gradient-to-b from-transparent to-white" />
+              )}
             </div>
-            <p className="body-5 mt-5">{reply.question}</p>
-            <p className="body-5 mt-5 ml-auto max-w-[250px] text-right">{reply.answer}</p>
+            <p className="mt-3 text-[14px] leading-[1.4] tracking-[-0.21px] whitespace-pre-line text-[#A9B0AD]">
+              {selectedReply.status}
+            </p>
+
             <button
               type="button"
-              className="body-5 mt-5 ml-auto block rounded-[10px] bg-[var(--color-background-subtle)] px-5 py-3"
+              className="mt-auto flex h-[42px] w-full items-center justify-between rounded-[10px] border border-[#8E9592] px-3 text-[14px] leading-[1.4] tracking-[-0.21px] text-[#343836]"
             >
-              자세히 보기
+              <span>
+                <strong className="mr-2 font-medium">참고 회의록</strong>
+                {selectedReply.reference}
+              </span>
+              <img src={chevronIcon} className="h-[7px] w-[15px] -rotate-90 opacity-40" />
             </button>
-          </article>
-        ))}
+            <button
+              type="button"
+              className="mt-3 flex h-11 w-full items-center justify-center rounded-[10px] bg-[#E9EFED] text-[16px] leading-[1.3] font-semibold text-[#343836]"
+            >
+              자세히보기
+            </button>
+          </div>
+        </div>
       </div>
     </section>
   );
 }
 
-function TodoList({ description, items }) {
+function TodoList({ description, projects }) {
+  const [todoItems, setTodoItems] = useState([]);
+  const [selectedProject, setSelectedProject] = useState(projects[0]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [updatingItemId, setUpdatingItemId] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    if (projects.length > 0 && !projects.includes(selectedProject)) {
+      setSelectedProject(projects[0]);
+    }
+  }, [projects, selectedProject]);
+
+  useEffect(() => {
+    let isCurrentRequest = true;
+
+    const loadActionItems = async () => {
+      try {
+        setIsLoading(true);
+        setErrorMessage('');
+
+        const actionItems = await getMyActionItems();
+
+        if (isCurrentRequest) {
+          setTodoItems(actionItems);
+        }
+      } catch (error) {
+        if (isCurrentRequest) {
+          setTodoItems([]);
+          setErrorMessage(getApiErrorMessage(error, '할 일 목록을 불러오지 못했습니다.'));
+        }
+      } finally {
+        if (isCurrentRequest) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadActionItems();
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, []);
+
+  const toggleTodo = async (actionItem) => {
+    const nextStatus = actionItem.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+
+    try {
+      setUpdatingItemId(actionItem.actionItemId);
+      setErrorMessage('');
+      setTodoItems((currentItems) =>
+        currentItems.map((item) =>
+          item.actionItemId === actionItem.actionItemId ? { ...item, status: nextStatus } : item,
+        ),
+      );
+
+      await updateActionItem(actionItem.actionItemId, {
+        content: actionItem.content,
+        assigneeUserId: actionItem.assigneeUserId,
+        dueDate: actionItem.dueDate,
+        status: nextStatus,
+      });
+    } catch (error) {
+      setTodoItems((currentItems) =>
+        currentItems.map((item) =>
+          item.actionItemId === actionItem.actionItemId
+            ? { ...item, status: actionItem.status }
+            : item,
+        ),
+      );
+      setErrorMessage(getApiErrorMessage(error, '할 일 상태를 변경하지 못했습니다.'));
+    } finally {
+      setUpdatingItemId(null);
+    }
+  };
+
+  const visibleItems = todoItems.slice(0, 10);
+
   return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-[10px] bg-[var(--color-white)] p-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="subhead-1">To-do list</h2>
-          <p className="caption-1 mt-2 text-[var(--color-text-tertiary)]">{description}</p>
+    <section className="flex h-[311px] min-h-0 flex-col justify-between overflow-hidden rounded-[10px] bg-white p-5">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-end gap-2">
+            <h2 className="text-[20px] leading-[1.3] font-semibold text-black">To-do list</h2>
+            <p className="text-[16px] leading-[1.4] font-medium tracking-[-0.16px] text-[#8E9592]">
+              {description}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="text-[14px] leading-[1.4] tracking-[-0.21px] text-[#525654] underline"
+          >
+            편집하기
+          </button>
         </div>
-        <button type="button" className="body-3">
-          수정하기
-        </button>
-      </div>
-      <div className="min-h-0 flex-1 [scrollbar-width:none] overflow-y-auto [&::-webkit-scrollbar]:hidden">
-        {items.map((item, index) =>
-          item.title ? (
-            <label
-              key={item.id}
-              className={`body-3 flex items-center gap-3 ${index === 0 ? 'mt-6' : 'mt-3'}`}
+
+        <div className="flex [scrollbar-width:none] gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden">
+          {projects.map((project) => (
+            <button
+              key={project}
+              type="button"
+              onClick={() => setSelectedProject(project)}
+              className={`h-[30px] shrink-0 rounded-[30px] px-3 py-1.5 text-[14px] leading-[1.3] tracking-[-0.28px] ${
+                selectedProject === project
+                  ? 'bg-[#101211] text-white'
+                  : 'bg-[#F2F7F4] text-[#343836]'
+              }`}
             >
-              <input
-                type="checkbox"
-                defaultChecked={item.completed}
-                className="size-6 appearance-none bg-[var(--color-gray-200)]"
-              />
-              {item.title}
-            </label>
-          ) : (
-            <div key={item.id} className="mt-3 size-6 bg-[var(--color-gray-200)]" />
-          ),
+              {project}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative grid h-[184px] grid-flow-col grid-cols-2 grid-rows-5 gap-x-[60px] gap-y-4">
+        {isLoading && (
+          <p className="absolute inset-0 flex items-center justify-center text-[14px] text-[#8E9592]">
+            할 일 목록을 불러오는 중입니다.
+          </p>
+        )}
+        {!isLoading && errorMessage && todoItems.length === 0 && (
+          <p className="absolute inset-0 flex items-center justify-center text-[14px] text-[#8E9592]">
+            {errorMessage}
+          </p>
+        )}
+        {!isLoading && !errorMessage && todoItems.length === 0 && (
+          <p className="absolute inset-0 flex items-center justify-center text-[14px] text-[#8E9592]">
+            등록된 할 일이 없습니다.
+          </p>
+        )}
+        {!isLoading &&
+          visibleItems.map((item) => {
+            const isCompleted = item.status === 'COMPLETED';
+            return (
+              <div key={item.actionItemId} className="flex h-6 min-w-0 items-center gap-2">
+                <button
+                  type="button"
+                  disabled={updatingItemId === item.actionItemId}
+                  onClick={() => toggleTodo(item)}
+                  className={`relative size-6 shrink-0 rounded-[5px] ${
+                    isCompleted ? 'bg-[#11E489]' : 'border-[1.5px] border-[#2B3F6C] bg-white'
+                  } disabled:opacity-60`}
+                >
+                  {isCompleted && (
+                    <span className="absolute top-[3px] left-[7px] h-[11px] w-[7px] rotate-45 border-r-2 border-b-2 border-white" />
+                  )}
+                </button>
+                <div className="flex min-w-0 items-center gap-1">
+                  <span
+                    className={`truncate text-[14px] leading-[1.4] tracking-[-0.21px] ${
+                      isCompleted ? 'text-[#A9B0AD] line-through' : 'text-[#343836]'
+                    }`}
+                  >
+                    {item.content}
+                  </span>
+                  <TodoLinkIcon isCompleted={isCompleted} />
+                </div>
+              </div>
+            );
+          })}
+        {errorMessage && todoItems.length > 0 && (
+          <p className="absolute right-0 bottom-[-18px] text-[12px] text-[var(--color-red)]">
+            {errorMessage}
+          </p>
         )}
       </div>
     </section>
@@ -243,7 +573,80 @@ function TodoList({ description, items }) {
 }
 
 function HomeDashboard() {
-  const { hero, meetingSchedule, aiReplies, todoList } = homePageMockData;
+  const navigate = useNavigate();
+  const { hero, aiReplies, todoList } = homePageMockData;
+  const [projects, setProjects] = useState([]);
+  const [meetings, setMeetings] = useState([]);
+  const [isMeetingsLoading, setIsMeetingsLoading] = useState(true);
+  const [meetingErrorMessage, setMeetingErrorMessage] = useState('');
+
+  useEffect(() => {
+    let isCurrentRequest = true;
+
+    const loadProjects = async () => {
+      try {
+        setIsMeetingsLoading(true);
+        setMeetingErrorMessage('');
+
+        const [memberProjects, myTeams] = await Promise.all([
+          getMemberProjects(getUserId()),
+          getMyTeams(),
+        ]);
+
+        const meetingResults = await Promise.allSettled(
+          myTeams.map((team) => getMeetings(team.teamId)),
+        );
+        const nextMeetings = meetingResults
+          .flatMap((result, index) => {
+            if (result.status !== 'fulfilled') return [];
+
+            return result.value
+              .map((meeting) => formatMeetingScheduleItem(meeting, myTeams[index]))
+              .filter(Boolean);
+          })
+          .sort((firstMeeting, secondMeeting) =>
+            `${firstMeeting.date}T${firstMeeting.time}`.localeCompare(
+              `${secondMeeting.date}T${secondMeeting.time}`,
+            ),
+          );
+
+        if (isCurrentRequest) {
+          setProjects(memberProjects);
+          setMeetings(nextMeetings);
+        }
+      } catch (error) {
+        console.error('Failed to load home projects:', error);
+
+        if (isCurrentRequest) {
+          setProjects([]);
+          setMeetings([]);
+          setMeetingErrorMessage(getApiErrorMessage(error, '회의 일정을 불러오지 못했습니다.'));
+        }
+      } finally {
+        if (isCurrentRequest) {
+          setIsMeetingsLoading(false);
+        }
+      }
+    };
+
+    loadProjects();
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, []);
+
+  const projectNames = projects.map((project) => project.name);
+  const today = new Date();
+  const initialMeetingDate = formatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+  const handleJoinMeeting = (meeting) => {
+    navigate(`/meetings/${meeting.meetingId}/room`, {
+      state: {
+        meeting: meeting.rawMeeting,
+      },
+    });
+  };
 
   return (
     <div className="h-full overflow-auto">
@@ -255,10 +658,16 @@ function HomeDashboard() {
 
         <div className="grid min-h-[400px] flex-1 grid-cols-[minmax(0,818px)_minmax(370px,1fr)] gap-4">
           <div className="grid grid-rows-[auto_1fr] gap-3">
-            <MeetingSchedule {...meetingSchedule} />
-            <TodoList {...todoList} />
+            <MeetingSchedule
+              initialDate={initialMeetingDate}
+              meetings={meetings}
+              isLoading={isMeetingsLoading}
+              errorMessage={meetingErrorMessage}
+              onJoin={handleJoinMeeting}
+            />
+            <TodoList {...todoList} projects={projectNames} />
           </div>
-          <AiReplyStatus replies={aiReplies} />
+          <AiReplyStatus replies={aiReplies} projects={projectNames} />
         </div>
       </div>
     </div>
