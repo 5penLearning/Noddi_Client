@@ -694,7 +694,12 @@ function ProjectPage() {
                 {!isTeamsLoading &&
                   !teamsErrorMessage &&
                   projectTeams.map((team) => (
-                    <ProjectTeamCard key={team.id} team={team} className="shrink-0" />
+                    <ProjectTeamCard
+                      key={team.id}
+                      team={team}
+                      onAsk={(teamId) => navigate('/qa', { state: { teamId } })}
+                      className="shrink-0"
+                    />
                   ))}
               </div>
             </section>
