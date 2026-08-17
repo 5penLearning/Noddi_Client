@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { deleteActionItem, getMyActionItems, updateActionItem } from '../../api/actionItemApi';
 import { getApiErrorMessage, getUserId } from '../../api/axios';
 import { getMeetings } from '../../api/meetingApi';
+import { getMyProfile } from '../../api/mypageApi';
 import { getMemberProjects } from '../../api/projects';
+import { getTeamQaFeed } from '../../api/qaApi';
 import { getMyTeams, getTeamMembers } from '../../api/teams';
 import { ActionItemForm, EditIcon, TrashIcon } from '../feature/meeting/ActionItemPanel';
 import logo from '../../assets/logo-green.svg';
@@ -45,6 +47,57 @@ const formatMeetingScheduleItem = (meeting, team) => {
     rawMeeting: meeting,
   };
 };
+
+const formatQaTime = (dateValue) => {
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) return '';
+
+  return new Intl.DateTimeFormat('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+    .format(date)
+    .replace(/\. /g, '. ');
+};
+
+const normalizeQaFeed = (feed, currentUser) =>
+  (feed?.items ?? []).map((item) => {
+    const source = feed.canViewSources ? item.answer?.sources?.[0] : null;
+    const answeredAt = item.answer?.updatedAt ?? item.answer?.createdAt ?? item.question.createdAt;
+    const currentUserId = currentUser?.userId ?? getUserId();
+
+    return {
+      id: item.answer?.answerId ?? `question-${item.question.questionId}`,
+      questionId: item.question.questionId,
+      isMine: currentUserId
+        ? Number(item.question.questionerId) === Number(currentUserId)
+        : item.question.questionerName === currentUser?.name,
+      name: item.question.questionerName,
+      role: '',
+      time: formatQaTime(item.question.createdAt),
+      projectId: feed.projectId,
+      projectName: feed.projectName,
+      teamId: feed.teamId,
+      teamName: feed.teamName,
+      question: item.question.content,
+      answer: item.answer?.content ?? 'AI가 답변을 생성하고 있습니다.',
+      status:
+        item.status === 'COMPLETED'
+          ? '답변이 완료되었어요.'
+          : item.status === 'PROCESSING'
+            ? 'AI가 답변을 생성하고 있어요.'
+            : item.status === 'PENDING'
+              ? '답변을 준비하고 있어요.'
+              : item.status,
+      referenceId: source?.referenceId,
+      reference: source?.sourceTitle ?? '참고 회의록 없음',
+      answeredAt,
+    };
+  });
 
 function MeetingSchedule({ initialDate, meetings, isLoading, errorMessage, onJoin }) {
   const initial = new Date(`${initialDate}T00:00:00`);
@@ -238,23 +291,28 @@ function TodoLinkIcon({ isCompleted }) {
   );
 }
 
-function AiReplyStatus({ replies, projects }) {
+function AiReplyStatus({ replies, projects, isLoading, errorMessage, onDetail, onReference }) {
+  const [selectedProjectName, setSelectedProjectName] = useState('');
   const [selectedReplyIndex, setSelectedReplyIndex] = useState(0);
   const [isAnswerOverflowing, setIsAnswerOverflowing] = useState(false);
   const answerRef = useRef(null);
-  const selectedReply = replies[selectedReplyIndex];
   const projectCounts = replies.reduce((counts, reply) => {
     counts[reply.projectName] = (counts[reply.projectName] ?? 0) + 1;
 
     return counts;
   }, {});
+  const activeProjectName = projectCounts[selectedProjectName]
+    ? selectedProjectName
+    : replies[0]?.projectName;
+  const projectReplies = replies.filter((reply) => reply.projectName === activeProjectName);
+  const selectedReply = projectReplies[selectedReplyIndex];
 
   const moveReply = (direction) => {
     setSelectedReplyIndex((currentIndex) => {
       const nextIndex = currentIndex + direction;
 
-      if (nextIndex < 0) return replies.length - 1;
-      if (nextIndex >= replies.length) return 0;
+      if (nextIndex < 0) return projectReplies.length - 1;
+      if (nextIndex >= projectReplies.length) return 0;
 
       return nextIndex;
     });
@@ -268,7 +326,29 @@ function AiReplyStatus({ replies, projects }) {
     setIsAnswerOverflowing(answerElement.scrollHeight > 240);
   }, [selectedReply]);
 
-  if (!selectedReply) return null;
+  useEffect(() => {
+    if (selectedReplyIndex >= projectReplies.length) {
+      setSelectedReplyIndex(0);
+    }
+  }, [projectReplies.length, selectedReplyIndex]);
+
+  if (isLoading || errorMessage || !selectedReply) {
+    return (
+      <section className="flex h-full min-h-[712px] flex-col overflow-hidden rounded-[10px] bg-white px-4 pt-5">
+        <div className="flex items-end gap-2">
+          <h2 className="text-[20px] leading-[1.3] font-semibold text-black">AI 답변 현황</h2>
+          <p className="text-[16px] leading-[1.4] font-medium tracking-[-0.16px] text-[#8E9592]">
+            내가 없는 동안 쌓인 답변이에요.
+          </p>
+        </div>
+        <p className="flex flex-1 items-center justify-center text-[14px] text-[var(--color-gray-500)]">
+          {isLoading
+            ? 'AI 답변을 불러오는 중입니다.'
+            : errorMessage || '새로 쌓인 AI 답변이 없습니다.'}
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="flex h-full min-h-[712px] flex-col overflow-hidden rounded-[10px] bg-white">
@@ -288,21 +368,21 @@ function AiReplyStatus({ replies, projects }) {
               <button
                 key={project}
                 type="button"
+                disabled={count === 0}
                 onClick={() => {
-                  const replyIndex = replies.findIndex((reply) => reply.projectName === project);
-
-                  if (replyIndex >= 0) setSelectedReplyIndex(replyIndex);
+                  setSelectedProjectName(project);
+                  setSelectedReplyIndex(0);
                 }}
                 className={`flex h-[30px] shrink-0 items-center gap-2 rounded-[30px] py-1.5 pr-1.5 pl-3 text-[14px] leading-[1.3] tracking-[-0.28px] ${
-                  selectedReply.projectName === project
+                  activeProjectName === project
                     ? 'bg-[#101211] text-white'
-                    : 'bg-[#F2F7F4] text-[#343836]'
+                    : 'bg-[#F2F7F4] text-[#343836] disabled:opacity-50'
                 }`}
               >
                 {project}
                 <span
                   className={`flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[12px] font-medium tracking-[-0.24px] ${
-                    selectedReply.projectName === project
+                    activeProjectName === project
                       ? 'bg-[#6EFFC0] text-[#101211]'
                       : 'bg-[#C5CCC9] text-white'
                   }`}
@@ -325,7 +405,7 @@ function AiReplyStatus({ replies, projects }) {
             <img src={chevronIcon} className="h-[7px] w-[15px] -rotate-90" />
           </button>
           <strong className="text-[16px] leading-[1.3] font-semibold text-[#343836]">
-            {selectedReplyIndex + 1}/{replies.length}
+            {selectedReplyIndex + 1}/{projectReplies.length}
           </strong>
           <button
             type="button"
@@ -337,37 +417,49 @@ function AiReplyStatus({ replies, projects }) {
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="flex items-center gap-2">
-            <span className="flex size-6 items-center justify-center rounded-full border border-[#D7DEDB] bg-[#E9EFED]">
-              <img src={logoSimpleIcon} className="h-[14px] w-[11px] opacity-30" />
-            </span>
-            <strong className="text-[16px] leading-[1.3] font-medium text-black">
-              {selectedReply.name}
-            </strong>
-            <span className="text-[16px] leading-[1.4] font-medium tracking-[-0.16px] text-[#8E9592]">
-              {selectedReply.role}
-            </span>
+          <div className={`flex flex-col ${selectedReply.isMine ? 'items-end' : 'items-start'}`}>
+            <div className="flex items-center gap-2">
+              <span className="flex size-6 items-center justify-center rounded-full border border-[#D7DEDB] bg-[#E9EFED]">
+                <img src={logoSimpleIcon} className="h-[14px] w-[11px] opacity-30" />
+              </span>
+              <strong className="text-[16px] leading-[1.3] font-medium text-black">
+                {selectedReply.name}
+              </strong>
+              {selectedReply.role && (
+                <span className="text-[16px] leading-[1.4] font-medium tracking-[-0.16px] text-[#8E9592]">
+                  {selectedReply.role}
+                </span>
+              )}
+            </div>
+
+            <div className="mt-[10px] w-[min(328px,calc(100%-32px))] rounded-[10px] bg-[#E9EFED] px-3 py-2">
+              <p className="text-[16px] leading-[1.4] font-medium tracking-[-0.16px] text-[#101211]">
+                {selectedReply.question}
+              </p>
+              <time className="mt-1 block text-[14px] leading-[1.3] tracking-[-0.28px] text-[#A9B0AD]">
+                {selectedReply.time}
+              </time>
+            </div>
           </div>
 
-          <div className="mt-[10px] ml-8 w-[min(328px,calc(100%-32px))] rounded-[10px] bg-[#E9EFED] px-3 py-2">
-            <p className="text-[16px] leading-[1.4] font-medium tracking-[-0.16px] text-[#101211]">
-              {selectedReply.question}
-            </p>
-            <time className="mt-1 block text-[14px] leading-[1.3] tracking-[-0.28px] text-[#A9B0AD]">
-              {selectedReply.time}
-            </time>
-          </div>
-
-          <div className="mt-5 ml-auto flex min-h-0 w-[84%] flex-1 flex-col">
-            <p className="text-right text-[14px] leading-[1.3] tracking-[-0.28px] text-[#A9B0AD]">
+          <div
+            className={`mt-5 flex min-h-0 w-[84%] flex-1 flex-col ${
+              selectedReply.isMine ? 'mr-auto items-start' : 'ml-auto items-end'
+            }`}
+          >
+            <p
+              className={`w-full text-[14px] leading-[1.3] tracking-[-0.28px] text-[#A9B0AD] ${
+                selectedReply.isMine ? 'text-left' : 'text-right'
+              }`}
+            >
               {selectedReply.projectName}/{selectedReply.teamName}
             </p>
-            <div className="relative mt-3">
+            <div className="relative mt-3 w-full">
               <p
                 ref={answerRef}
                 className={`text-[14px] leading-[1.4] tracking-[-0.21px] whitespace-pre-line text-[#343836] ${
-                  isAnswerOverflowing ? 'line-clamp-[12] max-h-[240px] overflow-hidden' : ''
-                }`}
+                  selectedReply.isMine ? 'text-left' : 'text-right'
+                } ${isAnswerOverflowing ? 'line-clamp-[12] max-h-[240px] overflow-hidden' : ''}`}
               >
                 {selectedReply.answer}
               </p>
@@ -375,25 +467,32 @@ function AiReplyStatus({ replies, projects }) {
                 <span className="pointer-events-none absolute right-0 bottom-0 left-0 h-16 bg-gradient-to-b from-transparent to-white" />
               )}
             </div>
-            <p className="mt-3 text-[14px] leading-[1.4] tracking-[-0.21px] whitespace-pre-line text-[#A9B0AD]">
+            <p
+              className={`mt-3 w-full text-[14px] leading-[1.4] tracking-[-0.21px] whitespace-pre-line text-[#A9B0AD] ${
+                selectedReply.isMine ? 'text-left' : 'text-right'
+              }`}
+            >
               {selectedReply.status}
             </p>
 
             <button
               type="button"
-              className="mt-auto flex h-[42px] w-full items-center justify-between rounded-[10px] border border-[#8E9592] px-3 text-[14px] leading-[1.4] tracking-[-0.21px] text-[#343836]"
+              onClick={() => onDetail(selectedReply)}
+              className="mt-4 flex h-11 w-full items-center justify-center rounded-[10px] bg-[#E9EFED] text-[16px] leading-[1.3] font-semibold text-[#343836]"
+            >
+              자세히 보기
+            </button>
+            <button
+              type="button"
+              disabled={!selectedReply.referenceId}
+              onClick={() => onReference(selectedReply)}
+              className="mt-3 flex h-[42px] w-full items-center justify-between rounded-[10px] border border-[#8E9592] px-3 text-[14px] leading-[1.4] tracking-[-0.21px] text-[#343836] disabled:opacity-50"
             >
               <span>
                 <strong className="mr-2 font-medium">참고 회의록</strong>
                 {selectedReply.reference}
               </span>
               <img src={chevronIcon} className="h-[7px] w-[15px] -rotate-90 opacity-40" />
-            </button>
-            <button
-              type="button"
-              className="mt-3 flex h-11 w-full items-center justify-center rounded-[10px] bg-[#E9EFED] text-[16px] leading-[1.3] font-semibold text-[#343836]"
-            >
-              자세히보기
             </button>
           </div>
         </div>
@@ -729,11 +828,14 @@ function TodoList({ description, projects, meetings }) {
 
 function HomeDashboard() {
   const navigate = useNavigate();
-  const { hero, aiReplies, todoList } = homePageMockData;
+  const { hero, todoList } = homePageMockData;
   const [projects, setProjects] = useState([]);
   const [meetings, setMeetings] = useState([]);
   const [isMeetingsLoading, setIsMeetingsLoading] = useState(true);
   const [meetingErrorMessage, setMeetingErrorMessage] = useState('');
+  const [aiReplies, setAiReplies] = useState([]);
+  const [isAiRepliesLoading, setIsAiRepliesLoading] = useState(true);
+  const [aiRepliesErrorMessage, setAiRepliesErrorMessage] = useState('');
 
   useEffect(() => {
     let isCurrentRequest = true;
@@ -741,16 +843,21 @@ function HomeDashboard() {
     const loadProjects = async () => {
       try {
         setIsMeetingsLoading(true);
+        setIsAiRepliesLoading(true);
         setMeetingErrorMessage('');
+        setAiRepliesErrorMessage('');
 
-        const [memberProjects, myTeams] = await Promise.all([
+        const [memberProjects, myTeams, profileResponse] = await Promise.all([
           getMemberProjects(getUserId()),
           getMyTeams(),
+          getMyProfile(),
         ]);
+        const currentUser = profileResponse?.result ?? profileResponse;
 
-        const meetingResults = await Promise.allSettled(
-          myTeams.map((team) => getMeetings(team.teamId)),
-        );
+        const [meetingResults, feedResults] = await Promise.all([
+          Promise.allSettled(myTeams.map((team) => getMeetings(team.teamId))),
+          Promise.allSettled(myTeams.map((team) => getTeamQaFeed(team.teamId))),
+        ]);
         const nextMeetings = meetingResults
           .flatMap((result, index) => {
             if (result.status !== 'fulfilled') return [];
@@ -764,10 +871,27 @@ function HomeDashboard() {
               `${secondMeeting.date}T${secondMeeting.time}`,
             ),
           );
+        const nextAiReplies = feedResults
+          .flatMap((result) =>
+            result.status === 'fulfilled' ? normalizeQaFeed(result.value, currentUser) : [],
+          )
+          .sort(
+            (firstReply, secondReply) =>
+              new Date(secondReply.answeredAt).getTime() -
+              new Date(firstReply.answeredAt).getTime(),
+          );
 
         if (isCurrentRequest) {
           setProjects(memberProjects);
           setMeetings(nextMeetings);
+          setAiReplies(nextAiReplies);
+
+          if (
+            feedResults.length > 0 &&
+            feedResults.every((result) => result.status === 'rejected')
+          ) {
+            setAiRepliesErrorMessage('AI 답변을 불러오지 못했습니다.');
+          }
         }
       } catch (error) {
         console.error('Failed to load home projects:', error);
@@ -775,11 +899,14 @@ function HomeDashboard() {
         if (isCurrentRequest) {
           setProjects([]);
           setMeetings([]);
+          setAiReplies([]);
           setMeetingErrorMessage(getApiErrorMessage(error, '회의 일정을 불러오지 못했습니다.'));
+          setAiRepliesErrorMessage(getApiErrorMessage(error, 'AI 답변을 불러오지 못했습니다.'));
         }
       } finally {
         if (isCurrentRequest) {
           setIsMeetingsLoading(false);
+          setIsAiRepliesLoading(false);
         }
       }
     };
@@ -803,6 +930,18 @@ function HomeDashboard() {
     });
   };
 
+  const handleOpenQaDetail = (reply) => {
+    navigate('/qa', { state: { questionId: reply.questionId, teamId: reply.teamId } });
+  };
+
+  const handleOpenReference = (reply) => {
+    if (!reply.referenceId) return;
+
+    navigate(`/projects/${reply.projectId}/teams/${reply.teamId}/meetings/${reply.referenceId}`, {
+      state: { teamName: reply.teamName },
+    });
+  };
+
   return (
     <div className="h-full overflow-auto">
       <div className="mx-auto flex min-h-full w-full max-w-[1346px] flex-col gap-5">
@@ -822,7 +961,14 @@ function HomeDashboard() {
             />
             <TodoList {...todoList} projects={projectNames} meetings={meetings} />
           </div>
-          <AiReplyStatus replies={aiReplies} projects={projectNames} />
+          <AiReplyStatus
+            replies={aiReplies}
+            projects={projectNames}
+            isLoading={isAiRepliesLoading}
+            errorMessage={aiRepliesErrorMessage}
+            onDetail={handleOpenQaDetail}
+            onReference={handleOpenReference}
+          />
         </div>
       </div>
     </div>
