@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import defaultMemberAvatar from '../../assets/icons/my-team-avatar.svg';
+import ProfileAvatar from '../common/ProfileAvatar';
 import teamLogo from '../../assets/icons/my-team-logo.svg';
 import closeIcon from '../../assets/icons/project-create/modal-close-x.svg';
 import searchIcon from '../../assets/icons/project-create/search.svg';
@@ -210,9 +211,11 @@ function TeamCreateModal({
                             onClick={() => handleSelectMember(member.userId)}
                             className="flex items-center gap-2 text-left"
                           >
-                            <img
-                              src={member.profileImageUrl || defaultMemberAvatar}
-                              alt=""
+                            <ProfileAvatar
+                              userId={member.userId ?? member.id}
+                              profileImageUrl={member.profileImageUrl}
+                              name={member.name}
+                              fallbackSrc={defaultMemberAvatar}
                               className="size-6 rounded-full object-cover"
                             />
                             <span className="flex items-end gap-[6px] whitespace-nowrap">
@@ -240,9 +243,11 @@ function TeamCreateModal({
                           onClick={() => handleRemoveMember(member.userId)}
                           className="flex h-[34px] items-center gap-2 rounded-[30px] border border-[var(--color-action-primary)] bg-[#EFFFF8] py-1 pr-[10px] pl-1"
                         >
-                          <img
-                            src={member.profileImageUrl || defaultMemberAvatar}
-                            alt=""
+                          <ProfileAvatar
+                            userId={member.userId ?? member.id}
+                            profileImageUrl={member.profileImageUrl}
+                            name={member.name}
+                            fallbackSrc={defaultMemberAvatar}
                             className="size-6 rounded-full object-cover"
                           />
                           <span className="flex items-end gap-[6px] whitespace-nowrap">

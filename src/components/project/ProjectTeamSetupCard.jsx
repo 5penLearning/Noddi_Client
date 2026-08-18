@@ -2,6 +2,7 @@ import closeLineLeftIcon from '../../assets/icons/project-create/close-line-left
 import closeLineRightIcon from '../../assets/icons/project-create/close-line-right.svg';
 import editIcon from '../../assets/icons/project-create/edit.svg';
 import defaultMemberAvatar from '../../assets/icons/project-create/member-avatar.svg';
+import ProfileAvatar from '../common/ProfileAvatar';
 import searchIcon from '../../assets/icons/project-create/search.svg';
 
 function ProjectTeamSetupCard({ team, onEdit, onRemove, onSearchLeader, className = '' }) {
@@ -47,8 +48,11 @@ function ProjectTeamSetupCard({ team, onEdit, onRemove, onSearchLeader, classNam
       >
         {leader && (
           <>
-            <img
-              src={leader.avatarUrl || defaultMemberAvatar}
+            <ProfileAvatar
+              userId={leader.userId ?? leader.id}
+              profileImageUrl={leader.profileImageUrl ?? leader.avatarUrl}
+              name={leader.name}
+              fallbackSrc={defaultMemberAvatar}
               className="size-5 shrink-0 rounded-full"
             />
             <span className="body-5 ml-[10px] shrink-0 tracking-[-0.21px] text-[var(--color-black)]">

@@ -2,6 +2,7 @@ import avatarDefault from '../../assets/icons/profile/avatar-default.svg';
 import chevronIcon from '../../assets/icons/profile/chevron.svg';
 import userAvatarIcon from '../../assets/icons/sidebar/user-avatar.svg';
 import userBodyIcon from '../../assets/icons/sidebar/user-body.svg';
+import ProfileAvatar from './ProfileAvatar';
 
 function ProfileIcon() {
   return (
@@ -83,7 +84,7 @@ function MenuButton({ item, onClick }) {
   );
 }
 
-function ProfileDropdown({ name, organization, email, onSelect }) {
+function ProfileDropdown({ userId, profileImageUrl, name, organization, email, onSelect }) {
   const currentTime = new Intl.DateTimeFormat('ko-KR', {
     timeZone: 'Asia/Seoul',
     hour: '2-digit',
@@ -95,7 +96,13 @@ function ProfileDropdown({ name, organization, email, onSelect }) {
     <section className="absolute top-[52px] right-0 z-50 flex h-[412px] w-[284px] flex-col gap-6 overflow-hidden rounded-[10px] bg-white px-[18px] py-[26px] shadow-[0_11px_24px_rgba(0,0,0,0.10),0_43px_43px_rgba(0,0,0,0.09),0_97px_58px_rgba(0,0,0,0.05)]">
       <div className="flex h-32 shrink-0 flex-col gap-4">
         <div className="flex h-[68px] items-start gap-[13px]">
-          <img src={avatarDefault} className="size-16 shrink-0" />
+          <ProfileAvatar
+            userId={userId}
+            profileImageUrl={profileImageUrl}
+            name={name}
+            fallbackSrc={avatarDefault}
+            className="size-16 shrink-0"
+          />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[20px] leading-[1.3] font-medium text-black">{name}</p>
             <p className="truncate text-[16px] leading-[1.4] tracking-[-0.16px] text-[#707673]">

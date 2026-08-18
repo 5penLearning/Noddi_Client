@@ -3,6 +3,7 @@ import OutlineButton from '../common/OutlineButton';
 import closeXIcon from '../../assets/icons/project-create/modal-close-x.svg';
 import defaultMemberAvatar from '../../assets/icons/project-create/modal-member-avatar.svg';
 import searchIcon from '../../assets/icons/project-create/search.svg';
+import ProfileAvatar from '../common/ProfileAvatar';
 
 function ProjectMemberModal({ data, onClose, onInvite, onEditMembers }) {
   return (
@@ -53,7 +54,13 @@ function ProjectMemberModal({ data, onClose, onInvite, onEditMembers }) {
         <ul className="mt-[25px] space-y-[19px] px-4">
           {data.members.map((member) => (
             <li key={member.id} className="flex h-11 items-center">
-              <img src={member.avatarUrl || defaultMemberAvatar} className="size-11 rounded-full" />
+              <ProfileAvatar
+                userId={member.userId ?? member.id}
+                profileImageUrl={member.profileImageUrl ?? member.avatarUrl}
+                name={member.name}
+                fallbackSrc={defaultMemberAvatar}
+                className="size-11"
+              />
               <span className="subhead-2 ml-[21px]">{member.name}</span>
               <span className="body-3 ml-[19px] text-[var(--color-gray-500)]">
                 {member.position}

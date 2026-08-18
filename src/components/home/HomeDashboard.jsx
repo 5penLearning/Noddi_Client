@@ -7,6 +7,7 @@ import { getUnreadAnswerCards, getUnreadAnswerCountsByProject } from '../../api/
 import { getMeetings } from '../../api/meetingApi';
 import { getMyTeams, getTeamMembers } from '../../api/teams';
 import { ActionItemForm, EditIcon, TrashIcon } from '../feature/meeting/ActionItemPanel';
+import ProfileAvatar from '../common/ProfileAvatar';
 import logo from '../../assets/logo-green.svg';
 import { homePageMockData } from '../../mocks/homePageData';
 
@@ -73,6 +74,8 @@ const normalizeUnreadAnswerCards = (cards) =>
       id: item.answerId ?? `question-${item.questionId}`,
       notificationId: item.notificationId,
       questionId: item.questionId,
+      questionerId: item.questioner?.userId,
+      profileImageUrl: item.questioner?.profileImageUrl,
       isMine: currentUserId
         ? Number(item.questioner?.userId) === Number(currentUserId)
         : false,
@@ -414,9 +417,13 @@ function AiReplyStatus({ replies, projects, isLoading, errorMessage, onDetail, o
         <div className="flex min-h-0 flex-1 flex-col">
           <div className={`flex flex-col ${selectedReply.isMine ? 'items-end' : 'items-start'}`}>
             <div className="flex items-center gap-2">
-              <span className="flex size-6 items-center justify-center rounded-full border border-[#D7DEDB] bg-[#E9EFED]">
-                <img src={logoSimpleIcon} className="h-[14px] w-[11px] opacity-30" />
-              </span>
+              <ProfileAvatar
+                userId={selectedReply.questionerId}
+                profileImageUrl={selectedReply.profileImageUrl}
+                name={selectedReply.name}
+                fallbackSrc={logoSimpleIcon}
+                className="size-6 shrink-0 border border-[#D7DEDB] bg-[#E9EFED]"
+              />
               <strong className="text-[16px] leading-[1.3] font-medium text-black">
                 {selectedReply.name}
               </strong>

@@ -1,3 +1,5 @@
+import ProfileAvatar from '../../common/ProfileAvatar';
+
 const MAX_VISIBLE_PARTICIPANTS = 3;
 
 function MeetingParticipants({ participants = [] }) {
@@ -24,17 +26,12 @@ function MeetingParticipants({ participants = [] }) {
             }`}
             title={participant.name}
           >
-            {participant.profileImageUrl ? (
-              <img
-                src={participant.profileImageUrl}
-                alt={`${participant.name} 프로필`}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span className="text-xs font-semibold text-[#101211]">
-                {participant.name.charAt(0)}
-              </span>
-            )}
+            <ProfileAvatar
+              userId={participant.userId}
+              profileImageUrl={participant.profileImageUrl}
+              name={participant.name}
+              className="h-full w-full text-xs"
+            />
           </div>
         ))}
 

@@ -10,6 +10,8 @@ function SearchToolbar({
   profileName,
   profileOrganization,
   profileEmail,
+  profileUserId,
+  profileImageUrl,
   onNotificationClick,
   onProfileClick,
   onProjectClick,
@@ -51,12 +53,16 @@ function SearchToolbar({
       <NotificationButton notificationCount={notificationCount} onClick={onNotificationClick} />
       <div ref={profileAreaRef} className="relative">
         <ProfileMenu
+          userId={profileUserId}
+          profileImageUrl={profileImageUrl}
           name={profileName}
           department={profileOrganization}
           onClick={() => setIsProfileDropdownOpen((isOpen) => !isOpen)}
         />
         {isProfileDropdownOpen && (
           <ProfileDropdown
+            userId={profileUserId}
+            profileImageUrl={profileImageUrl}
             name={profileName ?? '사용자'}
             organization={profileOrganization ?? '소속 조직'}
             email={profileEmail ?? ''}

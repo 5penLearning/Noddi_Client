@@ -10,7 +10,7 @@ import TeamCreateModal from '../../components/project/TeamCreateModal';
 import TeamMemberInviteModal from '../../components/project/TeamMemberInviteModal';
 import { getApiErrorMessage, getUserId } from '../../api/axios';
 import { getMeetings } from '../../api/meetingApi';
-import { createTeamPage, getTeamPage, getTeamPages } from '../../api/teamPages';
+import { createTeamPage, getTeamPage, getTeamPages, updateTeamPage } from '../../api/teamPages';
 import {
   deleteTeam,
   getMyTeams,
@@ -82,6 +82,7 @@ function TeamMeetingRecordsPage() {
   const [isSharedMemosLoading, setIsSharedMemosLoading] = useState(false);
   const [isSharedMemoDetailLoading, setIsSharedMemoDetailLoading] = useState(false);
   const [isSharedMemoCreating, setIsSharedMemoCreating] = useState(false);
+  const [isSharedMemoUpdating, setIsSharedMemoUpdating] = useState(false);
   const [sharedMemosErrorMessage, setSharedMemosErrorMessage] = useState('');
   const [sharedMemoDetailErrorMessage, setSharedMemoDetailErrorMessage] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
@@ -455,6 +456,39 @@ function TeamMeetingRecordsPage() {
     }
   };
 
+  const handleUpdateSharedMemo = async ({ title, content }) => {
+    if (!selectedMemoId) return false;
+
+    try {
+      setIsSharedMemoUpdating(true);
+      setSharedMemoDetailErrorMessage('');
+
+      await updateTeamPage(teamId, selectedMemoId, { title, content });
+
+      const [nextMemo, pageResult] = await Promise.all([
+        getTeamPage(teamId, selectedMemoId),
+        getTeamPages(teamId, {
+          page: 0,
+          size: 20,
+          sort: 'updatedAt,desc',
+        }),
+      ]);
+
+      setSelectedMemo(nextMemo);
+      setSharedMemos(pageResult.content ?? []);
+
+      return true;
+    } catch (error) {
+      setSharedMemoDetailErrorMessage(
+        getApiErrorMessage(error, '공유 페이지를 수정하지 못했습니다.'),
+      );
+
+      return false;
+    } finally {
+      setIsSharedMemoUpdating(false);
+    }
+  };
+
   return (
     <div className="mx-auto flex h-full w-full max-w-[1347px] flex-col">
       <nav className="flex h-[45px] shrink-0 items-start gap-1 pr-[7px] pl-5">
@@ -712,7 +746,10 @@ function TeamMeetingRecordsPage() {
             projectName={location.state?.projectName ?? '노디 프로젝트'}
             teamName={currentTeam?.name ?? location.state?.teamName ?? '마케팅팀'}
             isLoading={isSharedMemoDetailLoading}
+            isUpdating={isSharedMemoUpdating}
             errorMessage={sharedMemoDetailErrorMessage}
+            onBack={() => setSelectedMemoId(null)}
+            onUpdate={handleUpdateSharedMemo}
           />
         </main>
       )}

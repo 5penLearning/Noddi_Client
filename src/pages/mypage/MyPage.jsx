@@ -22,6 +22,7 @@ import {
   clearAuthSession,
 } from '../../api/axios';
 
+import ProfileAvatar from '../../components/common/ProfileAvatar';
 import PasswordConfirmModal from '../../components/feature/mypage/PasswordConfirmModal';
 import ProjectActionMenu from '../../components/feature/mypage/ProjectActionMenu';
 
@@ -810,11 +811,6 @@ function MyPage() {
     profile?.name ??
     '사용자';
 
-  const initial =
-    displayName
-      .trim()
-      .charAt(0);
-
   return (
     <>
       <div className="h-full w-full overflow-y-auto pb-14">
@@ -859,9 +855,12 @@ function MyPage() {
               {/* 프로필 */}
               <section className="flex items-center justify-between rounded-2xl border border-[#E3E9E6] bg-white px-7 py-6">
                 <div className="flex min-w-0 items-center gap-5">
-                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-[#C7F9DF] bg-[#EFFFF7] text-2xl font-semibold text-[#101211]">
-                    {initial}
-                  </div>
+                  <ProfileAvatar
+                    userId={profile?.userId}
+                    profileImageUrl={profile?.profileImageUrl}
+                    name={displayName}
+                    className="size-20 shrink-0 border border-[#C7F9DF] text-2xl"
+                  />
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">

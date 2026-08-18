@@ -49,9 +49,11 @@ function AppLayout() {
     };
 
     loadProfile();
+    window.addEventListener('profile-updated', loadProfile);
 
     return () => {
       isCurrentRequest = false;
+      window.removeEventListener('profile-updated', loadProfile);
     };
   }, []);
 
@@ -149,6 +151,8 @@ function AppLayout() {
             profileName={profile?.name}
             profileOrganization={profile?.organizationName}
             profileEmail={profile?.email}
+            profileUserId={profile?.userId}
+            profileImageUrl={profile?.profileImageUrl}
             onNotificationClick={() => {
               setIsNotificationModalOpen(true);
               loadNotifications();
