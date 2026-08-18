@@ -38,6 +38,7 @@ const pageTitles = {
 function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationFilter, setNotificationFilter] = useState('ALL');
@@ -75,13 +76,19 @@ function AppLayout() {
       setIsNotificationLoading(true);
       setNotificationErrorMessage('');
 
-      const result = await getNotifications({ filter: notificationFilter });
+      const result = await getNotifications({
+        filter: notificationFilter,
+      });
 
       setNotifications((result.items ?? []).map(normalizeNotification));
       setUnreadNotificationCount(result.unreadCount ?? 0);
     } catch (error) {
       console.error('Failed to load notifications:', error);
-      setNotificationErrorMessage(getApiErrorMessage(error, '알림을 불러오지 못했습니다.'));
+
+      setNotificationErrorMessage(
+        getApiErrorMessage(error, '알림을 불러오지 못했습니다.'),
+      );
+
       setNotifications([]);
     } finally {
       setIsNotificationLoading(false);
@@ -107,13 +114,17 @@ function AppLayout() {
 
     if (navigation.type === 'MEETING_SUMMARY') {
       navigate(`/meetings/${navigation.referenceId}/record`, {
-        state: { teamId: navigation.teamId },
+        state: {
+          teamId: navigation.teamId,
+        },
       });
       return;
     }
 
     if (navigation.type === 'TEAM') {
-      navigate(`/projects/${navigation.projectId}/teams/${navigation.teamId}/meetings`);
+      navigate(
+        `/projects/${navigation.projectId}/teams/${navigation.teamId}/meetings`,
+      );
       return;
     }
 
@@ -141,9 +152,12 @@ function AppLayout() {
 
       setIsNotificationModalOpen(false);
       navigateFromNotification(notification);
+
       await loadNotifications();
     } catch (error) {
-      setNotificationErrorMessage(getApiErrorMessage(error, '알림을 읽음 처리하지 못했습니다.'));
+      setNotificationErrorMessage(
+        getApiErrorMessage(error, '알림을 읽음 처리하지 못했습니다.'),
+      );
     }
   };
 
@@ -162,28 +176,39 @@ function AppLayout() {
 
       await loadNotifications();
     } catch (error) {
-      setNotificationErrorMessage(getApiErrorMessage(error, '알림을 숨기지 못했습니다.'));
+      setNotificationErrorMessage(
+        getApiErrorMessage(error, '알림을 숨기지 못했습니다.'),
+      );
     }
   };
 
   const activeItem = Object.entries(navigationPaths).find(
-    ([, path]) => location.pathname === path || location.pathname.startsWith(`${path}/`),
+    ([, path]) =>
+      location.pathname === path ||
+      location.pathname.startsWith(`${path}/`),
   )?.[0];
 
   const currentPagePath = Object.keys(pageTitles).find(
-    (path) => location.pathname === path || location.pathname.startsWith(`${path}/`),
+    (path) =>
+      location.pathname === path ||
+      location.pathname.startsWith(`${path}/`),
   );
 
-  const pageTitle = pageTitles[currentPagePath] ?? '페이지를 찾을 수 없습니다.';
-  const teamPageMatch = location.pathname.match(/^\/projects\/([^/]+)\/teams\/([^/]+)\//);
+  const pageTitle =
+    pageTitles[currentPagePath] ?? '페이지를 찾을 수 없습니다.';
+
+  const teamPageMatch = location.pathname.match(
+    /^\/projects\/([^/]+)\/teams\/([^/]+)\//,
+  );
+
   const isTeamPage = Boolean(teamPageMatch);
   const currentProjectId = teamPageMatch?.[1];
-  const teamPageTitle = `${location.state?.projectName ?? '프로젝트'} / ${
-    location.state?.teamName ?? '팀'
-  }`;
+
+  const teamPageTitle = `${location.state?.projectName ?? '프로젝트'} / ${location.state?.teamName ?? '팀'
+    }`;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[var(--color-gray-100)] p-[10px]">
+    <div className="flex h-screen overflow-hidden bg-[#FAFFFC] p-[10px]">
       <SidebarNavigation
         activeItem={activeItem ?? ''}
         onNavigate={(id) => navigate(navigationPaths[id])}
@@ -202,6 +227,7 @@ function AppLayout() {
                 ‹
               </button>
             )}
+
             <h1 className="subhead-1 text-[var(--color-text-primary)]">
               {isTeamPage ? teamPageTitle : pageTitle}
             </h1>
@@ -221,10 +247,13 @@ function AppLayout() {
             onProfileClick={() => navigate('/mypage')}
             onProjectClick={() => navigate('/projects')}
             onActivityClick={() => navigate('/mypage')}
-            onHelpClick={() => {}}
+            onHelpClick={() => { }}
             onLogoutClick={() => {
               clearAuthSession();
-              navigate('/login', { replace: true });
+
+              navigate('/login', {
+                replace: true,
+              });
             }}
           />
         </header>

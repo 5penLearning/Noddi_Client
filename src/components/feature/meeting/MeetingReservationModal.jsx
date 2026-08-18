@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import calendarArrowIcon from '../../../assets/icons/home-meeting/calendar-arrow.svg';
+
 const INITIAL_FORM = {
   title: '',
   agenda: '',
@@ -603,7 +605,6 @@ function MeetingReservationModal({
         className="flex max-h-[94vh] w-full max-w-[540px] flex-col overflow-hidden rounded-[20px] bg-[#F9FFFD] shadow-[0_18px_60px_rgba(16,18,17,0.18)]"
       >
         <div className="flex-1 overflow-y-auto px-7 pb-6 pt-7">
-          {/* Header */}
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-[20px] font-semibold leading-[1.2] text-[#101211]">
               회의 예약하기
@@ -625,7 +626,6 @@ function MeetingReservationModal({
           </div>
 
           <div className="space-y-5">
-            {/* 회의명 */}
             <div>
               <label
                 htmlFor="meeting-title"
@@ -682,7 +682,6 @@ function MeetingReservationModal({
               </div>
             </div>
 
-            {/* 회의 주제 */}
             <div>
               <label
                 htmlFor="meeting-agenda"
@@ -724,7 +723,6 @@ function MeetingReservationModal({
               </div>
             </div>
 
-            {/* 날짜 */}
             <div>
               <label className="mb-3 block text-[14px] font-medium text-[#101211]">
                 날짜
@@ -733,7 +731,7 @@ function MeetingReservationModal({
                 </span>
               </label>
 
-              <div className="mb-4 flex items-center justify-center gap-5">
+              <div className="mb-4 flex items-center justify-center gap-4">
                 <button
                   type="button"
                   onClick={
@@ -742,10 +740,14 @@ function MeetingReservationModal({
                   disabled={
                     isSubmitting
                   }
-                  className="text-[25px] font-light leading-none text-[#AAB4B0] transition-colors hover:text-[#31F5A0] active:text-[#31F5A0]"
+                  className="flex size-8 items-center justify-center rounded-[8px] transition hover:bg-[#EFFFF7] active:bg-[#DFFFF0] disabled:cursor-not-allowed disabled:opacity-40"
                   aria-label="이전 달"
                 >
-                  ‹
+                  <img
+                    src={calendarArrowIcon}
+                    alt=""
+                    className="h-[7.12px] w-[15.5px] -rotate-90"
+                  />
                 </button>
 
                 <strong className="min-w-[110px] text-center text-[15px] font-semibold text-[#101211]">
@@ -763,10 +765,14 @@ function MeetingReservationModal({
                   disabled={
                     isSubmitting
                   }
-                  className="text-[25px] font-light leading-none text-[#AAB4B0] transition-colors hover:text-[#31F5A0] active:text-[#31F5A0]"
+                  className="flex size-8 items-center justify-center rounded-[8px] transition hover:bg-[#EFFFF7] active:bg-[#DFFFF0] disabled:cursor-not-allowed disabled:opacity-40"
                   aria-label="다음 달"
                 >
-                  ›
+                  <img
+                    src={calendarArrowIcon}
+                    alt=""
+                    className="h-[7.12px] w-[15.5px] rotate-90"
+                  />
                 </button>
               </div>
 
@@ -838,10 +844,10 @@ function MeetingReservationModal({
                       >
                         <span
                           className={`flex h-9 w-9 items-center justify-center rounded-full text-[13px] transition ${isSelected
-                              ? 'bg-[#31F5A0] font-semibold text-[#101211]'
-                              : isPast
-                                ? 'cursor-not-allowed text-[#D2D8D5]'
-                                : 'text-[#303633] hover:bg-[#EAFBF4]'
+                            ? 'bg-[#31F5A0] font-semibold text-[#101211]'
+                            : isPast
+                              ? 'cursor-not-allowed text-[#D2D8D5]'
+                              : 'text-[#303633] hover:bg-[#EAFBF4]'
                             }`}
                         >
                           {calendarDate.getDate()}
@@ -864,7 +870,6 @@ function MeetingReservationModal({
               </div>
             </div>
 
-            {/* 시작 시간 */}
             <div>
               <label className="mb-2 block text-[14px] font-medium text-[#101211]">
                 시작 시간
@@ -954,7 +959,6 @@ function MeetingReservationModal({
               </div>
             </div>
 
-            {/* 종료 시간 */}
             <div>
               <label className="mb-2 block text-[14px] font-medium text-[#101211]">
                 종료 시간
@@ -1044,7 +1048,6 @@ function MeetingReservationModal({
               </div>
             </div>
 
-            {/* 팀 선택 */}
             <div>
               <label className="mb-2 block text-[14px] font-medium text-[#101211]">
                 팀 선택
@@ -1056,8 +1059,8 @@ function MeetingReservationModal({
               <div className="relative">
                 <div
                   className={`flex h-11 items-center rounded-[8px] border bg-white px-3.5 transition ${isTeamDropdownOpen
-                      ? 'border-[#31F5A0]'
-                      : 'border-[#AEB8B4]'
+                    ? 'border-[#31F5A0]'
+                    : 'border-[#AEB8B4]'
                     }`}
                 >
                   <input
@@ -1178,9 +1181,9 @@ function MeetingReservationModal({
               isSubmitting
             }
             className={`h-12 w-full rounded-[8px] text-[13px] font-semibold transition ${isFormFilled &&
-                !isSubmitting
-                ? 'bg-[#31F5A0] text-[#101211] hover:brightness-[0.97] active:scale-[0.995]'
-                : 'cursor-not-allowed bg-[#DDE7E2] text-[#9AA5A0]'
+              !isSubmitting
+              ? 'bg-[#31F5A0] text-[#101211] hover:brightness-[0.97] active:scale-[0.995]'
+              : 'cursor-not-allowed bg-[#DDE7E2] text-[#9AA5A0]'
               }`}
           >
             {isSubmitting
