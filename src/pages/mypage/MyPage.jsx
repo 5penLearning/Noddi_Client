@@ -169,6 +169,66 @@ function BuildingIcon() {
   );
 }
 
+function DepartmentIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M4 7H20V19H4V7Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+
+      <path
+        d="M8 7V5H16V7"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+
+      <path
+        d="M8 11H16M8 15H13"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function PositionIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle
+        cx="12"
+        cy="8"
+        r="3"
+        stroke="currentColor"
+        strokeWidth="1.7"
+      />
+
+      <path
+        d="M6 19C6 15.6863 8.68629 13 12 13C15.3137 13 18 15.6863 18 19"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function FolderIcon() {
   return (
     <svg
@@ -231,8 +291,7 @@ function getRoleLabel(role) {
 }
 
 function normalizeProjects(response) {
-  const result =
-    response?.result;
+  const result = response?.result;
 
   if (Array.isArray(result)) {
     return result;
@@ -249,46 +308,44 @@ function normalizeInvitations(
   projectInvitations,
   teamInvitations,
 ) {
-  const projects =
-    projectInvitations.map(
-      (invitation) => ({
-        ...invitation,
+  const projects = projectInvitations.map(
+    (invitation) => ({
+      ...invitation,
 
-        key: `PROJECT-${invitation.inviteId}`,
+      key: `PROJECT-${invitation.inviteId}`,
 
-        type: 'PROJECT',
+      type: 'PROJECT',
 
-        targetName:
-          invitation.projectName,
+      targetName:
+        invitation.projectName,
 
-        targetDescription:
-          invitation.projectDescription ??
-          '',
+      targetDescription:
+        invitation.projectDescription ??
+        '',
 
-        role:
-          invitation.offeredRole ??
-          null,
-      }),
-    );
+      role:
+        invitation.offeredRole ??
+        null,
+    }),
+  );
 
-  const teams =
-    teamInvitations.map(
-      (invitation) => ({
-        ...invitation,
+  const teams = teamInvitations.map(
+    (invitation) => ({
+      ...invitation,
 
-        key: `TEAM-${invitation.inviteId}`,
+      key: `TEAM-${invitation.inviteId}`,
 
-        type: 'TEAM',
+      type: 'TEAM',
 
-        targetName:
-          invitation.teamName,
+      targetName:
+        invitation.teamName,
 
-        targetDescription:
-          '팀 초대',
+      targetDescription:
+        '팀 초대',
 
-        role: null,
-      }),
-    );
+      role: null,
+    }),
+  );
 
   return [
     ...projects,
@@ -315,12 +372,11 @@ function SectionHeader({
         )}
       </div>
 
-      {typeof count ===
-        'number' && (
-          <span className="rounded-full bg-[#EFF4F1] px-2.5 py-1 text-[11px] font-semibold text-[#59625F]">
-            {count}
-          </span>
-        )}
+      {typeof count === 'number' && (
+        <span className="rounded-full bg-[#EFF4F1] px-2.5 py-1 text-[11px] font-semibold text-[#59625F]">
+          {count}
+        </span>
+      )}
     </div>
   );
 }
@@ -410,296 +466,283 @@ function MyPage() {
     );
   });
 
-  const loadMyPage =
-    useCallback(async () => {
-      try {
-        setIsLoading(true);
+  const loadMyPage = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setPageError('');
 
-        setPageError('');
+      const [
+        profileResponse,
+        projectInvitationResponse,
+        teamInvitationResponse,
+        projectResponse,
+      ] = await Promise.all([
+        getMyProfile(),
+        getProjectInvitations(),
+        getTeamInvitations(),
+        getOrganizationProjects(),
+      ]);
 
-        const [
-          profileResponse,
-          projectInvitationResponse,
-          teamInvitationResponse,
+      const profileData =
+        profileResponse?.result ??
+        null;
+
+      const projectInvitations =
+        projectInvitationResponse?.result ??
+        [];
+
+      const teamInvitations =
+        teamInvitationResponse?.result ??
+        [];
+
+      setProfile(profileData);
+
+      setInvitations(
+        normalizeInvitations(
+          projectInvitations,
+          teamInvitations,
+        ),
+      );
+
+      if (!profileData?.userId) {
+        setMyProjects([]);
+
+        return;
+      }
+
+      const projects =
+        normalizeProjects(
           projectResponse,
-        ] = await Promise.all([
-          getMyProfile(),
-          getProjectInvitations(),
-          getTeamInvitations(),
-          getOrganizationProjects(),
-        ]);
-
-        const profileData =
-          profileResponse?.result ??
-          null;
-
-        const projectInvitations =
-          projectInvitationResponse
-            ?.result ?? [];
-
-        const teamInvitations =
-          teamInvitationResponse
-            ?.result ?? [];
-
-        setProfile(
-          profileData,
         );
 
-        setInvitations(
-          normalizeInvitations(
-            projectInvitations,
-            teamInvitations,
-          ),
-        );
-
-        if (
-          !profileData?.userId
-        ) {
-          setMyProjects([]);
-          return;
-        }
-
-        const projects =
-          normalizeProjects(
-            projectResponse,
-          );
-
-        const projectResults =
-          await Promise.all(
-            projects.map(
-              async (project) => {
-                try {
-                  const memberResponse =
-                    await getProjectMembers(
-                      project.projectId,
-                    );
-
-                  const members =
-                    memberResponse?.result ??
-                    [];
-
-                  const me =
-                    members.find(
-                      (member) =>
-                        Number(
-                          member.userId,
-                        ) ===
-                        Number(
-                          profileData.userId,
-                        ),
-                    );
-
-                  if (!me) {
-                    return null;
-                  }
-
-                  return {
-                    ...project,
-
-                    myRole:
-                      me.role ??
-                      'MEMBER',
-                  };
-                } catch (error) {
-                  console.error(
-                    `Failed to load project members: ${project.projectId}`,
-                    error,
+      const projectResults =
+        await Promise.all(
+          projects.map(
+            async (project) => {
+              try {
+                const memberResponse =
+                  await getProjectMembers(
+                    project.projectId,
                   );
 
+                const members =
+                  memberResponse?.result ??
+                  [];
+
+                const me =
+                  members.find(
+                    (member) =>
+                      Number(
+                        member.userId,
+                      ) ===
+                      Number(
+                        profileData.userId,
+                      ),
+                  );
+
+                if (!me) {
                   return null;
                 }
-              },
-            ),
-          );
 
-        setMyProjects(
-          projectResults.filter(
-            Boolean,
+                return {
+                  ...project,
+
+                  myRole:
+                    me.role ??
+                    'MEMBER',
+                };
+              } catch (error) {
+                console.error(
+                  `Failed to load project members: ${project.projectId}`,
+                  error,
+                );
+
+                return null;
+              }
+            },
           ),
         );
-      } catch (error) {
-        console.error(
-          'Failed to load my page:',
-          error,
-        );
 
-        setPageError(
-          error?.response?.data
-            ?.message ??
-          '마이페이지 정보를 불러오지 못했습니다.',
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    }, []);
+      setMyProjects(
+        projectResults.filter(
+          Boolean,
+        ),
+      );
+    } catch (error) {
+      console.error(
+        'Failed to load my page:',
+        error,
+      );
+
+      setPageError(
+        error?.response?.data?.message ??
+        '마이페이지 정보를 불러오지 못했습니다.',
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     loadMyPage();
   }, [loadMyPage]);
 
-  const handleInvitation =
-    async (
-      invitation,
-      isAccepted,
-    ) => {
+  const handleInvitation = async (
+    invitation,
+    isAccepted,
+  ) => {
+    if (respondingInvitationKey) {
+      return;
+    }
+
+    try {
+      setRespondingInvitationKey(
+        invitation.key,
+      );
+
+      setPageError('');
+      setSuccessMessage('');
+
       if (
-        respondingInvitationKey
+        invitation.type ===
+        'TEAM'
       ) {
-        return;
-      }
-
-      try {
-        setRespondingInvitationKey(
-          invitation.key,
+        await respondTeamInvitation(
+          invitation.inviteId,
+          isAccepted,
         );
-
-        setPageError('');
-        setSuccessMessage('');
-
-        if (
-          invitation.type ===
-          'TEAM'
-        ) {
-          await respondTeamInvitation(
-            invitation.inviteId,
-            isAccepted,
-          );
-        } else {
-          await respondProjectInvitation(
-            invitation.inviteId,
-            isAccepted,
-          );
-        }
-
-        setSuccessMessage(
-          isAccepted
-            ? '초대를 수락했습니다.'
-            : '초대를 거절했습니다.',
-        );
-
-        await loadMyPage();
-      } catch (error) {
-        console.error(
-          'Failed to respond invitation:',
-          error,
-        );
-
-        setPageError(
-          error?.response?.data
-            ?.message ??
-          '초대 응답에 실패했습니다.',
-        );
-      } finally {
-        setRespondingInvitationKey(
-          null,
+      } else {
+        await respondProjectInvitation(
+          invitation.inviteId,
+          isAccepted,
         );
       }
-    };
 
-  const handleOpenProfileSettings =
-    () => {
-      setPasswordConfirmError('');
+      setSuccessMessage(
+        isAccepted
+          ? '초대를 수락했습니다.'
+          : '초대를 거절했습니다.',
+      );
 
-      setIsPasswordConfirmOpen(
+      await loadMyPage();
+    } catch (error) {
+      console.error(
+        'Failed to respond invitation:',
+        error,
+      );
+
+      setPageError(
+        error?.response?.data?.message ??
+        '초대 응답에 실패했습니다.',
+      );
+    } finally {
+      setRespondingInvitationKey(
+        null,
+      );
+    }
+  };
+
+  const handleOpenProfileSettings = () => {
+    setPasswordConfirmError('');
+
+    setIsPasswordConfirmOpen(
+      true,
+    );
+  };
+
+  const handleClosePasswordConfirm = () => {
+    if (isVerifyingPassword) {
+      return;
+    }
+
+    setPasswordConfirmError('');
+
+    setIsPasswordConfirmOpen(
+      false,
+    );
+  };
+
+  const handleVerifyPassword = async (password) => {
+    if (!profile?.email) {
+      setPasswordConfirmError(
+        '사용자 이메일 정보를 확인할 수 없습니다.',
+      );
+
+      return;
+    }
+
+    try {
+      setIsVerifyingPassword(
         true,
       );
-    };
-
-  const handleClosePasswordConfirm =
-    () => {
-      if (isVerifyingPassword) {
-        return;
-      }
 
       setPasswordConfirmError('');
+
+      const response =
+        await verifyCurrentPassword({
+          email:
+            profile.email,
+          password,
+        });
+
+      const verifiedUserId =
+        response?.result?.userId;
+
+      if (
+        verifiedUserId &&
+        Number(
+          verifiedUserId,
+        ) !==
+        Number(
+          profile.userId,
+        )
+      ) {
+        throw new Error(
+          '사용자 정보를 확인하지 못했습니다.',
+        );
+      }
 
       setIsPasswordConfirmOpen(
         false,
       );
-    };
 
-  const handleVerifyPassword =
-    async (password) => {
-      if (!profile?.email) {
-        setPasswordConfirmError(
-          '사용자 이메일 정보를 확인할 수 없습니다.',
-        );
-
-        return;
-      }
-
-      try {
-        setIsVerifyingPassword(
-          true,
-        );
-
-        setPasswordConfirmError('');
-
-        const response =
-          await verifyCurrentPassword({
-            email:
-              profile.email,
-            password,
-          });
-
-        const verifiedUserId =
-          response?.result?.userId;
-
-        if (
-          verifiedUserId &&
-          Number(
-            verifiedUserId,
-          ) !==
-          Number(
-            profile.userId,
-          )
-        ) {
-          throw new Error(
-            '사용자 정보를 확인하지 못했습니다.',
-          );
-        }
-
-        setIsPasswordConfirmOpen(
-          false,
-        );
-
-        navigate(
-          '/mypage/profile',
-          {
-            state: {
-              passwordVerified:
-                true,
-            },
+      navigate(
+        '/mypage/profile',
+        {
+          state: {
+            passwordVerified:
+              true,
           },
-        );
-      } catch (error) {
-        console.error(
-          'Failed to verify password:',
-          error,
-        );
-
-        setPasswordConfirmError(
-          error?.response?.data
-            ?.message ??
-          error?.message ??
-          '비밀번호가 일치하지 않습니다.',
-        );
-      } finally {
-        setIsVerifyingPassword(
-          false,
-        );
-      }
-    };
-
-  const handleToggleProjectMenu =
-    (projectId) => {
-      setOpenProjectMenuId(
-        (previousId) =>
-          previousId === projectId
-            ? null
-            : projectId,
+        },
       );
-    };
+    } catch (error) {
+      console.error(
+        'Failed to verify password:',
+        error,
+      );
+
+      setPasswordConfirmError(
+        error?.response?.data?.message ??
+        error?.message ??
+        '비밀번호가 일치하지 않습니다.',
+      );
+    } finally {
+      setIsVerifyingPassword(
+        false,
+      );
+    }
+  };
+
+  const handleToggleProjectMenu = (
+    projectId,
+  ) => {
+    setOpenProjectMenuId(
+      (previousId) =>
+        previousId === projectId
+          ? null
+          : projectId,
+    );
+  };
 
   const handleOpenProject = (
     projectId,
@@ -713,91 +756,89 @@ function MyPage() {
     );
   };
 
-  const handleLeaveProject =
-    async (project) => {
-      if (
-        !profile?.userId ||
-        leavingProjectId
-      ) {
-        return;
-      }
+  const handleLeaveProject = async (
+    project,
+  ) => {
+    if (
+      !profile?.userId ||
+      leavingProjectId
+    ) {
+      return;
+    }
 
-      const confirmed =
-        window.confirm(
-          `${project.name} 프로젝트에서 탈퇴할까요?`,
-        );
-
-      if (!confirmed) {
-        return;
-      }
-
-      try {
-        setLeavingProjectId(
-          project.projectId,
-        );
-
-        setOpenProjectMenuId(
-          null,
-        );
-
-        setPageError('');
-        setSuccessMessage('');
-
-        await leaveProject(
-          project.projectId,
-          profile.userId,
-        );
-
-        setSuccessMessage(
-          '프로젝트에서 탈퇴했습니다.',
-        );
-
-        await loadMyPage();
-      } catch (error) {
-        console.error(
-          'Failed to leave project:',
-          error,
-        );
-
-        setPageError(
-          error?.response?.data
-            ?.message ??
-          '프로젝트에서 탈퇴하지 못했습니다.',
-        );
-      } finally {
-        setLeavingProjectId(
-          null,
-        );
-      }
-    };
-
-  const handleAutoLoginChange =
-    () => {
-      const nextValue =
-        !autoLogin;
-
-      setAutoLogin(
-        nextValue,
+    const confirmed =
+      window.confirm(
+        `${project.name} 프로젝트에서 탈퇴할까요?`,
       );
 
-      localStorage.setItem(
-        'noddi_auto_login',
-        String(nextValue),
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setLeavingProjectId(
+        project.projectId,
       );
-    };
 
-  const handleTimezoneChange =
-    (event) => {
-      const value =
-        event.target.value;
-
-      setTimezone(value);
-
-      localStorage.setItem(
-        'noddi_timezone',
-        value,
+      setOpenProjectMenuId(
+        null,
       );
-    };
+
+      setPageError('');
+      setSuccessMessage('');
+
+      await leaveProject(
+        project.projectId,
+        profile.userId,
+      );
+
+      setSuccessMessage(
+        '프로젝트에서 탈퇴했습니다.',
+      );
+
+      await loadMyPage();
+    } catch (error) {
+      console.error(
+        'Failed to leave project:',
+        error,
+      );
+
+      setPageError(
+        error?.response?.data?.message ??
+        '프로젝트에서 탈퇴하지 못했습니다.',
+      );
+    } finally {
+      setLeavingProjectId(
+        null,
+      );
+    }
+  };
+
+  const handleAutoLoginChange = () => {
+    const nextValue =
+      !autoLogin;
+
+    setAutoLogin(nextValue);
+
+    localStorage.setItem(
+      'noddi_auto_login',
+      String(nextValue),
+    );
+  };
+
+  const handleTimezoneChange = (
+    event,
+  ) => {
+    const value =
+      event.target.value;
+
+    setTimezone(value);
+
+    localStorage.setItem(
+      'noddi_timezone',
+      value,
+    );
+  };
 
   const handleLogout = () => {
     clearAuthSession();
@@ -811,6 +852,13 @@ function MyPage() {
     profile?.name ??
     '사용자';
 
+  const profileRoleText = [
+    profile?.department,
+    profile?.position,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
     <>
       <div className="h-full w-full overflow-y-auto pb-14">
@@ -821,9 +869,7 @@ function MyPage() {
             </h1>
 
             <p className="mt-1 text-sm text-[#8A9490]">
-              내 정보와 참여 중인
-              프로젝트를 관리할 수
-              있습니다.
+              내 정보와 참여 중인 프로젝트를 관리할 수 있습니다.
             </p>
           </header>
 
@@ -845,8 +891,7 @@ function MyPage() {
                 <div className="mx-auto h-7 w-7 animate-spin rounded-full border-[3px] border-[#DCE5E1] border-t-[#31F5A0]" />
 
                 <p className="mt-4 text-sm text-[#707A76]">
-                  내 정보를 불러오고
-                  있습니다.
+                  내 정보를 불러오고 있습니다.
                 </p>
               </div>
             </div>
@@ -856,9 +901,15 @@ function MyPage() {
               <section className="flex items-center justify-between rounded-2xl border border-[#E3E9E6] bg-white px-7 py-6">
                 <div className="flex min-w-0 items-center gap-5">
                   <ProfileAvatar
-                    userId={profile?.userId}
-                    profileImageUrl={profile?.profileImageUrl}
-                    name={displayName}
+                    userId={
+                      profile?.userId
+                    }
+                    profileImageUrl={
+                      profile?.profileImageUrl
+                    }
+                    name={
+                      displayName
+                    }
                     className="size-20 shrink-0 border border-[#C7F9DF] text-2xl"
                   />
 
@@ -879,6 +930,12 @@ function MyPage() {
                         <EditIcon />
                       </button>
                     </div>
+
+                    {profileRoleText && (
+                      <p className="mt-1 text-sm font-medium text-[#59625F]">
+                        {profileRoleText}
+                      </p>
+                    )}
 
                     <p className="mt-1 text-sm text-[#707A76]">
                       {profile?.organizationName ??
@@ -907,7 +964,7 @@ function MyPage() {
               <section>
                 <SectionHeader
                   title="계정 정보"
-                  description="가입한 계정과 소속 정보를 확인할 수 있습니다."
+                  description="가입한 계정과 프로필 정보를 확인할 수 있습니다."
                 />
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -944,6 +1001,40 @@ function MyPage() {
                       </p>
                     </div>
                   </div>
+
+                  <div className="flex items-center gap-4 rounded-xl border border-[#E3E9E6] bg-white px-5 py-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#F1F6F3] text-[#59625F]">
+                      <DepartmentIcon />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-medium text-[#8A9490]">
+                        부서
+                      </p>
+
+                      <p className="mt-1 truncate text-sm font-semibold text-[#303633]">
+                        {profile?.department ??
+                          '-'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 rounded-xl border border-[#E3E9E6] bg-white px-5 py-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#F1F6F3] text-[#59625F]">
+                      <PositionIcon />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-medium text-[#8A9490]">
+                        직함
+                      </p>
+
+                      <p className="mt-1 truncate text-sm font-semibold text-[#303633]">
+                        {profile?.position ??
+                          '-'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </section>
 
@@ -957,12 +1048,10 @@ function MyPage() {
                   }
                 />
 
-                {invitations.length ===
-                  0 ? (
+                {invitations.length === 0 ? (
                   <div className="flex min-h-[120px] items-center justify-center rounded-xl border border-dashed border-[#DCE3E0] bg-[#FAFBFA]">
                     <p className="text-sm text-[#8A9490]">
-                      받은 초대장이
-                      없습니다.
+                      받은 초대장이 없습니다.
                     </p>
                   </div>
                 ) : (
@@ -1072,12 +1161,10 @@ function MyPage() {
                   }
                 />
 
-                {myProjects.length ===
-                  0 ? (
+                {myProjects.length === 0 ? (
                   <div className="flex min-h-[120px] items-center justify-center rounded-xl border border-dashed border-[#DCE3E0] bg-[#FAFBFA]">
                     <p className="text-sm text-[#8A9490]">
-                      참여 중인 프로젝트가
-                      없습니다.
+                      참여 중인 프로젝트가 없습니다.
                     </p>
                   </div>
                 ) : (
@@ -1092,8 +1179,7 @@ function MyPage() {
                             project.projectId
                           }
                           className={`relative flex items-center justify-between gap-5 px-5 py-4 ${index !==
-                            myProjects.length -
-                            1
+                            myProjects.length - 1
                             ? 'border-b border-[#EDF1EF]'
                             : ''
                             }`}
@@ -1188,8 +1274,7 @@ function MyPage() {
                       </p>
 
                       <p className="mt-1 text-xs text-[#8A9490]">
-                        다음 접속에서도 로그인
-                        상태를 유지합니다.
+                        다음 접속에서도 로그인 상태를 유지합니다.
                       </p>
                     </div>
 
@@ -1225,14 +1310,15 @@ function MyPage() {
                       </p>
 
                       <p className="mt-1 text-xs text-[#8A9490]">
-                        서비스에서 사용할
-                        시간대를 선택합니다.
+                        서비스에서 사용할 시간대를 선택합니다.
                       </p>
                     </div>
 
                     <div className="relative w-[260px]">
                       <select
-                        value={timezone}
+                        value={
+                          timezone
+                        }
                         onChange={
                           handleTimezoneChange
                         }
