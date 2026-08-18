@@ -18,6 +18,22 @@ export const login = async ({
   return response.data;
 };
 
+export const getSignupProfileOptions = async ({
+  organizationId,
+}) => {
+  const response = await api.get(
+    '/api/v1/auth/profile-options',
+    {
+      params: {
+        organizationId,
+      },
+      skipAuth: true,
+    },
+  );
+
+  return response.data;
+};
+
 export const sendEmailCode = async ({
   email,
   organizationId,
@@ -59,6 +75,8 @@ export const verifyEmailCode = async ({
 export const signup = async ({
   organizationId,
   name,
+  department,
+  position,
   email,
   password,
 }) => {
@@ -67,6 +85,8 @@ export const signup = async ({
     {
       organizationId,
       name,
+      department,
+      position,
       email,
       password,
     },
