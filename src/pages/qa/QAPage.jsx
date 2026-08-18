@@ -1,25 +1,89 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+
+import {
+  useLocation,
+} from 'react-router-dom';
 
 import {
   createQuestion,
   getMyQuestions,
   getQuestionDetail,
-  getTeamQuestions,
+  getTeamQaFeed,
   reviseAnswer,
 } from '../../api/qaApi';
 
-import { getMyTeams } from '../../api/teams';
+import {
+  getMyProfile,
+} from '../../api/mypageApi';
+
+import {
+  getMemberProjects,
+} from '../../api/projects';
+
+import {
+  getMyTeams,
+  getProjectTeams,
+} from '../../api/teams';
+
 import ProfileAvatar from '../../components/common/ProfileAvatar';
 
-function ChatIcon() {
+function MenuIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
-        d="M5 5H19C20.1046 5 21 5.89543 21 7V15C21 16.1046 20.1046 17 19 17H10L5 21V17C3.89543 17 3 16.1046 3 15V7C3 5.89543 3.89543 5 5 5Z"
+        d="M5 7H19M5 12H19M5 17H19"
         stroke="currentColor"
         strokeWidth="1.8"
-        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M6 6L18 18M18 6L6 18"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 5V19M5 12H19"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
       />
     </svg>
   );
@@ -27,7 +91,13 @@ function ChatIcon() {
 
 function RefreshIcon() {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M20 11C19.5 7.1 16.1 4 12 4C8.7 4 5.8 6 4.6 8.9"
         stroke="currentColor"
@@ -63,7 +133,13 @@ function RefreshIcon() {
 
 function SendIcon() {
   return (
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M4 4L21 12L4 20L7 12L4 4Z"
         stroke="currentColor"
@@ -71,29 +147,25 @@ function SendIcon() {
         strokeLinejoin="round"
       />
 
-      <path d="M7 12H21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function SourceIcon() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
-        d="M6 3H14L19 8V21H6V3Z"
+        d="M7 12H21"
         stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinejoin="round"
+        strokeWidth="1.8"
+        strokeLinecap="round"
       />
-
-      <path d="M14 3V8H19" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
     </svg>
   );
 }
 
 function SparkleIcon() {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M12 3C12.7 7.3 15 9.3 19 10C15 10.7 12.7 12.7 12 17C11.3 12.7 9 10.7 5 10C9 9.3 11.3 7.3 12 3Z"
         stroke="currentColor"
@@ -111,11 +183,17 @@ function SparkleIcon() {
   );
 }
 
-function ChevronDownIcon() {
+function EditIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
-        d="M6 9L12 15L18 9"
+        d="M13.5 6.5L17.5 10.5M4 20L8.2 19.2L19 8.4C20.1 7.3 20.1 5.5 19 4.4C17.9 3.3 16.1 3.3 15 4.4L4.2 15.2L4 20Z"
         stroke="currentColor"
         strokeWidth="1.8"
         strokeLinecap="round"
@@ -125,40 +203,167 @@ function ChevronDownIcon() {
   );
 }
 
+function SourceIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M6 3H14L19 8V21H6V3Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+
+      <path
+        d="M14 3V8H19"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function LoadingSpinner({
+  size = 24,
+}) {
+  return (
+    <div
+      className="animate-spin rounded-full border-[3px] border-[#DDF4E8] border-t-[#31F5A0]"
+      style={{
+        width: size,
+        height: size,
+      }}
+    />
+  );
+}
+
 const STATUS_MAP = {
   PENDING: {
-    label: '대기 중',
-    className: 'bg-[#F3F5F4] text-[#77807C]',
+    label: '답변 대기 중',
+    shortLabel: '답변 대기 중',
+    textClassName:
+      'text-[#668077]',
   },
 
   PROCESSING: {
-    label: '답변 생성 중',
-    className: 'bg-[#FFF8DA] text-[#89751E]',
+    label:
+      'AI가 답변을 생성하고 있어요',
+    shortLabel:
+      'AI 답변 중...',
+    textClassName:
+      'text-[#16885B]',
   },
 
   ANSWERED: {
     label: '답변 완료',
-    className: 'bg-[#EFFFF7] text-[#16885B]',
+    shortLabel: '답변 완료',
+    textClassName:
+      'text-[#16885B]',
   },
 
   FAILED: {
-    label: '답변 실패',
-    className: 'bg-[#FFF1F0] text-[#F64E42]',
+    label:
+      '답변 생성에 실패했어요',
+    shortLabel: '답변 실패',
+    textClassName:
+      'text-[#F64E42]',
+  },
+
+  MANUAL_REQUIRED: {
+    label:
+      '팀원의 직접 답변이 필요해요',
+    shortLabel: '팀 답변 필요',
+    textClassName:
+      'text-[#C26A27]',
+  },
+
+  TEAM_ANSWER_PENDING: {
+    label:
+      '팀원의 답변을 기다리고 있어요',
+    shortLabel:
+      '팀 답변 대기',
+    textClassName:
+      'text-[#39738F]',
   },
 };
 
 function getStatus(status) {
-  return STATUS_MAP[status] ?? STATUS_MAP.PENDING;
+  return (
+    STATUS_MAP[status] ??
+    STATUS_MAP.PENDING
+  );
 }
 
 function getPageContent(response) {
-  const result = response?.result;
+  const result =
+    response?.result;
 
-  if (Array.isArray(result?.content)) {
+  if (
+    Array.isArray(
+      result?.content,
+    )
+  ) {
     return result.content;
   }
 
   return [];
+}
+
+function normalizeFeedItem(
+  item,
+  feed,
+) {
+  const question =
+    item?.question ?? {};
+
+  return {
+    questionId:
+      question.questionId,
+
+    targetTeamId:
+      feed?.teamId,
+
+    targetTeamName:
+      feed?.teamName,
+
+    questionerId:
+      question.questionerId,
+
+    questionerName:
+      question.questionerName,
+
+    questionerDepartment:
+      question.questionerDepartment,
+
+    questionerPosition:
+      question.questionerPosition,
+
+    questionerProfileImageUrl:
+      question.questionerProfileImageUrl,
+
+    content:
+      question.content,
+
+    createdAt:
+      question.createdAt,
+
+    status:
+      item?.status,
+
+    answer:
+      item?.answer ?? null,
+
+    canAnswer:
+      Boolean(
+        item?.canAnswer,
+      ),
+  };
 }
 
 function formatTime(value) {
@@ -166,17 +371,25 @@ function formatTime(value) {
     return '';
   }
 
-  const date = new Date(value);
+  const date =
+    new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
     return '';
   }
 
-  return date.toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  return date.toLocaleTimeString(
+    'ko-KR',
+    {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    },
+  );
 }
 
 function formatDate(value) {
@@ -184,984 +397,2575 @@ function formatDate(value) {
     return '';
   }
 
-  const date = new Date(value);
+  const date =
+    new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
     return '';
   }
 
-  return date.toLocaleDateString('ko-KR', {
-    month: '2-digit',
-    day: '2-digit',
-  });
+  return date.toLocaleDateString(
+    'ko-KR',
+    {
+      month: '2-digit',
+      day: '2-digit',
+    },
+  );
 }
 
-function QuestionListItem({ question, selected, onClick }) {
-  const status = getStatus(question.status);
+function getAnswerLabel(
+  answerType,
+) {
+  if (
+    answerType === 'TEAM'
+  ) {
+    return '팀 답변';
+  }
+
+  if (
+    answerType === 'SYSTEM'
+  ) {
+    return '시스템 답변';
+  }
+
+  return 'Noddi AI';
+}
+
+function getQuestionStatusText(
+  question,
+) {
+  if (
+    question?.answer?.revised
+  ) {
+    return {
+      label:
+        'AI 답변이 수정되었어요',
+      className:
+        'text-[#F64E42]',
+    };
+  }
+
+  const status =
+    getStatus(
+      question?.status,
+    );
+
+  return {
+    label:
+      status.shortLabel,
+    className:
+      status.textClassName,
+  };
+}
+
+function QuestionListItem({
+  question,
+  selected,
+  onClick,
+}) {
+  const status =
+    getQuestionStatusText(
+      question,
+    );
 
   return (
     <button
       type="button"
-      onClick={onClick}
-      className={`w-full rounded-xl px-3 py-3 text-left transition ${
-        selected ? 'bg-[#ECFFF5]' : 'hover:bg-[#F7F9F8]'
-      }`}
+      onClick={
+        onClick
+      }
+      className={`w-full rounded-[10px] px-3 py-3 text-left transition ${selected
+          ? 'bg-[#DFFFF0]'
+          : 'hover:bg-[#F3FFF8]'
+        }`}
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#C8F4DC] bg-white text-[9px] font-semibold text-[#16885B]">
-          Q&A
+        <div
+          className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[9px] font-bold ${selected
+              ? 'bg-[#31F5A0] text-[#101211]'
+              : 'bg-[#EFFFF7] text-[#16885B]'
+            }`}
+        >
+          Q
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-xs font-semibold text-[#101211]">
-              {question.targetTeamName ?? '팀 Q&A'}
+          <div className="flex items-start justify-between gap-2">
+            <p className="truncate text-[12px] font-semibold text-[#101211]">
+              {question.targetTeamName ??
+                '팀 Q&A'}
             </p>
 
-            <span className="shrink-0 text-[9px] text-[#A0A8A4]">
-              {formatTime(question.createdAt)}
+            <span className="shrink-0 pt-0.5 text-[9px] text-[#82988F]">
+              {formatTime(
+                question.createdAt,
+              )}
             </span>
           </div>
 
-          <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-[#7C8681]">
+          <p className="mt-1 line-clamp-1 text-[10px] leading-4 text-[#658076]">
             {question.content}
           </p>
 
-          <div className="mt-2">
-            <span
-              className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-medium ${status.className}`}
-            >
-              {status.label}
-            </span>
-          </div>
+          <p
+            className={`mt-1.5 truncate text-[9px] font-medium ${status.className}`}
+          >
+            {status.label}
+          </p>
         </div>
       </div>
     </button>
   );
 }
 
-function EmptyList({ children }) {
+function EmptyState({
+  children,
+}) {
   return (
-    <div className="px-3 py-7 text-center">
-      <p className="text-[11px] leading-5 text-[#9AA39F]">{children}</p>
+    <div className="px-4 py-6 text-center">
+      <p className="text-[10px] leading-5 text-[#80968D]">
+        {children}
+      </p>
     </div>
   );
 }
 
-function LoadingSpinner() {
+function SourceCard({
+  source,
+}) {
   return (
-    <div className="h-6 w-6 animate-spin rounded-full border-[3px] border-[#E0E6E3] border-t-[#31F5A0]" />
+    <div className="rounded-[12px] border border-[#DDF3E8] bg-white px-3 py-3">
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 text-[#4D7564]">
+          <SourceIcon />
+        </span>
+
+        <p className="min-w-0 flex-1 truncate text-[10px] font-semibold text-[#29483B]">
+          {source.sourceTitle ??
+            '참고 자료'}
+        </p>
+
+        <span className="shrink-0 rounded-full bg-[#EFFFF7] px-2 py-0.5 text-[8px] font-semibold text-[#3D785E]">
+          {source.sourceType ===
+            'TRANSCRIPT'
+            ? '회의 기록'
+            : '팀 페이지'}
+        </span>
+      </div>
+
+      {source.excerpt && (
+        <p className="mt-2 line-clamp-4 whitespace-pre-wrap text-[9px] leading-4 text-[#6E887D]">
+          {source.excerpt}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ConversationSidebar({
+  teams,
+  selectedTeamId,
+  myQuestions,
+  recentQuestions,
+  selectedQuestionId,
+  hasNext,
+  isLoadingFeed,
+  isLoadingMore,
+  onSelectTeam,
+  onNewChat,
+  onSelectQuestion,
+  onRefresh,
+  onLoadMore,
+}) {
+  return (
+    <div className="flex h-full min-h-0 flex-col bg-white">
+      {/* Team selector */}
+      <div className="shrink-0 border-b border-[#E3F4EB] px-3 py-4">
+        <p className="px-2 text-[11px] font-semibold text-[#29483B]">
+          팀 선택
+        </p>
+
+        <div className="mt-2 space-y-1">
+          {teams.length ===
+            0 ? (
+            <p className="px-2 py-2 text-[10px] text-[#80968D]">
+              프로젝트에 팀이 없습니다.
+            </p>
+          ) : (
+            teams.map(
+              (team) => {
+                const selected =
+                  Number(
+                    selectedTeamId,
+                  ) ===
+                  Number(
+                    team.id,
+                  );
+
+                return (
+                  <button
+                    key={
+                      team.id
+                    }
+                    type="button"
+                    onClick={() =>
+                      onSelectTeam(
+                        team.id,
+                      )
+                    }
+                    className={`relative flex h-10 w-full items-center overflow-hidden rounded-[9px] px-3 text-left text-[11px] font-semibold transition ${selected
+                        ? 'bg-[#71F7B8] text-[#101211]'
+                        : 'text-[#527064] hover:bg-[#EFFFF7]'
+                      }`}
+                  >
+                    {selected && (
+                      <span className="absolute bottom-0 left-0 top-0 w-[3px] bg-[#101211]/15" />
+                    )}
+
+                    <span className="truncate">
+                      {
+                        team.name
+                      }
+                    </span>
+                  </button>
+                );
+              },
+            )
+          )}
+        </div>
+      </div>
+
+      {/* New chat */}
+      <div className="shrink-0 border-b border-[#E3F4EB] p-3">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            disabled={
+              !selectedTeamId
+            }
+            onClick={
+              onNewChat
+            }
+            className="flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-[10px] bg-[#E9FFF4] text-[11px] font-semibold text-[#16885B] transition hover:bg-[#DFFFF0] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <PlusIcon />
+            새 질문
+          </button>
+
+          <button
+            type="button"
+            onClick={
+              onRefresh
+            }
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-[#D7EFE3] text-[#507264] transition hover:bg-[#F2FFF8]"
+            aria-label="새로고침"
+          >
+            <RefreshIcon />
+          </button>
+        </div>
+      </div>
+
+      {/* Questions */}
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+        <div className="px-2 pb-2 pt-1">
+          <p className="text-[10px] font-semibold text-[#71887D]">
+            내 질문
+          </p>
+        </div>
+
+        {myQuestions.length ===
+          0 ? (
+          <EmptyState>
+            아직 작성한 질문이 없습니다.
+          </EmptyState>
+        ) : (
+          <div className="space-y-0.5">
+            {myQuestions.map(
+              (question) => (
+                <QuestionListItem
+                  key={`MY-${question.questionId}`}
+                  question={
+                    question
+                  }
+                  selected={
+                    Number(
+                      selectedQuestionId,
+                    ) ===
+                    Number(
+                      question.questionId,
+                    )
+                  }
+                  onClick={() =>
+                    onSelectQuestion(
+                      question,
+                    )
+                  }
+                />
+              ),
+            )}
+          </div>
+        )}
+
+        <div className="mx-2 my-4 border-t border-[#E8F6EF]" />
+
+        <div className="px-2 pb-2">
+          <p className="text-[10px] font-semibold text-[#71887D]">
+            최근
+          </p>
+        </div>
+
+        {isLoadingFeed ? (
+          <div className="flex justify-center py-7">
+            <LoadingSpinner
+              size={20}
+            />
+          </div>
+        ) : recentQuestions.length ===
+          0 ? (
+          <EmptyState>
+            선택한 팀에 등록된 질문이 없습니다.
+          </EmptyState>
+        ) : (
+          <>
+            <div className="space-y-0.5">
+              {recentQuestions.map(
+                (
+                  question,
+                ) => (
+                  <QuestionListItem
+                    key={`FEED-${question.questionId}`}
+                    question={
+                      question
+                    }
+                    selected={
+                      Number(
+                        selectedQuestionId,
+                      ) ===
+                      Number(
+                        question.questionId,
+                      )
+                    }
+                    onClick={() =>
+                      onSelectQuestion(
+                        question,
+                      )
+                    }
+                  />
+                ),
+              )}
+            </div>
+
+            {hasNext && (
+              <button
+                type="button"
+                disabled={
+                  isLoadingMore
+                }
+                onClick={
+                  onLoadMore
+                }
+                className="mt-2 h-9 w-full rounded-[10px] text-[10px] font-semibold text-[#4D7564] transition hover:bg-[#EFFFF7] disabled:opacity-40"
+              >
+                {isLoadingMore
+                  ? '불러오는 중...'
+                  : '이전 질문 더 보기'}
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AnswerEditorPanel({
+  answerDraft,
+  questionDetail,
+  isRevising,
+  onChange,
+  onSave,
+  onClose,
+}) {
+  const answer =
+    questionDetail?.answer;
+
+  const sources =
+    Array.isArray(
+      questionDetail?.sources,
+    )
+      ? questionDetail.sources
+      : [];
+
+  const hasChanged =
+    answerDraft.trim() !==
+    (
+      answer?.content ??
+      ''
+    ).trim();
+
+  return (
+    <div className="flex h-full min-h-0 flex-col bg-[#FAFFFC]">
+      <div className="flex shrink-0 items-start justify-between border-b border-[#DFF2E8] px-5 py-5">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-[#16885B]">
+              <EditIcon />
+            </span>
+
+            <h2 className="text-[14px] font-semibold text-[#101211]">
+              답변 수정
+            </h2>
+          </div>
+
+          <p className="mt-2 max-w-[240px] text-[10px] leading-4 text-[#6B8479]">
+            팀 상황에 맞게 답변 내용을 보완할 수 있습니다.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          disabled={
+            isRevising
+          }
+          onClick={
+            onClose
+          }
+          className="flex h-8 w-8 items-center justify-center rounded-full text-[#5B776B] transition hover:bg-[#EFFFF7] hover:text-[#101211]"
+          aria-label="답변 수정 닫기"
+        >
+          <CloseIcon />
+        </button>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto p-5">
+        <div className="flex items-center justify-between">
+          <label
+            htmlFor="qa-answer-editor"
+            className="text-[11px] font-semibold text-[#355C4B]"
+          >
+            답변 내용
+          </label>
+
+          <span className="text-[9px] text-[#82988F]">
+            {
+              answerDraft.length
+            }
+            /1000
+          </span>
+        </div>
+
+        <textarea
+          id="qa-answer-editor"
+          value={
+            answerDraft
+          }
+          maxLength={1000}
+          disabled={
+            isRevising
+          }
+          onChange={
+            onChange
+          }
+          className="mt-2 h-[300px] w-full resize-none rounded-[14px] border border-[#D2EBDD] bg-white p-4 text-[12px] leading-5 text-[#20342C] outline-none transition focus:border-[#31F5A0]"
+        />
+
+        {sources.length >
+          0 && (
+            <div className="mt-6">
+              <p className="text-[11px] font-semibold text-[#355C4B]">
+                답변에 참고한 정보
+              </p>
+
+              <div className="mt-3 space-y-2">
+                {sources.map(
+                  (
+                    source,
+                    index,
+                  ) => (
+                    <SourceCard
+                      key={`${source.citationIndex}-${source.referenceId}-${index}`}
+                      source={
+                        source
+                      }
+                    />
+                  ),
+                )}
+              </div>
+            </div>
+          )}
+      </div>
+
+      <div className="shrink-0 border-t border-[#DFF2E8] bg-white p-5">
+        <button
+          type="button"
+          disabled={
+            isRevising ||
+            !answerDraft.trim() ||
+            !hasChanged
+          }
+          onClick={
+            onSave
+          }
+          className="h-11 w-full rounded-[11px] bg-[#101211] text-[11px] font-semibold text-white transition hover:bg-[#252A27] disabled:cursor-not-allowed disabled:bg-[#DDEBE4] disabled:text-[#8CA198]"
+        >
+          {isRevising
+            ? '수정 중...'
+            : '답변 수정하기'}
+        </button>
+      </div>
+    </div>
   );
 }
 
 function QAPage() {
-  const location = useLocation();
-  const targetQuestionId = location.state?.questionId;
-  const targetTeamId = location.state?.teamId;
-  const [teams, setTeams] = useState([]);
+  const location =
+    useLocation();
 
-  const [selectedTeamId, setSelectedTeamId] = useState(null);
+  const targetQuestionId =
+    location.state?.questionId ??
+    null;
 
-  const [myQuestions, setMyQuestions] = useState([]);
+  const targetTeamId =
+    location.state?.teamId ??
+    null;
 
-  const [teamQuestions, setTeamQuestions] = useState([]);
+  const [
+    profile,
+    setProfile,
+  ] = useState(null);
 
-  const [selectedQuestion, setSelectedQuestion] = useState(null);
+  const [
+    projects,
+    setProjects,
+  ] = useState([]);
 
-  const [questionDetail, setQuestionDetail] = useState(null);
+  const [
+    teams,
+    setTeams,
+  ] = useState([]);
 
-  const [questionInput, setQuestionInput] = useState('');
+  const [
+    selectedProjectId,
+    setSelectedProjectId,
+  ] = useState(null);
 
-  const [answerDraft, setAnswerDraft] = useState('');
+  const [
+    selectedTeamId,
+    setSelectedTeamId,
+  ] = useState(null);
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [
+    pendingTargetTeamId,
+    setPendingTargetTeamId,
+  ] = useState(
+    targetTeamId,
+  );
 
-  const [isLoadingTeamQuestions, setIsLoadingTeamQuestions] = useState(false);
+  const [
+    myQuestions,
+    setMyQuestions,
+  ] = useState([]);
 
-  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [
+    feedQuestions,
+    setFeedQuestions,
+  ] = useState([]);
 
-  const [isCreating, setIsCreating] = useState(false);
+  const [
+    feedCursor,
+    setFeedCursor,
+  ] = useState(null);
 
-  const [isRevising, setIsRevising] = useState(false);
+  const [
+    feedHasNext,
+    setFeedHasNext,
+  ] = useState(false);
 
-  const [error, setError] = useState('');
+  const [
+    selectedQuestion,
+    setSelectedQuestion,
+  ] = useState(
+    targetQuestionId
+      ? {
+        questionId:
+          targetQuestionId,
+        targetTeamId,
+      }
+      : null,
+  );
 
-  const [successMessage, setSuccessMessage] = useState('');
+  const [
+    questionDetail,
+    setQuestionDetail,
+  ] = useState(null);
 
-  const selectedTeam = useMemo(() => {
-    return teams.find((team) => Number(team.teamId) === Number(selectedTeamId)) ?? null;
-  }, [teams, selectedTeamId]);
+  const [
+    questionInput,
+    setQuestionInput,
+  ] = useState('');
 
-  const selectedQuestionTeamId = selectedQuestion?.targetTeamId ?? questionDetail?.targetTeamId;
+  const [
+    answerDraft,
+    setAnswerDraft,
+  ] = useState('');
 
-  const canEditAnswer = useMemo(() => {
-    if (!selectedQuestionTeamId) {
-      return false;
-    }
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(true);
 
-    return teams.some((team) => Number(team.teamId) === Number(selectedQuestionTeamId));
-  }, [teams, selectedQuestionTeamId]);
+  const [
+    isLoadingTeams,
+    setIsLoadingTeams,
+  ] = useState(false);
 
-  const loadQuestionDetail = useCallback(async (questionId) => {
-    if (!questionId) {
-      setQuestionDetail(null);
+  const [
+    isLoadingFeed,
+    setIsLoadingFeed,
+  ] = useState(false);
 
-      setAnswerDraft('');
+  const [
+    isLoadingMoreFeed,
+    setIsLoadingMoreFeed,
+  ] = useState(false);
 
-      return;
-    }
+  const [
+    isLoadingDetail,
+    setIsLoadingDetail,
+  ] = useState(false);
 
-    try {
-      setIsLoadingDetail(true);
+  const [
+    isCreating,
+    setIsCreating,
+  ] = useState(false);
 
-      setError('');
+  const [
+    isRevising,
+    setIsRevising,
+  ] = useState(false);
 
-      const response = await getQuestionDetail(questionId);
+  const [
+    isSidebarOpen,
+    setIsSidebarOpen,
+  ] = useState(false);
 
-      const detail = response?.result ?? null;
+  const [
+    isEditorOpen,
+    setIsEditorOpen,
+  ] = useState(false);
 
-      setQuestionDetail(detail);
+  const [
+    error,
+    setError,
+  ] = useState('');
 
-      setAnswerDraft(detail?.answer?.content ?? '');
-    } catch (requestError) {
-      console.error('Failed to load question detail:', requestError);
+  const [
+    successMessage,
+    setSuccessMessage,
+  ] = useState('');
 
-      setError(requestError?.response?.data?.message ?? '질문 상세 정보를 불러오지 못했습니다.');
-    } finally {
-      setIsLoadingDetail(false);
-    }
-  }, []);
+  const selectedProject =
+    useMemo(() => {
+      return (
+        projects.find(
+          (project) =>
+            Number(
+              project.projectId,
+            ) ===
+            Number(
+              selectedProjectId,
+            ),
+        ) ?? null
+      );
+    }, [
+      projects,
+      selectedProjectId,
+    ]);
 
-  const loadMyQuestions = useCallback(async () => {
-    try {
-      const response = await getMyQuestions();
+  const selectedTeam =
+    useMemo(() => {
+      return (
+        teams.find(
+          (team) =>
+            Number(
+              team.id,
+            ) ===
+            Number(
+              selectedTeamId,
+            ),
+        ) ?? null
+      );
+    }, [
+      teams,
+      selectedTeamId,
+    ]);
 
-      const questions = getPageContent(response);
+  const projectTeamIds =
+    useMemo(() => {
+      return new Set(
+        teams.map(
+          (team) =>
+            Number(
+              team.id,
+            ),
+        ),
+      );
+    }, [teams]);
 
-      setMyQuestions(questions);
+  const projectMyQuestions =
+    useMemo(() => {
+      return myQuestions.filter(
+        (question) =>
+          projectTeamIds.has(
+            Number(
+              question.targetTeamId,
+            ),
+          ),
+      );
+    }, [
+      myQuestions,
+      projectTeamIds,
+    ]);
 
-      return questions;
-    } catch (requestError) {
-      console.error('Failed to load my questions:', requestError);
-
-      throw requestError;
-    }
-  }, []);
-
-  const loadTeamQuestions = useCallback(async (teamId) => {
-    if (!teamId) {
-      setTeamQuestions([]);
-
-      return [];
-    }
-
-    try {
-      setIsLoadingTeamQuestions(true);
-
-      const response = await getTeamQuestions(teamId);
-
-      const questions = getPageContent(response);
-
-      setTeamQuestions(questions);
-
-      return questions;
-    } catch (requestError) {
-      console.error('Failed to load team questions:', requestError);
-
-      setTeamQuestions([]);
-
-      return [];
-    } finally {
-      setIsLoadingTeamQuestions(false);
-    }
-  }, []);
-
-  const loadInitialData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-
-      setError('');
-
-      const [teamResponse, myQuestionResponse] = await Promise.all([
-        getMyTeams(),
-        getMyQuestions(),
-      ]);
-
-      const nextTeams = teamResponse;
-
-      const nextMyQuestions = getPageContent(myQuestionResponse);
-
-      setTeams(nextTeams);
-
-      setMyQuestions(nextMyQuestions);
-
-      if (targetTeamId || nextTeams.length > 0) {
-        setSelectedTeamId(targetTeamId ?? nextTeams[0].teamId);
+  const activeQuestion =
+    useMemo(() => {
+      if (
+        !selectedQuestion &&
+        !questionDetail
+      ) {
+        return null;
       }
 
-      if (targetQuestionId) {
-        setSelectedQuestion({
-          questionId: targetQuestionId,
-          targetTeamId,
-        });
-      } else if (nextMyQuestions.length > 0) {
-        setSelectedQuestion(nextMyQuestions[0]);
-      }
-    } catch (requestError) {
-      console.error('Failed to load Q&A:', requestError);
+      return {
+        ...(selectedQuestion ??
+          {}),
+        ...(questionDetail ??
+          {}),
+      };
+    }, [
+      selectedQuestion,
+      questionDetail,
+    ]);
 
-      setError(requestError?.response?.data?.message ?? 'Q&A 정보를 불러오지 못했습니다.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [targetQuestionId, targetTeamId]);
+  const activeQuestionId =
+    activeQuestion?.questionId;
+
+  const activeAnswer =
+    activeQuestion?.answer;
+
+  const canEditAnswer =
+    Boolean(
+      questionDetail?.canAnswer &&
+      activeAnswer?.answerId,
+    );
+
+  const activeSources =
+    Array.isArray(
+      questionDetail?.sources,
+    )
+      ? questionDetail.sources
+      : Array.isArray(
+        activeAnswer?.sources,
+      )
+        ? activeAnswer.sources
+        : [];
+
+  const isMyQuestion =
+    Boolean(
+      profile?.userId &&
+      activeQuestion
+        ?.questionerId &&
+      Number(
+        profile.userId,
+      ) ===
+      Number(
+        activeQuestion.questionerId,
+      ),
+    );
+
+  const questionerImageUrl =
+    activeQuestion
+      ?.questionerProfileImageUrl ??
+    (isMyQuestion
+      ? profile?.profileImageUrl
+      : null);
+
+  const questionerDepartment =
+    activeQuestion
+      ?.questionerDepartment ??
+    (isMyQuestion
+      ? profile?.department
+      : null);
+
+  const questionerPosition =
+    activeQuestion
+      ?.questionerPosition ??
+    (isMyQuestion
+      ? profile?.position
+      : null);
+
+  const questionerMeta = [
+    questionerDepartment,
+    questionerPosition,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  const loadMyQuestionList =
+    useCallback(async () => {
+      const response =
+        await getMyQuestions();
+
+      const questions =
+        getPageContent(
+          response,
+        );
+
+      setMyQuestions(
+        questions,
+      );
+
+      return questions;
+    }, []);
+
+  const loadQuestionDetail =
+    useCallback(
+      async (
+        questionId,
+      ) => {
+        if (!questionId) {
+          setQuestionDetail(
+            null,
+          );
+
+          setAnswerDraft('');
+
+          return null;
+        }
+
+        try {
+          setIsLoadingDetail(
+            true,
+          );
+
+          const response =
+            await getQuestionDetail(
+              questionId,
+            );
+
+          const detail =
+            response?.result ??
+            null;
+
+          setQuestionDetail(
+            detail,
+          );
+
+          setAnswerDraft(
+            detail?.answer
+              ?.content ??
+            '',
+          );
+
+          setFeedQuestions(
+            (previous) =>
+              previous.map(
+                (question) =>
+                  Number(
+                    question.questionId,
+                  ) ===
+                    Number(
+                      questionId,
+                    )
+                    ? {
+                      ...question,
+                      status:
+                        detail?.status ??
+                        question.status,
+                      answer:
+                        detail?.answer ??
+                        question.answer,
+                      canAnswer:
+                        detail?.canAnswer ??
+                        question.canAnswer,
+                    }
+                    : question,
+              ),
+          );
+
+          return detail;
+        } catch (
+        requestError
+        ) {
+          console.error(
+            'Failed to load question detail:',
+            requestError,
+          );
+
+          setError(
+            requestError?.response
+              ?.data?.message ??
+            '질문 정보를 불러오지 못했습니다.',
+          );
+
+          return null;
+        } finally {
+          setIsLoadingDetail(
+            false,
+          );
+        }
+      },
+      [],
+    );
+
+  const loadTeamFeed =
+    useCallback(
+      async (
+        teamId,
+        {
+          cursor,
+          append = false,
+        } = {},
+      ) => {
+        if (!teamId) {
+          setFeedQuestions(
+            [],
+          );
+
+          setFeedCursor(
+            null,
+          );
+
+          setFeedHasNext(
+            false,
+          );
+
+          return [];
+        }
+
+        try {
+          if (append) {
+            setIsLoadingMoreFeed(
+              true,
+            );
+          } else {
+            setIsLoadingFeed(
+              true,
+            );
+          }
+
+          const feed =
+            await getTeamQaFeed(
+              teamId,
+              {
+                cursor,
+                size: 20,
+              },
+            );
+
+          const nextQuestions =
+            Array.isArray(
+              feed?.items,
+            )
+              ? feed.items.map(
+                (item) =>
+                  normalizeFeedItem(
+                    item,
+                    feed,
+                  ),
+              )
+              : [];
+
+          if (append) {
+            setFeedQuestions(
+              (previous) => {
+                const ids =
+                  new Set(
+                    previous.map(
+                      (
+                        question,
+                      ) =>
+                        Number(
+                          question.questionId,
+                        ),
+                    ),
+                  );
+
+                return [
+                  ...previous,
+                  ...nextQuestions.filter(
+                    (
+                      question,
+                    ) =>
+                      !ids.has(
+                        Number(
+                          question.questionId,
+                        ),
+                      ),
+                  ),
+                ];
+              },
+            );
+          } else {
+            setFeedQuestions(
+              nextQuestions,
+            );
+          }
+
+          setFeedCursor(
+            feed?.nextCursor ??
+            null,
+          );
+
+          setFeedHasNext(
+            Boolean(
+              feed?.hasNext,
+            ),
+          );
+
+          return nextQuestions;
+        } catch (
+        requestError
+        ) {
+          console.error(
+            'Failed to load team feed:',
+            requestError,
+          );
+
+          if (!append) {
+            setFeedQuestions(
+              [],
+            );
+
+            setFeedCursor(
+              null,
+            );
+
+            setFeedHasNext(
+              false,
+            );
+          }
+
+          setError(
+            requestError?.response
+              ?.data?.message ??
+            '팀 Q&A를 불러오지 못했습니다.',
+          );
+
+          return [];
+        } finally {
+          setIsLoadingFeed(
+            false,
+          );
+
+          setIsLoadingMoreFeed(
+            false,
+          );
+        }
+      },
+      [],
+    );
+
+  const loadProjectTeams =
+    useCallback(
+      async (
+        projectId,
+      ) => {
+        if (!projectId) {
+          setTeams([]);
+
+          setSelectedTeamId(
+            null,
+          );
+
+          return [];
+        }
+
+        try {
+          setIsLoadingTeams(
+            true,
+          );
+
+          const nextTeams =
+            await getProjectTeams(
+              projectId,
+            );
+
+          setTeams(
+            nextTeams,
+          );
+
+          const preferredTeam =
+            pendingTargetTeamId &&
+              nextTeams.some(
+                (team) =>
+                  Number(
+                    team.id,
+                  ) ===
+                  Number(
+                    pendingTargetTeamId,
+                  ),
+              )
+              ? pendingTargetTeamId
+              : nextTeams[0]
+                ?.id ??
+              null;
+
+          setSelectedTeamId(
+            preferredTeam,
+          );
+
+          setPendingTargetTeamId(
+            null,
+          );
+
+          return nextTeams;
+        } catch (
+        requestError
+        ) {
+          console.error(
+            'Failed to load project teams:',
+            requestError,
+          );
+
+          setTeams([]);
+
+          setSelectedTeamId(
+            null,
+          );
+
+          setError(
+            requestError?.response
+              ?.data?.message ??
+            '프로젝트 팀을 불러오지 못했습니다.',
+          );
+
+          return [];
+        } finally {
+          setIsLoadingTeams(
+            false,
+          );
+        }
+      },
+      [
+        pendingTargetTeamId,
+      ],
+    );
+
+  const loadInitialData =
+    useCallback(async () => {
+      try {
+        setIsLoading(true);
+
+        setError('');
+
+        const [
+          profileResponse,
+          questionResponse,
+          myTeamResponse,
+        ] =
+          await Promise.all([
+            getMyProfile(),
+            getMyQuestions(),
+            getMyTeams(),
+          ]);
+
+        const profileData =
+          profileResponse?.result ??
+          null;
+
+        const questions =
+          getPageContent(
+            questionResponse,
+          );
+
+        setProfile(
+          profileData,
+        );
+
+        setMyQuestions(
+          questions,
+        );
+
+        let memberProjects =
+          [];
+
+        if (
+          profileData?.userId
+        ) {
+          try {
+            memberProjects =
+              await getMemberProjects(
+                profileData.userId,
+              );
+          } catch (
+          projectError
+          ) {
+            console.error(
+              'Failed to load member projects:',
+              projectError,
+            );
+          }
+        }
+
+        if (
+          memberProjects.length ===
+          0
+        ) {
+          const projectMap =
+            new Map();
+
+          myTeamResponse.forEach(
+            (team) => {
+              if (
+                !team.projectId
+              ) {
+                return;
+              }
+
+              if (
+                projectMap.has(
+                  Number(
+                    team.projectId,
+                  ),
+                )
+              ) {
+                return;
+              }
+
+              projectMap.set(
+                Number(
+                  team.projectId,
+                ),
+                {
+                  projectId:
+                    team.projectId,
+
+                  name:
+                    team.projectName ??
+                    '프로젝트',
+                },
+              );
+            },
+          );
+
+          memberProjects =
+            Array.from(
+              projectMap.values(),
+            );
+        }
+
+        setProjects(
+          memberProjects,
+        );
+
+        const targetMyTeam =
+          myTeamResponse.find(
+            (team) =>
+              Number(
+                team.teamId,
+              ) ===
+              Number(
+                targetTeamId,
+              ),
+          );
+
+        const preferredProjectId =
+          targetMyTeam?.projectId &&
+            memberProjects.some(
+              (project) =>
+                Number(
+                  project.projectId,
+                ) ===
+                Number(
+                  targetMyTeam.projectId,
+                ),
+            )
+            ? targetMyTeam.projectId
+            : memberProjects[0]
+              ?.projectId ??
+            null;
+
+        setSelectedProjectId(
+          preferredProjectId,
+        );
+      } catch (
+      requestError
+      ) {
+        console.error(
+          'Failed to load Q&A:',
+          requestError,
+        );
+
+        setError(
+          requestError?.response
+            ?.data?.message ??
+          'Q&A 정보를 불러오지 못했습니다.',
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    }, [
+      targetTeamId,
+    ]);
 
   useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);
 
   useEffect(() => {
+    if (
+      !selectedProjectId
+    ) {
+      return;
+    }
+
+    loadProjectTeams(
+      selectedProjectId,
+    );
+  }, [
+    selectedProjectId,
+    loadProjectTeams,
+  ]);
+
+  useEffect(() => {
     if (!selectedTeamId) {
-      setTeamQuestions([]);
+      setFeedQuestions(
+        [],
+      );
+
+      setFeedCursor(
+        null,
+      );
+
+      setFeedHasNext(
+        false,
+      );
 
       return;
     }
 
-    loadTeamQuestions(selectedTeamId);
-  }, [selectedTeamId, loadTeamQuestions]);
+    loadTeamFeed(
+      selectedTeamId,
+    );
+  }, [
+    selectedTeamId,
+    loadTeamFeed,
+  ]);
 
   useEffect(() => {
-    if (!selectedQuestion?.questionId) {
-      setQuestionDetail(null);
+    if (
+      !selectedQuestion
+        ?.questionId
+    ) {
+      setQuestionDetail(
+        null,
+      );
 
       setAnswerDraft('');
 
       return;
     }
 
-    loadQuestionDetail(selectedQuestion.questionId);
-  }, [selectedQuestion, loadQuestionDetail]);
+    loadQuestionDetail(
+      selectedQuestion.questionId,
+    );
+  }, [
+    selectedQuestion
+      ?.questionId,
+    loadQuestionDetail,
+  ]);
 
   useEffect(() => {
-    const status = questionDetail?.status;
+    const status =
+      questionDetail?.status;
 
-    if (status !== 'PENDING' && status !== 'PROCESSING') {
+    const shouldPoll = [
+      'PENDING',
+      'PROCESSING',
+      'MANUAL_REQUIRED',
+      'TEAM_ANSWER_PENDING',
+    ].includes(status);
+
+    if (
+      !shouldPoll ||
+      !questionDetail
+        ?.questionId
+    ) {
       return undefined;
     }
 
-    const intervalId = window.setInterval(async () => {
-      await loadQuestionDetail(questionDetail.questionId);
-    }, 3000);
+    const intervalId =
+      window.setInterval(
+        () => {
+          loadQuestionDetail(
+            questionDetail.questionId,
+          );
+        },
+        3000,
+      );
 
     return () => {
-      window.clearInterval(intervalId);
+      window.clearInterval(
+        intervalId,
+      );
     };
-  }, [questionDetail?.questionId, questionDetail?.status, loadQuestionDetail]);
+  }, [
+    questionDetail
+      ?.questionId,
+    questionDetail?.status,
+    loadQuestionDetail,
+  ]);
 
-  const handleRefresh = async () => {
-    try {
-      setError('');
-      setSuccessMessage('');
+  useEffect(() => {
+    setIsEditorOpen(
+      false,
+    );
+  }, [
+    activeQuestionId,
+  ]);
 
-      await Promise.all([
-        loadMyQuestions(),
+  const handleSelectProject =
+    (projectId) => {
+      if (
+        Number(
+          projectId,
+        ) ===
+        Number(
+          selectedProjectId,
+        )
+      ) {
+        return;
+      }
 
-        selectedTeamId ? loadTeamQuestions(selectedTeamId) : Promise.resolve([]),
+      setPendingTargetTeamId(
+        null,
+      );
 
-        selectedQuestion?.questionId
-          ? loadQuestionDetail(selectedQuestion.questionId)
-          : Promise.resolve(),
-      ]);
-    } catch (requestError) {
-      setError(requestError?.response?.data?.message ?? '질문 목록을 새로고침하지 못했습니다.');
-    }
-  };
+      setSelectedProjectId(
+        projectId,
+      );
 
-  const handleSelectTeam = (teamId) => {
-    setSelectedTeamId(teamId);
+      setSelectedTeamId(
+        null,
+      );
 
-    setSuccessMessage('');
-    setError('');
-  };
+      setSelectedQuestion(
+        null,
+      );
 
-  const handleSelectQuestion = (question) => {
-    setSelectedQuestion(question);
-
-    setSuccessMessage('');
-    setError('');
-  };
-
-  const handleSubmitQuestion = async (event) => {
-    event.preventDefault();
-
-    const content = questionInput.trim();
-
-    if (!content || !selectedTeamId || isCreating) {
-      return;
-    }
-
-    try {
-      setIsCreating(true);
-
-      setError('');
-      setSuccessMessage('');
-
-      const response = await createQuestion({
-        targetTeamId: selectedTeamId,
-
-        content,
-      });
-
-      const created = response?.result;
+      setQuestionDetail(
+        null,
+      );
 
       setQuestionInput('');
 
-      const createdQuestion = {
-        questionId: created?.questionId,
-
-        targetTeamId: selectedTeamId,
-
-        targetTeamName: selectedTeam?.name ?? '팀',
-
-        questionerName: '나',
-
-        content,
-
-        status: created?.status ?? 'PENDING',
-
-        createdAt: new Date().toISOString(),
-      };
-
-      if (created?.questionId) {
-        setSelectedQuestion(createdQuestion);
-      }
-
-      await Promise.all([loadMyQuestions(), loadTeamQuestions(selectedTeamId)]);
-
-      setSuccessMessage('질문을 등록했습니다.');
-    } catch (requestError) {
-      console.error('Failed to create question:', requestError);
-
-      setError(requestError?.response?.data?.message ?? '질문을 등록하지 못했습니다.');
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const handleQuestionKeyDown = (event) => {
-    if (event.key !== 'Enter' || event.shiftKey) {
-      return;
-    }
-
-    event.preventDefault();
-
-    if (!questionInput.trim() || !selectedTeamId || isCreating) {
-      return;
-    }
-
-    event.currentTarget.form?.requestSubmit();
-  };
-
-  const handleReviseAnswer = async () => {
-    const answerId = questionDetail?.answer?.answerId;
-
-    const content = answerDraft.trim();
-
-    if (!answerId || !content || isRevising) {
-      return;
-    }
-
-    try {
-      setIsRevising(true);
+      setIsEditorOpen(
+        false,
+      );
 
       setError('');
-      setSuccessMessage('');
 
-      await reviseAnswer(answerId, content);
+      setSuccessMessage(
+        '',
+      );
+    };
 
-      await loadQuestionDetail(questionDetail.questionId);
+  const handleSelectTeam = (
+    teamId,
+  ) => {
+    setSelectedTeamId(
+      teamId,
+    );
 
-      setSuccessMessage('답변을 수정했습니다.');
-    } catch (requestError) {
-      console.error('Failed to revise answer:', requestError);
+    setSelectedQuestion(
+      null,
+    );
 
-      setError(requestError?.response?.data?.message ?? '답변을 수정하지 못했습니다.');
-    } finally {
-      setIsRevising(false);
-    }
+    setQuestionDetail(
+      null,
+    );
+
+    setQuestionInput('');
+
+    setIsEditorOpen(
+      false,
+    );
+
+    setIsSidebarOpen(
+      false,
+    );
+
+    setError('');
+
+    setSuccessMessage(
+      '',
+    );
   };
 
-  const detailStatus = getStatus(questionDetail?.status ?? selectedQuestion?.status);
+  const handleSelectQuestion =
+    (question) => {
+      if (
+        question
+          ?.targetTeamId &&
+        Number(
+          question.targetTeamId,
+        ) !==
+        Number(
+          selectedTeamId,
+        )
+      ) {
+        setSelectedTeamId(
+          question.targetTeamId,
+        );
+      }
 
-  const hasAnswerChanged = answerDraft.trim() !== (questionDetail?.answer?.content ?? '').trim();
+      setSelectedQuestion(
+        question,
+      );
+
+      setIsSidebarOpen(
+        false,
+      );
+
+      setIsEditorOpen(
+        false,
+      );
+
+      setError('');
+
+      setSuccessMessage(
+        '',
+      );
+    };
+
+  const handleNewChat = () => {
+    setSelectedQuestion(
+      null,
+    );
+
+    setQuestionDetail(
+      null,
+    );
+
+    setQuestionInput('');
+
+    setIsEditorOpen(
+      false,
+    );
+
+    setIsSidebarOpen(
+      false,
+    );
+
+    setSuccessMessage(
+      '',
+    );
+
+    window.setTimeout(
+      () => {
+        document
+          .getElementById(
+            'qa-question-input',
+          )
+          ?.focus();
+      },
+      0,
+    );
+  };
+
+  const handleRefresh =
+    async () => {
+      try {
+        setError('');
+
+        setSuccessMessage(
+          '',
+        );
+
+        await Promise.all([
+          loadMyQuestionList(),
+
+          selectedTeamId
+            ? loadTeamFeed(
+              selectedTeamId,
+            )
+            : Promise.resolve(),
+
+          activeQuestionId
+            ? loadQuestionDetail(
+              activeQuestionId,
+            )
+            : Promise.resolve(),
+        ]);
+      } catch (
+      requestError
+      ) {
+        setError(
+          requestError?.response
+            ?.data?.message ??
+          'Q&A를 새로고침하지 못했습니다.',
+        );
+      }
+    };
+
+  const handleLoadMore =
+    async () => {
+      if (
+        !selectedTeamId ||
+        !feedCursor ||
+        !feedHasNext ||
+        isLoadingMoreFeed
+      ) {
+        return;
+      }
+
+      await loadTeamFeed(
+        selectedTeamId,
+        {
+          cursor:
+            feedCursor,
+          append: true,
+        },
+      );
+    };
+
+  const handleSubmitQuestion =
+    async (event) => {
+      event.preventDefault();
+
+      const content =
+        questionInput.trim();
+
+      if (
+        !content ||
+        !selectedTeamId ||
+        isCreating
+      ) {
+        return;
+      }
+
+      try {
+        setIsCreating(true);
+
+        setError('');
+
+        setSuccessMessage(
+          '',
+        );
+
+        const response =
+          await createQuestion({
+            targetTeamId:
+              selectedTeamId,
+
+            content,
+          });
+
+        const created =
+          response?.result;
+
+        const createdQuestion =
+        {
+          questionId:
+            created?.questionId,
+
+          targetTeamId:
+            selectedTeamId,
+
+          targetTeamName:
+            selectedTeam?.name ??
+            '팀',
+
+          questionerId:
+            profile?.userId,
+
+          questionerName:
+            profile?.name ??
+            '나',
+
+          questionerDepartment:
+            profile?.department,
+
+          questionerPosition:
+            profile?.position,
+
+          questionerProfileImageUrl:
+            profile?.profileImageUrl,
+
+          content,
+
+          status:
+            created?.status ??
+            'PENDING',
+
+          createdAt:
+            new Date().toISOString(),
+        };
+
+        setQuestionInput('');
+
+        if (
+          created?.questionId
+        ) {
+          setSelectedQuestion(
+            createdQuestion,
+          );
+        }
+
+        await Promise.all([
+          loadMyQuestionList(),
+
+          loadTeamFeed(
+            selectedTeamId,
+          ),
+        ]);
+
+        setSuccessMessage(
+          '질문을 등록했습니다.',
+        );
+      } catch (
+      requestError
+      ) {
+        console.error(
+          'Failed to create question:',
+          requestError,
+        );
+
+        setError(
+          requestError?.response
+            ?.data?.message ??
+          '질문을 등록하지 못했습니다.',
+        );
+      } finally {
+        setIsCreating(false);
+      }
+    };
+
+  const handleQuestionKeyDown =
+    (event) => {
+      if (
+        event.key !==
+        'Enter' ||
+        event.shiftKey
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (
+        !questionInput.trim() ||
+        !selectedTeamId ||
+        isCreating
+      ) {
+        return;
+      }
+
+      event.currentTarget.form?.requestSubmit();
+    };
+
+  const handleReviseAnswer =
+    async () => {
+      const answerId =
+        questionDetail?.answer
+          ?.answerId;
+
+      const content =
+        answerDraft.trim();
+
+      if (
+        !answerId ||
+        !content ||
+        !questionDetail
+          ?.canAnswer ||
+        isRevising
+      ) {
+        return;
+      }
+
+      try {
+        setIsRevising(true);
+
+        setError('');
+
+        setSuccessMessage(
+          '',
+        );
+
+        await reviseAnswer(
+          answerId,
+          content,
+        );
+
+        await Promise.all([
+          loadQuestionDetail(
+            questionDetail.questionId,
+          ),
+
+          selectedTeamId
+            ? loadTeamFeed(
+              selectedTeamId,
+            )
+            : Promise.resolve(),
+
+          loadMyQuestionList(),
+        ]);
+
+        setIsEditorOpen(
+          false,
+        );
+
+        setSuccessMessage(
+          '답변을 수정했습니다.',
+        );
+      } catch (
+      requestError
+      ) {
+        console.error(
+          'Failed to revise answer:',
+          requestError,
+        );
+
+        setError(
+          requestError?.response
+            ?.data?.message ??
+          '답변을 수정하지 못했습니다.',
+        );
+      } finally {
+        setIsRevising(false);
+      }
+    };
+
+  const activeStatus =
+    getStatus(
+      activeQuestion?.status,
+    );
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
-      {/* 페이지 헤더 */}
-      <header className="shrink-0 pb-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-[#101211]">Q&A</h1>
+      {/* Header */}
+      <header className="shrink-0">
+        <div className="flex items-center justify-between gap-4 pb-5">
+          <div>
+            <h1 className="text-[26px] font-semibold tracking-[-0.03em] text-[#101211]">
+              Ai Q&A
+            </h1>
 
-          <p className="mt-1 text-xs text-[#8A9490]">
-            팀의 회의록과 공유 정보를 기반으로 필요한 내용을 질문해보세요.
-          </p>
+            <p className="mt-1 text-[12px] font-medium text-[#688077]">
+              프로젝트의 회의록과 팀 정보를 기반으로 필요한 내용을 질문해보세요.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              setIsSidebarOpen(
+                true,
+              )
+            }
+            className="flex h-10 items-center gap-2 rounded-[11px] border border-[#D7EFE3] bg-white px-3 text-[11px] font-semibold text-[#355C4B] lg:hidden"
+          >
+            <MenuIcon />
+
+            {selectedTeam?.name ??
+              '대화 목록'}
+          </button>
         </div>
 
-        {/* 팀 탭 */}
-        <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
-          {teams.map((team) => {
-            const selected = Number(team.teamId) === Number(selectedTeamId);
+        {/* Project tabs */}
+        <div className="relative z-20 flex min-h-[47px] items-end gap-1.5 overflow-x-auto px-1">
+          {projects.map(
+            (project) => {
+              const selected =
+                Number(
+                  project.projectId,
+                ) ===
+                Number(
+                  selectedProjectId,
+                );
 
-            return (
-              <button
-                key={team.teamId}
-                type="button"
-                onClick={() => handleSelectTeam(team.teamId)}
-                className={`shrink-0 rounded-xl border px-5 py-3 text-xs font-semibold transition ${
-                  selected
-                    ? 'border-[#31F5A0] bg-[#31F5A0] text-[#101211]'
-                    : 'border-[#E1E7E4] bg-white text-[#4F5955] hover:bg-[#F7F9F8]'
-                }`}
-              >
-                {team.name}
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={
+                    project.projectId
+                  }
+                  type="button"
+                  onClick={() =>
+                    handleSelectProject(
+                      project.projectId,
+                    )
+                  }
+                  className={`relative shrink-0 px-5 text-[11px] font-semibold transition ${selected
+                      ? 'z-20 h-[47px] rounded-t-[12px] border border-b-0 border-[#31F5A0] bg-[#31F5A0] text-[#101211]'
+                      : 'mb-[5px] h-[39px] rounded-[10px] border border-[#D9ECE2] bg-white text-[#4E6B5F] hover:border-[#BFE8D3] hover:bg-[#F2FFF8]'
+                    }`}
+                >
+                  {
+                    project.name
+                  }
 
-          {teams.length === 0 && !isLoading && (
-            <div className="rounded-xl border border-dashed border-[#DCE3E0] px-5 py-3 text-xs text-[#8A9490]">
-              참여 중인 팀이 없습니다.
-            </div>
+                  {selected && (
+                    <>
+                      <span className="absolute -bottom-[3px] left-0 right-0 h-[5px] bg-[#31F5A0]" />
+
+                      <span className="absolute -bottom-[2px] -left-px h-[3px] w-px bg-[#31F5A0]" />
+
+                      <span className="absolute -bottom-[2px] -right-px h-[3px] w-px bg-[#31F5A0]" />
+                    </>
+                  )}
+                </button>
+              );
+            },
           )}
+
+          {projects.length ===
+            0 &&
+            !isLoading && (
+              <div className="mb-[5px] flex h-[39px] items-center rounded-[10px] border border-dashed border-[#D7EFE3] px-5 text-[11px] text-[#7D938A]">
+                참여 중인 프로젝트가 없습니다.
+              </div>
+            )}
         </div>
       </header>
 
       {error && (
-        <div className="mb-3 shrink-0 rounded-xl border border-[#FFDAD6] bg-[#FFF5F4] px-4 py-3 text-xs text-[#D83D34]">
+        <div className="mb-3 mt-3 shrink-0 rounded-[12px] border border-[#FFD7D2] bg-[#FFF6F5] px-4 py-3 text-[11px] text-[#D84A40]">
           {error}
         </div>
       )}
 
       {successMessage && (
-        <div className="mb-3 shrink-0 rounded-xl border border-[#C8F7DF] bg-[#EDFFF6] px-4 py-3 text-xs text-[#16885B]">
+        <div className="mb-3 mt-3 shrink-0 rounded-[12px] border border-[#BFF4D9] bg-[#EDFFF6] px-4 py-3 text-[11px] text-[#14794F]">
           {successMessage}
         </div>
       )}
 
-      {/* Q&A 본체 */}
-      <section className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-[#DFE6E2] bg-white">
+      {/* Connected Q&A panel */}
+      <section className="relative z-10 -mt-px flex min-h-0 flex-1 overflow-hidden rounded-b-[18px] rounded-tr-[18px] border border-[#D7EEE2] bg-white">
         {isLoading ? (
-          <div className="flex h-full items-center justify-center">
+          <div className="flex h-full w-full items-center justify-center">
             <div className="text-center">
               <div className="flex justify-center">
                 <LoadingSpinner />
               </div>
 
-              <p className="mt-4 text-xs text-[#8A9490]">Q&A를 불러오고 있습니다.</p>
+              <p className="mt-4 text-[11px] text-[#688077]">
+                Q&A를 불러오고 있습니다.
+              </p>
             </div>
           </div>
         ) : (
-          <div className="grid h-full min-h-0 grid-cols-[270px_minmax(0,1fr)_300px]">
-            {/* 질문 목록 */}
-            <aside className="flex min-h-0 flex-col border-r border-[#E6EBE8] bg-white">
-              <div className="shrink-0 border-b border-[#EDF1EF] p-4">
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={!selectedTeam}
-                    onClick={() => document.getElementById('qa-question-input')?.focus()}
-                    className="flex h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-[#31F5A0] bg-[#ECFFF5] text-xs font-semibold text-[#16885B] transition hover:bg-[#DFFFF0] disabled:cursor-not-allowed disabled:border-[#DCE3E0] disabled:bg-[#F5F7F6] disabled:text-[#A0A8A4]"
-                  >
-                    <ChatIcon />새 질문
-                  </button>
+          <>
+            {/* Desktop sidebar */}
+            <aside className="relative hidden w-[255px] shrink-0 border-r border-[#E3F4EB] bg-white lg:block">
+              {/* selected project connection */}
+              <div className="absolute left-0 right-0 top-0 h-[4px] bg-[#31F5A0]" />
 
-                  <button
-                    type="button"
-                    onClick={handleRefresh}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#E1E7E4] text-[#59625F] transition hover:bg-[#F5F7F6]"
-                    aria-label="새로고침"
-                  >
-                    <RefreshIcon />
-                  </button>
-                </div>
-              </div>
-
-              <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
-                <div className="flex items-center justify-between px-2 pb-2">
-                  <p className="text-[11px] font-semibold text-[#59625F]">내 질문</p>
-
-                  <span className="text-[9px] text-[#A0A8A4]">{myQuestions.length}</span>
-                </div>
-
-                {myQuestions.length === 0 ? (
-                  <EmptyList>아직 작성한 질문이 없습니다.</EmptyList>
-                ) : (
-                  <div className="space-y-1">
-                    {myQuestions.map((question) => (
-                      <QuestionListItem
-                        key={`MY-${question.questionId}`}
-                        question={question}
-                        selected={
-                          Number(selectedQuestion?.questionId) === Number(question.questionId)
-                        }
-                        onClick={() => handleSelectQuestion(question)}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                <div className="mx-2 my-4 border-t border-[#EDF1EF]" />
-
-                <div className="flex items-center justify-between px-2 pb-2">
-                  <div className="flex items-center gap-1.5">
-                    <p className="max-w-[150px] truncate text-[11px] font-semibold text-[#59625F]">
-                      {selectedTeam?.name ?? '팀'} 질문
-                    </p>
-
-                    <ChevronDownIcon />
-                  </div>
-
-                  <span className="text-[9px] text-[#A0A8A4]">{teamQuestions.length}</span>
-                </div>
-
-                {isLoadingTeamQuestions ? (
-                  <div className="flex justify-center py-8">
-                    <LoadingSpinner />
-                  </div>
-                ) : teamQuestions.length === 0 ? (
-                  <EmptyList>이 팀에 등록된 질문이 없습니다.</EmptyList>
-                ) : (
-                  <div className="space-y-1">
-                    {teamQuestions.map((question) => (
-                      <QuestionListItem
-                        key={`TEAM-${question.questionId}`}
-                        question={question}
-                        selected={
-                          Number(selectedQuestion?.questionId) === Number(question.questionId)
-                        }
-                        onClick={() => handleSelectQuestion(question)}
-                      />
-                    ))}
-                  </div>
-                )}
+              <div className="h-full pt-[4px]">
+                <ConversationSidebar
+                  teams={
+                    teams
+                  }
+                  selectedTeamId={
+                    selectedTeamId
+                  }
+                  myQuestions={
+                    projectMyQuestions
+                  }
+                  recentQuestions={
+                    feedQuestions
+                  }
+                  selectedQuestionId={
+                    activeQuestionId
+                  }
+                  hasNext={
+                    feedHasNext
+                  }
+                  isLoadingFeed={
+                    isLoadingFeed ||
+                    isLoadingTeams
+                  }
+                  isLoadingMore={
+                    isLoadingMoreFeed
+                  }
+                  onSelectTeam={
+                    handleSelectTeam
+                  }
+                  onNewChat={
+                    handleNewChat
+                  }
+                  onSelectQuestion={
+                    handleSelectQuestion
+                  }
+                  onRefresh={
+                    handleRefresh
+                  }
+                  onLoadMore={
+                    handleLoadMore
+                  }
+                />
               </div>
             </aside>
 
-            {/* 가운데 */}
-            <main className="flex min-h-0 min-w-0 flex-col">
-              {/* 중앙 콘텐츠 */}
-              <div className="min-h-0 flex-1">
-                {!selectedQuestion ? (
-                  <div className="flex h-full items-center justify-center px-10">
+            {/* Conversation */}
+            <main className="flex min-w-0 flex-1 flex-col bg-white">
+              <div className="flex min-h-[62px] shrink-0 items-center justify-between gap-4 border-b border-[#E3F4EB] px-4 sm:px-6">
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-semibold text-[#101211]">
+                    {selectedTeam?.name ??
+                      '팀을 선택해주세요'}
+                  </p>
+
+                  <p className="mt-0.5 truncate text-[9px] text-[#789087]">
+                    {selectedProject?.name ??
+                      ''}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {activeQuestion && (
+                    <span
+                      className={`hidden text-[9px] font-medium sm:block ${activeStatus.textClassName}`}
+                    >
+                      {
+                        activeStatus.label
+                      }
+                    </span>
+                  )}
+
+                  {canEditAnswer && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setIsEditorOpen(
+                          true,
+                        )
+                      }
+                      className="flex h-9 items-center gap-1.5 rounded-[10px] bg-[#101211] px-3 text-[10px] font-semibold text-white transition hover:bg-[#262B28]"
+                    >
+                      <EditIcon />
+                      답변 수정
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Conversation body */}
+              <div className="min-h-0 flex-1 overflow-y-auto bg-[#FCFFFD] px-4 py-6 sm:px-6 lg:px-8">
+                {!selectedTeamId ? (
+                  <div className="flex h-full min-h-[360px] items-center justify-center">
                     <div className="max-w-[320px] text-center">
-                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#ECFFF5] text-[#16885B]">
+                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[18px] bg-[#EFFFF7] text-[#16885B]">
                         <SparkleIcon />
                       </div>
 
-                      <h2 className="mt-4 text-sm font-semibold text-[#101211]">
-                        팀에 질문해보세요
+                      <h2 className="mt-4 text-[14px] font-semibold text-[#101211]">
+                        질문할 팀을 선택해주세요
                       </h2>
 
-                      <p className="mt-2 text-xs leading-5 text-[#8A9490]">
-                        궁금한 업무 내용을 입력하면 팀의 정보를 바탕으로 AI 답변을 생성합니다.
+                      <p className="mt-2 text-[11px] leading-5 text-[#6B8479]">
+                        프로젝트의 팀을 선택하면 해당 팀의 정보와 회의록을 기반으로 질문할 수 있습니다.
                       </p>
                     </div>
                   </div>
+                ) : !activeQuestion ? (
+                  <div className="flex h-full min-h-[360px] items-center justify-center">
+                    <div className="max-w-[350px] text-center">
+                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#31F5A0] text-[#101211]">
+                        <SparkleIcon />
+                      </div>
+
+                      <h2 className="mt-4 text-[15px] font-semibold text-[#101211]">
+                        {selectedTeam?.name}에 질문해보세요
+                      </h2>
+
+                      <p className="mt-2 text-[11px] leading-5 text-[#6B8479]">
+                        팀에서 공유한 정보와 회의 기록을 바탕으로 Noddi AI가 답변을 생성합니다.
+                      </p>
+                    </div>
+                  </div>
+                ) : isLoadingDetail ? (
+                  <div className="flex h-full min-h-[360px] items-center justify-center">
+                    <LoadingSpinner />
+                  </div>
                 ) : (
-                  <div className="flex h-full min-h-0 flex-col">
-                    {/* 질문 헤더 */}
-                    <div className="shrink-0 border-b border-[#EDF1EF] px-6 py-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <ProfileAvatar
-                              userId={
-                                questionDetail?.questionerId ?? selectedQuestion.questionerId
+                  <div className="mx-auto w-full max-w-[800px]">
+                    {/* Question */}
+                    {isMyQuestion ? (
+                      <div className="flex justify-end">
+                        <div className="max-w-[82%] sm:max-w-[70%]">
+                          <div className="rounded-[16px_16px_4px_16px] border border-[#A9F1CF] bg-[#CFFFF0] px-4 py-3">
+                            <p className="whitespace-pre-wrap text-[12px] leading-5 text-[#173329] sm:text-[13px]">
+                              {
+                                activeQuestion.content
                               }
-                              profileImageUrl={
-                                questionDetail?.questionerProfileImageUrl ??
-                                selectedQuestion.questionerProfileImageUrl
-                              }
-                              name={
-                                questionDetail?.questionerName ??
-                                selectedQuestion.questionerName ??
-                                '질문자'
-                              }
-                              className="size-8 shrink-0 text-[11px]"
-                            />
-
-                            <div className="min-w-0">
-                              <p className="truncate text-xs font-semibold text-[#101211]">
-                                {questionDetail?.questionerName ??
-                                  selectedQuestion.questionerName ??
-                                  '질문자'}
-                              </p>
-
-                              <p className="mt-0.5 truncate text-[10px] text-[#8A9490]">
-                                {questionDetail?.targetTeamName ??
-                                  selectedQuestion.targetTeamName ??
-                                  '팀'}
-                              </p>
-                            </div>
+                            </p>
                           </div>
-                        </div>
 
-                        <div className="flex items-center gap-3">
-                          <span className="text-[10px] text-[#A0A8A4]">
-                            {formatDate(questionDetail?.createdAt ?? selectedQuestion.createdAt)}{' '}
-                            {formatTime(questionDetail?.createdAt ?? selectedQuestion.createdAt)}
-                          </span>
-
-                          <span
-                            className={`rounded-full px-2.5 py-1 text-[9px] font-medium ${detailStatus.className}`}
-                          >
-                            {detailStatus.label}
-                          </span>
+                          <p className="mt-1.5 text-right text-[9px] text-[#81978E]">
+                            {formatTime(
+                              activeQuestion.createdAt,
+                            )}
+                          </p>
                         </div>
                       </div>
+                    ) : (
+                      <div className="flex items-start gap-3">
+                        <ProfileAvatar
+                          userId={
+                            activeQuestion.questionerId
+                          }
+                          profileImageUrl={
+                            questionerImageUrl
+                          }
+                          name={
+                            activeQuestion.questionerName ??
+                            '질문자'
+                          }
+                          className="size-9 shrink-0 text-[11px]"
+                        />
+
+                        <div className="max-w-[82%] sm:max-w-[70%]">
+                          <div className="flex items-center gap-2">
+                            <p className="text-[11px] font-semibold text-[#29483B]">
+                              {activeQuestion.questionerName ??
+                                '질문자'}
+                            </p>
+
+                            {questionerMeta && (
+                              <span className="text-[9px] text-[#81978E]">
+                                {
+                                  questionerMeta
+                                }
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-2 rounded-[4px_16px_16px_16px] border border-[#E0F1E8] bg-white px-4 py-3 shadow-[0_4px_14px_rgba(16,18,17,0.03)]">
+                            <p className="whitespace-pre-wrap text-[12px] leading-5 text-[#20342C] sm:text-[13px]">
+                              {
+                                activeQuestion.content
+                              }
+                            </p>
+                          </div>
+
+                          <p className="mt-1.5 text-[9px] text-[#81978E]">
+                            {formatTime(
+                              activeQuestion.createdAt,
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="my-7 flex items-center gap-3">
+                      <div className="h-px flex-1 bg-[#DDF2E8]" />
+
+                      <span className="text-[9px] font-medium text-[#77A28F]">
+                        Noddi AI
+                      </span>
+
+                      <div className="h-px flex-1 bg-[#DDF2E8]" />
                     </div>
 
-                    {/* 질문 + 답변 */}
-                    <div className="min-h-0 flex-1 overflow-y-auto px-7 py-7">
-                      {isLoadingDetail ? (
-                        <div className="flex h-full items-center justify-center">
-                          <LoadingSpinner />
+                    {/* Answer */}
+                    {activeAnswer?.content ? (
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#31F5A0] text-[#101211]">
+                          <SparkleIcon />
                         </div>
-                      ) : (
-                        <div className="mx-auto max-w-[720px]">
-                          {/* 사용자 질문 */}
-                          <div className="flex items-start gap-3">
-                            <ProfileAvatar
-                              userId={
-                                questionDetail?.questionerId ?? selectedQuestion.questionerId
-                              }
-                              profileImageUrl={
-                                questionDetail?.questionerProfileImageUrl ??
-                                selectedQuestion.questionerProfileImageUrl
-                              }
-                              name={
-                                questionDetail?.questionerName ??
-                                selectedQuestion.questionerName ??
-                                '질문자'
-                              }
-                              className="size-9 shrink-0 text-xs"
-                            />
 
-                            <div className="min-w-0">
-                              <p className="text-xs font-semibold text-[#303633]">
-                                {questionDetail?.questionerName ??
-                                  selectedQuestion.questionerName ??
-                                  '질문자'}
-                              </p>
+                        <div className="max-w-[88%] sm:max-w-[76%]">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-[11px] font-semibold text-[#101211]">
+                              {getAnswerLabel(
+                                activeAnswer.answerType,
+                              )}
+                            </p>
 
-                              <div className="mt-2 max-w-[520px] rounded-[4px_15px_15px_15px] bg-[#F2F4F3] px-4 py-3">
-                                <p className="text-sm leading-6 whitespace-pre-wrap text-[#303633]">
-                                  {questionDetail?.content ?? selectedQuestion.content}
-                                </p>
-                              </div>
+                            {activeAnswer.revised && (
+                              <span className="text-[9px] font-semibold text-[#F64E42]">
+                                수정됨
+                              </span>
+                            )}
+                          </div>
 
-                              <p className="mt-1.5 text-[9px] text-[#A0A8A4]">
-                                {formatTime(
-                                  questionDetail?.createdAt ?? selectedQuestion.createdAt,
+                          <div className="mt-2 rounded-[4px_16px_16px_16px] bg-[#EFFFF7] px-4 py-3.5">
+                            <p className="whitespace-pre-wrap text-[12px] leading-5 text-[#20342C] sm:text-[13px]">
+                              {
+                                activeAnswer.content
+                              }
+                            </p>
+
+                            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#D3F3E2] pt-3">
+                              {activeAnswer.answerType ===
+                                'AI' && (
+                                  <span className="text-[8px] text-[#668077]">
+                                    AI generated
+                                  </span>
                                 )}
-                              </p>
+
+                              {activeAnswer.revised &&
+                                activeAnswer.lastRevisedByName && (
+                                  <>
+                                    <span className="text-[8px] text-[#AAC2B7]">
+                                      ·
+                                    </span>
+
+                                    <span className="text-[8px] text-[#668077]">
+                                      {
+                                        activeAnswer.lastRevisedByName
+                                      }
+                                      님이 수정
+                                    </span>
+                                  </>
+                                )}
                             </div>
                           </div>
 
-                          {/* AI 답변 */}
-                          <div className="mt-8 flex justify-end">
-                            {questionDetail?.status === 'ANSWERED' && questionDetail?.answer ? (
-                              <div className="max-w-[78%]">
-                                <div className="rounded-[15px_4px_15px_15px] border border-[#D3F4E3] bg-[#F0FFF8] px-5 py-4">
-                                  <div className="mb-3 flex items-center gap-2 text-[#16885B]">
-                                    <SparkleIcon />
+                          <p className="mt-1.5 text-[9px] text-[#81978E]">
+                            {formatTime(
+                              activeAnswer.lastRevisedAt ??
+                              activeAnswer.updatedAt ??
+                              activeAnswer.createdAt,
+                            )}
+                          </p>
 
-                                    <span className="text-[10px] font-semibold">AI 답변</span>
-                                  </div>
+                          {canEditAnswer && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setIsEditorOpen(
+                                  true,
+                                )
+                              }
+                              className="mt-2 flex h-8 items-center gap-1.5 rounded-[9px] px-2 text-[9px] font-semibold text-[#43715D] transition hover:bg-[#E7FFF3]"
+                            >
+                              <EditIcon />
+                              답변 수정
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ) : activeQuestion.status ===
+                      'FAILED' ? (
+                      <div className="flex justify-center">
+                        <div className="rounded-[13px] border border-[#FFD7D2] bg-[#FFF6F5] px-5 py-4 text-center">
+                          <p className="text-[11px] font-semibold text-[#D84A40]">
+                            답변을 생성하지 못했습니다.
+                          </p>
+                        </div>
+                      </div>
+                    ) : activeQuestion.status ===
+                      'MANUAL_REQUIRED' ? (
+                      <div className="flex justify-center">
+                        <div className="rounded-[13px] border border-[#FFE1C5] bg-[#FFF8F0] px-5 py-4 text-center">
+                          <p className="text-[11px] font-semibold text-[#AF641F]">
+                            팀원의 직접 답변이 필요합니다.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#31F5A0] text-[#101211]">
+                          <SparkleIcon />
+                        </div>
 
-                                  <p className="text-sm leading-6 whitespace-pre-wrap text-[#25302B]">
-                                    {questionDetail.answer.content}
-                                  </p>
+                        <div className="rounded-[4px_16px_16px_16px] bg-[#EFFFF7] px-4 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <LoadingSpinner
+                              size={16}
+                            />
 
-                                  <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#DDF4E8] pt-3">
-                                    <span className="text-[9px] text-[#7C8681]">AI generated</span>
+                            <div>
+                              <p className="text-[11px] font-semibold text-[#29483B]">
+                                {activeQuestion.status ===
+                                  'TEAM_ANSWER_PENDING'
+                                  ? '팀원의 답변을 기다리고 있습니다.'
+                                  : 'AI가 답변을 생성하고 있습니다.'}
+                              </p>
 
-                                    {questionDetail.answer.revised && (
-                                      <>
-                                        <span className="text-[9px] text-[#C1C7C4]">·</span>
+                              <p className="mt-1 text-[9px] text-[#6C857A]">
+                                완료되면 자동으로 표시됩니다.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
-                                        <span className="text-[9px] font-medium text-[#F64E42]">
-                                          수정됨
-                                        </span>
+                    {activeSources.length >
+                      0 && (
+                        <div className="ml-0 mt-5 max-w-[560px] sm:ml-12">
+                          <p className="mb-2 text-[9px] font-semibold text-[#688077]">
+                            답변 출처
+                          </p>
 
-                                        {questionDetail.answer.lastRevisedByName && (
-                                          <span className="text-[9px] text-[#8A9490]">
-                                            {questionDetail.answer.lastRevisedByName}
-                                          </span>
-                                        )}
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* 답변 출처 */}
-                                {questionDetail?.sources?.length > 0 && (
-                                  <div className="mt-3">
-                                    <p className="mb-2 text-[10px] font-semibold text-[#7C8681]">
-                                      답변 출처
-                                    </p>
-
-                                    <div className="space-y-2">
-                                      {questionDetail.sources.map((source, index) => (
-                                        <div
-                                          key={`${source.citationIndex}-${source.referenceId}-${index}`}
-                                          className="rounded-xl border border-[#E3E9E6] bg-white px-3 py-3"
-                                        >
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-[#59625F]">
-                                              <SourceIcon />
-                                            </span>
-
-                                            <p className="min-w-0 flex-1 truncate text-[10px] font-semibold text-[#303633]">
-                                              {source.sourceTitle ?? '참고 자료'}
-                                            </p>
-
-                                            <span className="shrink-0 rounded-full bg-[#F2F5F3] px-2 py-0.5 text-[8px] font-medium text-[#7C8681]">
-                                              {source.sourceType === 'TRANSCRIPT'
-                                                ? '회의 기록'
-                                                : '팀 페이지'}
-                                            </span>
-                                          </div>
-
-                                          {source.excerpt && (
-                                            <p className="mt-2 line-clamp-3 text-[9px] leading-4 text-[#8A9490]">
-                                              {source.excerpt}
-                                            </p>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            ) : questionDetail?.status === 'FAILED' ? (
-                              <div className="rounded-xl border border-[#FFDAD6] bg-[#FFF5F4] px-5 py-4">
-                                <p className="text-xs font-semibold text-[#D83D34]">
-                                  답변 생성에 실패했습니다.
-                                </p>
-
-                                <p className="mt-1 text-[10px] text-[#A85F59]">
-                                  잠시 후 다시 확인해주세요.
-                                </p>
-                              </div>
-                            ) : (
-                              <div className="rounded-xl border border-[#E3E9E6] bg-[#FAFBFA] px-5 py-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#DCE5E1] border-t-[#31F5A0]" />
-
-                                  <div>
-                                    <p className="text-xs font-semibold text-[#303633]">
-                                      AI가 답변을 생성하고 있습니다.
-                                    </p>
-
-                                    <p className="mt-1 text-[9px] text-[#8A9490]">
-                                      완료되면 자동으로 표시됩니다.
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
+                          <div className="space-y-2">
+                            {activeSources.map(
+                              (
+                                source,
+                                index,
+                              ) => (
+                                <SourceCard
+                                  key={`${source.citationIndex}-${source.referenceId}-${index}`}
+                                  source={
+                                    source
+                                  }
+                                />
+                              ),
                             )}
                           </div>
                         </div>
                       )}
+
+                    <div className="mt-8 flex items-center gap-3">
+                      <div className="h-px flex-1 bg-[#DDF2E8]" />
+
+                      <span className="text-[8px] text-[#91A69D]">
+                        {formatDate(
+                          activeQuestion.createdAt,
+                        )}
+                      </span>
+
+                      <div className="h-px flex-1 bg-[#DDF2E8]" />
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* 새 질문 입력 */}
-              <div className="shrink-0 border-t border-[#EDF1EF] bg-white px-6 py-4">
+              {/* Input */}
+              <div className="shrink-0 border-t border-[#E3F4EB] bg-white p-3 sm:px-5 sm:py-4">
                 <form
-                  onSubmit={handleSubmitQuestion}
-                  className="rounded-xl border border-[#DCE3E0] bg-white transition focus-within:border-[#31F5A0]"
+                  onSubmit={
+                    handleSubmitQuestion
+                  }
+                  className="mx-auto flex max-w-[860px] items-end gap-2 rounded-[14px] bg-[#F0FAF5] px-3 py-2 transition focus-within:bg-[#EFFFF7]"
                 >
                   <textarea
                     id="qa-question-input"
-                    value={questionInput}
+                    value={
+                      questionInput
+                    }
                     maxLength={500}
-                    disabled={!selectedTeam || isCreating}
-                    onChange={(event) => setQuestionInput(event.target.value)}
-                    onKeyDown={handleQuestionKeyDown}
-                    rows={2}
+                    disabled={
+                      !selectedTeamId ||
+                      isCreating
+                    }
+                    onChange={(
+                      event,
+                    ) =>
+                      setQuestionInput(
+                        event.target.value,
+                      )
+                    }
+                    onKeyDown={
+                      handleQuestionKeyDown
+                    }
+                    rows={1}
                     placeholder={
                       selectedTeam
-                        ? `${selectedTeam.name}에 궁금한 내용을 질문하세요.`
-                        : '질문할 팀을 먼저 선택해주세요.'
+                        ? `${selectedTeam.name}에 질문을 입력하세요.`
+                        : '질문할 팀을 선택해주세요.'
                     }
-                    className="block max-h-28 min-h-[64px] w-full resize-none rounded-t-xl bg-transparent px-4 pt-3 text-xs leading-5 text-[#101211] outline-none placeholder:text-[#A0A8A4] disabled:cursor-not-allowed disabled:bg-[#FAFBFA]"
+                    className="max-h-[100px] min-h-[38px] min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-[12px] leading-5 text-[#101211] outline-none placeholder:text-[#8DA198] disabled:cursor-not-allowed"
                   />
 
-                  <div className="flex items-center justify-between px-4 pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9px] text-[#A0A8A4]">Enter 전송</span>
+                  <div className="flex shrink-0 items-center gap-2 pb-0.5">
+                    <span className="hidden text-[8px] text-[#82988F] sm:inline">
+                      {
+                        questionInput.length
+                      }
+                      /500
+                    </span>
 
-                      <span className="text-[9px] text-[#C4CAC7]">·</span>
-
-                      <span className="text-[9px] text-[#A0A8A4]">Shift + Enter 줄바꿈</span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <span className="text-[9px] text-[#A0A8A4]">
-                        {questionInput.length}
-                        /500
-                      </span>
-
-                      <button
-                        type="submit"
-                        disabled={!questionInput.trim() || !selectedTeam || isCreating}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#31F5A0] text-[#101211] transition hover:bg-[#23E993] disabled:cursor-not-allowed disabled:bg-[#DCE3E0] disabled:text-[#9AA39F]"
-                        aria-label="질문 전송"
-                      >
-                        <SendIcon />
-                      </button>
-                    </div>
+                    <button
+                      type="submit"
+                      disabled={
+                        !questionInput.trim() ||
+                        !selectedTeamId ||
+                        isCreating
+                      }
+                      className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#31F5A0] text-[#101211] transition hover:brightness-[0.97] disabled:cursor-not-allowed disabled:bg-[#D8E9E1] disabled:text-[#8CA198]"
+                      aria-label="질문 전송"
+                    >
+                      <SendIcon />
+                    </button>
                   </div>
                 </form>
+
+                <p className="mx-auto mt-1.5 hidden max-w-[860px] px-1 text-[8px] text-[#92A79E] sm:block">
+                  Enter 전송 · Shift + Enter 줄바꿈
+                </p>
               </div>
             </main>
 
-            {/* 오른쪽 답변 수정 */}
-            <aside className="flex min-h-0 flex-col border-l border-[#E6EBE8] bg-[#FAFBFA]">
-              <div className="shrink-0 border-b border-[#E6EBE8] px-5 py-5">
-                <div className="flex items-center gap-2">
-                  <span className="text-[#16885B]">
-                    <SparkleIcon />
-                  </span>
-
-                  <h2 className="text-sm font-semibold text-[#101211]">답변 수정</h2>
-                </div>
-
-                <p className="mt-2 text-[10px] leading-4 text-[#8A9490]">
-                  AI가 생성한 답변을 팀 상황에 맞게 수정할 수 있습니다.
-                </p>
-              </div>
-
-              <div className="min-h-0 flex-1 overflow-y-auto p-5">
-                {!selectedQuestion ? (
-                  <div className="flex h-full items-center justify-center text-center">
-                    <p className="text-xs leading-5 text-[#9AA39F]">
-                      수정할 질문을
-                      <br />
-                      먼저 선택해주세요.
-                    </p>
-                  </div>
-                ) : isLoadingDetail ? (
-                  <div className="flex h-full items-center justify-center">
-                    <LoadingSpinner />
-                  </div>
-                ) : !questionDetail?.answer ? (
-                  <div className="rounded-xl border border-[#E3E9E6] bg-white px-4 py-5">
-                    <p className="text-xs font-semibold text-[#303633]">
-                      아직 수정할 답변이 없습니다.
-                    </p>
-
-                    <p className="mt-2 text-[10px] leading-4 text-[#8A9490]">
-                      AI 답변 생성이 완료되면 이곳에서 답변을 수정할 수 있습니다.
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <div>
-                      <label
-                        htmlFor="qa-answer-editor"
-                        className="text-[11px] font-semibold text-[#59625F]"
-                      >
-                        답변 내용
-                      </label>
-
-                      <textarea
-                        id="qa-answer-editor"
-                        value={answerDraft}
-                        maxLength={1000}
-                        disabled={!canEditAnswer || isRevising}
-                        onChange={(event) => setAnswerDraft(event.target.value)}
-                        className="mt-2 h-[280px] w-full resize-none rounded-xl border border-[#DCE3E0] bg-white p-4 text-xs leading-5 text-[#303633] transition outline-none focus:border-[#31F5A0] disabled:bg-[#F3F5F4] disabled:text-[#8A9490]"
-                      />
-
-                      <div className="mt-2 flex items-center justify-between gap-3">
-                        <span className="text-[9px] text-[#9AA39F]">
-                          {answerDraft.length}
-                          /1000
-                        </span>
-
-                        {!canEditAnswer && (
-                          <span className="text-right text-[9px] text-[#F64E42]">
-                            대상 팀의 팀원만 수정할 수 있습니다.
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {questionDetail?.sources?.length > 0 && (
-                      <div className="mt-6">
-                        <p className="text-[11px] font-semibold text-[#59625F]">
-                          답변에 참고한 정보
-                        </p>
-
-                        <div className="mt-3 space-y-2">
-                          {questionDetail.sources.map((source, index) => (
-                            <div
-                              key={`RIGHT-${source.citationIndex}-${source.referenceId}-${index}`}
-                              className="rounded-xl border border-[#E3E9E6] bg-white px-3 py-3"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="shrink-0 text-[#59625F]">
-                                  <SourceIcon />
-                                </span>
-
-                                <p className="min-w-0 flex-1 truncate text-[10px] font-semibold text-[#303633]">
-                                  {source.sourceTitle ?? '참고 자료'}
-                                </p>
-                              </div>
-
-                              <p className="mt-2 text-[8px] font-medium text-[#16885B]">
-                                {source.sourceType === 'TRANSCRIPT' ? '회의 기록' : '팀 페이지'}
-                              </p>
-
-                              {source.excerpt && (
-                                <p className="mt-2 line-clamp-4 text-[9px] leading-4 text-[#8A9490]">
-                                  {source.excerpt}
-                                </p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <div className="shrink-0 border-t border-[#E6EBE8] bg-white p-5">
-                <button
-                  type="button"
-                  disabled={
-                    !questionDetail?.answer ||
-                    !canEditAnswer ||
-                    !answerDraft.trim() ||
-                    !hasAnswerChanged ||
+            {/* Desktop editor */}
+            {isEditorOpen && (
+              <aside className="hidden w-[320px] shrink-0 border-l border-[#DFF2E8] xl:block">
+                <AnswerEditorPanel
+                  answerDraft={
+                    answerDraft
+                  }
+                  questionDetail={
+                    questionDetail
+                  }
+                  isRevising={
                     isRevising
                   }
-                  onClick={handleReviseAnswer}
-                  className="h-10 w-full rounded-xl bg-[#101211] text-xs font-semibold text-white transition hover:bg-[#292E2B] disabled:cursor-not-allowed disabled:bg-[#D8DEDB] disabled:text-[#8A9490]"
-                >
-                  {isRevising ? '수정 중...' : '답변 수정하기'}
-                </button>
-              </div>
-            </aside>
-          </div>
+                  onChange={(
+                    event,
+                  ) =>
+                    setAnswerDraft(
+                      event.target.value,
+                    )
+                  }
+                  onSave={
+                    handleReviseAnswer
+                  }
+                  onClose={() =>
+                    setIsEditorOpen(
+                      false,
+                    )
+                  }
+                />
+              </aside>
+            )}
+          </>
         )}
       </section>
+
+      {/* Mobile sidebar */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#101211]/35 backdrop-blur-[1px]"
+            onClick={() =>
+              setIsSidebarOpen(
+                false,
+              )
+            }
+            aria-label="대화 목록 닫기"
+          />
+
+          <aside className="absolute bottom-0 left-0 top-0 w-[min(86vw,310px)] border-r border-[#DFF2E8] bg-white shadow-[12px_0_40px_rgba(16,18,17,0.12)]">
+            <div className="flex h-14 items-center justify-between border-b border-[#E3F4EB] px-4">
+              <p className="text-[13px] font-semibold text-[#101211]">
+                Q&A 목록
+              </p>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setIsSidebarOpen(
+                    false,
+                  )
+                }
+                className="flex h-8 w-8 items-center justify-center rounded-full text-[#5E786D] hover:bg-[#EFFFF7]"
+                aria-label="닫기"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+
+            <div className="h-[calc(100%-56px)]">
+              <ConversationSidebar
+                teams={
+                  teams
+                }
+                selectedTeamId={
+                  selectedTeamId
+                }
+                myQuestions={
+                  projectMyQuestions
+                }
+                recentQuestions={
+                  feedQuestions
+                }
+                selectedQuestionId={
+                  activeQuestionId
+                }
+                hasNext={
+                  feedHasNext
+                }
+                isLoadingFeed={
+                  isLoadingFeed ||
+                  isLoadingTeams
+                }
+                isLoadingMore={
+                  isLoadingMoreFeed
+                }
+                onSelectTeam={
+                  handleSelectTeam
+                }
+                onNewChat={
+                  handleNewChat
+                }
+                onSelectQuestion={
+                  handleSelectQuestion
+                }
+                onRefresh={
+                  handleRefresh
+                }
+                onLoadMore={
+                  handleLoadMore
+                }
+              />
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* Tablet/mobile editor */}
+      {isEditorOpen && (
+        <div className="fixed inset-0 z-50 xl:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-[#101211]/35 backdrop-blur-[1px]"
+            onClick={() =>
+              setIsEditorOpen(
+                false,
+              )
+            }
+            aria-label="답변 수정 닫기"
+          />
+
+          <aside className="absolute bottom-0 right-0 top-0 w-[min(92vw,380px)] border-l border-[#DFF2E8] bg-white shadow-[-12px_0_40px_rgba(16,18,17,0.12)]">
+            <AnswerEditorPanel
+              answerDraft={
+                answerDraft
+              }
+              questionDetail={
+                questionDetail
+              }
+              isRevising={
+                isRevising
+              }
+              onChange={(
+                event,
+              ) =>
+                setAnswerDraft(
+                  event.target.value,
+                )
+              }
+              onSave={
+                handleReviseAnswer
+              }
+              onClose={() =>
+                setIsEditorOpen(
+                  false,
+                )
+              }
+            />
+          </aside>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,9 @@
 import api from './axios';
 
-export const getMyQuestions = async ({ page = 0, size = 30 } = {}) => {
+export const getMyQuestions = async ({
+  page = 0,
+  size = 30,
+} = {}) => {
   const { data } = await api.get('/api/v1/qa/questions/me', {
     params: {
       page,
@@ -12,36 +15,65 @@ export const getMyQuestions = async ({ page = 0, size = 30 } = {}) => {
   return data;
 };
 
-export const getTeamQuestions = async (teamId, { page = 0, size = 30 } = {}) => {
-  const { data } = await api.get(`/api/v1/teams/${teamId}/qa/questions`, {
-    params: {
-      page,
-      size,
-      sort: 'createdAt,desc',
+export const getTeamQuestions = async (
+  teamId,
+  {
+    page = 0,
+    size = 30,
+  } = {},
+) => {
+  const { data } = await api.get(
+    `/api/v1/teams/${teamId}/qa/questions`,
+    {
+      params: {
+        page,
+        size,
+        sort: 'createdAt,desc',
+      },
     },
-  });
+  );
 
   return data;
 };
 
-export const getQuestionDetail = async (questionId) => {
-  const { data } = await api.get(`/api/v1/qa/questions/${questionId}`);
+export const getTeamQaFeed = async (
+  teamId,
+  {
+    cursor,
+    size = 20,
+  } = {},
+) => {
+  const { data } = await api.get(
+    `/api/v1/teams/${teamId}/qa/feed`,
+    {
+      params: {
+        ...(cursor
+          ? {
+              cursor,
+            }
+          : {}),
+        size,
+      },
+    },
+  );
+
+  return data.result ?? null;
+};
+
+export const getQuestionDetail = async (
+  questionId,
+) => {
+  const { data } = await api.get(
+    `/api/v1/qa/questions/${questionId}`,
+  );
 
   return data;
 };
 
-export const getTeamQaFeed = async (teamId, { cursor, size = 20 } = {}) => {
-  const { data } = await api.get(`/api/v1/teams/${teamId}/qa/feed`, {
-    params: {
-      ...(cursor ? { cursor } : {}),
-      size,
-    },
-  });
-
-  return data.result;
-};
-
-export const createQuestion = async ({ targetTeamId, content }) => {
+export const createQuestion = async ({
+  targetTeamId,
+  content,
+}) => {
   const { data } = await api.post('/api/v1/qa/questions', {
     targetTeamId,
     content,
@@ -50,10 +82,26 @@ export const createQuestion = async ({ targetTeamId, content }) => {
   return data;
 };
 
-export const reviseAnswer = async (answerId, content) => {
-  const { data } = await api.patch(`/api/v1/qa/answers/${answerId}`, {
-    content,
-  });
+export const reviseAnswer = async (
+  answerId,
+  content,
+) => {
+  const { data } = await api.patch(
+    `/api/v1/qa/answers/${answerId}`,
+    {
+      content,
+    },
+  );
+
+  return data;
+};
+
+export const getAnswerRevisions = async (
+  answerId,
+) => {
+  const { data } = await api.get(
+    `/api/v1/qa/answers/${answerId}/revisions`,
+  );
 
   return data;
 };
