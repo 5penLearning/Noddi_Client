@@ -1,55 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 
-import MeetingAiResult from '../../components/project/MeetingAiResult';
 import MeetingAudioPlayer from '../../components/project/MeetingAudioPlayer';
 import MeetingDetailHeader from '../../components/project/MeetingDetailHeader';
 import MeetingParticipants from '../../components/project/MeetingParticipants';
-import MeetingTranscriptPanel from '../../components/project/MeetingTranscriptPanel';
+import MeetingRecordDetailContent from '../../components/project/meetingRecords/MeetingRecordDetailContent';
+import {
+  formatMeetingDateTime,
+  formatMeetingDuration,
+  getRecordingUrlFromResponse,
+} from '../../components/project/meetingRecords/meetingRecordUtils';
 import { getApiErrorMessage } from '../../api/axios';
 import { getMeeting, getMeetingParticipants, getMeetingRecordingUrl } from '../../api/meetingApi';
 import { getMeetingSummary, updateMeetingSummary } from '../../api/summaryApi';
-
-const formatMeetingDate = (dateValue) => {
-  const date = new Date(dateValue);
-
-  if (Number.isNaN(date.getTime())) return '-';
-
-  const dateText = new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    weekday: 'short',
-  }).format(date);
-  const timeText = new Intl.DateTimeFormat('ko-KR', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(date);
-
-  return `${dateText} ${timeText}`;
-};
-
-const formatDuration = (startValue, endValue) => {
-  const startDate = new Date(startValue);
-  const endDate = new Date(endValue);
-
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return '-';
-
-  const totalSeconds = Math.max(0, Math.floor((endDate.getTime() - startDate.getTime()) / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return `${hours ? `${hours}시간 ` : ''}${minutes}분 ${seconds}초`;
-};
-
-const getRecordingUrlFromResponse = (response) => {
-  const result = response?.result ?? response;
-  const url = result?.recordingUrl ?? result?.url ?? result;
-
-  return typeof url === 'string' ? url : '';
-};
 
 function TeamMeetingRecordDetailPage() {
   const location = useLocation();
@@ -208,8 +171,8 @@ function TeamMeetingRecordDetailPage() {
         <div className="min-h-0 flex-1 overflow-y-auto">
           <MeetingDetailHeader
             title={displayMeeting.title ?? '회의록 상세'}
-            dateLabel={formatMeetingDate(startAt)}
-            durationLabel={formatDuration(startAt, endAt)}
+            dateLabel={formatMeetingDateTime(startAt)}
+            durationLabel={formatMeetingDuration(startAt, endAt)}
             isEditing={isEditing}
             isSaving={isSaving}
             onEdit={handleStartEdit}
@@ -218,112 +181,14 @@ function TeamMeetingRecordDetailPage() {
           />
           <MeetingParticipants participants={participants} teamName={teamName} />
 
-          <div className="mt-6 grid grid-cols-[310px_minmax(0,1fr)] items-start gap-6 px-[29px] pb-8">
-            <aside className="min-w-0">
-              <section>
-                <h2 className="text-[16px] leading-[1.3] font-semibold text-[var(--color-gray-900)]">
-                  주요 이슈
-                </h2>
-                <div className="mt-4 flex flex-wrap gap-1">
-                  {isEditing ? (
-                    <div className="w-full space-y-2">
-                      {editForm.issues.map((issue, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <input
-                            value={issue}
-                            onChange={(event) =>
-                              setEditForm((currentForm) => ({
-                                ...currentForm,
-                                issues: currentForm.issues.map((item, itemIndex) =>
-                                  itemIndex === index ? event.target.value : item,
-                                ),
-                              }))
-                            }
-                            placeholder="주요 이슈를 입력해주세요."
-                            className="h-10 min-w-0 flex-1 rounded-[8px] border border-[var(--color-gray-300)] bg-[var(--color-gray-50)] px-3 text-[14px] outline-none focus:border-[var(--color-primary)] focus:bg-white"
-                          />
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setEditForm((currentForm) => ({
-                                ...currentForm,
-                                issues: currentForm.issues.filter(
-                                  (_, itemIndex) => itemIndex !== index,
-                                ),
-                              }))
-                            }
-                            className="size-8 shrink-0 text-[18px] text-[var(--color-gray-500)]"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setEditForm((currentForm) => ({
-                            ...currentForm,
-                            issues: [...currentForm.issues, ''],
-                          }))
-                        }
-                        className="text-[13px] text-[var(--color-gray-600)]"
-                      >
-                        + 항목 추가
-                      </button>
-                    </div>
-                  ) : (summary.keywords ?? []).length > 0 ? (
-                    summary.keywords.map((keyword) => (
-                      <span
-                        key={keyword}
-                        className="rounded-[10px] bg-[#e8fff5] px-[10px] py-[5px] text-[14px] leading-[1.3] tracking-[-0.28px] text-[var(--color-primary-700,#11e489)]"
-                      >
-                        {keyword}
-                      </span>
-                    ))
-                  ) : (
-                    <p className="text-[14px] text-[var(--color-gray-500)]">
-                      등록된 주요 이슈가 없습니다.
-                    </p>
-                  )}
-                </div>
-              </section>
-
-              <div className="mt-8">
-                <MeetingTranscriptPanel transcript={summary.rawTranscript ?? ''} />
-              </div>
-            </aside>
-
-            <MeetingAiResult
-              summaryData={summary}
-              meetingId={meetingId}
-              participants={participants}
-              isEditing={isEditing}
-              editForm={editForm}
-              onSummaryChange={(value) =>
-                setEditForm((currentForm) => ({ ...currentForm, summary: value }))
-              }
-              onDecisionChange={(index, value) =>
-                setEditForm((currentForm) => ({
-                  ...currentForm,
-                  decisions: currentForm.decisions.map((item, itemIndex) =>
-                    itemIndex === index ? value : item,
-                  ),
-                }))
-              }
-              onAddDecision={() =>
-                setEditForm((currentForm) => ({
-                  ...currentForm,
-                  decisions: [...currentForm.decisions, ''],
-                }))
-              }
-              onRemoveDecision={(index) =>
-                setEditForm((currentForm) => ({
-                  ...currentForm,
-                  decisions: currentForm.decisions.filter((_, itemIndex) => itemIndex !== index),
-                }))
-              }
-            />
-          </div>
+          <MeetingRecordDetailContent
+            summary={summary}
+            meetingId={meetingId}
+            participants={participants}
+            isEditing={isEditing}
+            editForm={editForm}
+            setEditForm={setEditForm}
+          />
         </div>
       )}
 

@@ -3,13 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import AnnouncementDetailModal from '../../components/project/AnnouncementDetailModal';
 import AnnouncementFormModal from '../../components/project/AnnouncementFormModal';
-import AddUserIcon from '../../components/project/AddUserIcon';
-import ContentVisibilityToggle from '../../components/project/ContentVisibilityToggle';
-import MyTeamCard from '../../components/project/MyTeamCard';
 import ProjectCreateButton from '../../components/project/ProjectCreateButton';
 import ProjectInviteModal from '../../components/project/ProjectInviteModal';
-import ProjectNotice from '../../components/project/ProjectNotice';
-import ProjectTeamCard from '../../components/project/ProjectTeamCard';
+import ProjectNavigation from '../../components/project/ProjectNavigation';
+import ProjectOverview from '../../components/project/ProjectOverview';
 import TeamCreateModal from '../../components/project/TeamCreateModal';
 import {
   createAnnouncement,
@@ -35,35 +32,6 @@ import {
   inviteTeamMember,
 } from '../../api/teams';
 import { projectPageMockData } from '../../mocks/projectPageData';
-
-const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
-
-const getDateAtMidnight = (dateValue) => {
-  const date = new Date(dateValue);
-
-  if (Number.isNaN(date.getTime())) return null;
-
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-};
-
-const getProjectDayLabel = (project) => {
-  const today = getDateAtMidnight(new Date());
-  const deadline = getDateAtMidnight(project.endDate ?? project.deadline ?? project.dueDate);
-
-  if (deadline) {
-    const remainingDays = Math.max(0, Math.ceil((deadline - today) / MILLISECONDS_PER_DAY));
-
-    return `D-${remainingDays}`;
-  }
-
-  const createdAt = getDateAtMidnight(project.createdAt);
-
-  if (!createdAt) return 'D+0';
-
-  const elapsedDays = Math.max(0, Math.floor((today - createdAt) / MILLISECONDS_PER_DAY));
-
-  return `D+${elapsedDays}`;
-};
 
 function ProjectPage() {
   const navigate = useNavigate();
@@ -544,167 +512,51 @@ function ProjectPage() {
   return (
     <div className="h-full [scrollbar-width:none] overflow-y-auto [&::-webkit-scrollbar]:hidden">
       <div className="mx-auto w-full max-w-[1350px]">
-        <div className="flex h-[82px] items-start gap-[14px] pt-[17px]">
-          {projects.map((project) => {
-            const isActive = String(project.projectId) === projectId;
+        <ProjectNavigation
+          projects={projects}
+          currentProjectId={projectId}
+          canInvite={currentProject.myRole === 'LEADER'}
+          onSelectProject={(nextProjectId) => navigate(`/projects/${nextProjectId}`)}
+          onCreateProject={() => navigate('/projects/new')}
+          onInviteMember={() => {
+            setInviteKeyword('');
+            setInvitePage(0);
+            setProjectInviteErrorMessage('');
+            setProjectInviteResultMessage('');
+            setIsProjectInviteModalOpen(true);
+          }}
+        />
 
-            return (
-              <button
-                key={project.projectId}
-                type="button"
-                onClick={() => navigate(`/projects/${project.projectId}`)}
-                className={`subhead-3 flex w-[162px] shrink-0 justify-center text-[var(--color-black)] ${
-                  isActive
-                    ? 'h-[75px] items-start rounded-t-[10px] bg-[var(--color-action-primary)] pt-[14px]'
-                    : 'h-[54px] items-center rounded-[10px] bg-[var(--color-gray-50)]'
-                }`}
-              >
-                {project.name}
-              </button>
-            );
-          })}
+        <ProjectOverview
+          project={currentProject}
+          fallbackDescription={description}
+          isBannerVisible={isBannerVisible}
+          announcements={announcements}
+          isAnnouncementsLoading={isAnnouncementsLoading}
+          announcementsErrorMessage={announcementsErrorMessage}
+          myTeams={myTeams}
+          projectTeams={projectTeams}
+          isTeamsLoading={isTeamsLoading}
+          teamsErrorMessage={teamsErrorMessage}
+          onBannerVisibilityChange={setIsBannerVisible}
+          onCreateAnnouncement={handleOpenCreateAnnouncement}
+          onOpenAnnouncement={handleOpenAnnouncementDetail}
+          onMoveTeam={(nextTeamId) => {
+            const team = myTeams.find((item) => String(item.id) === String(nextTeamId));
 
-          <ProjectCreateButton onClick={() => navigate('/projects/new')} />
-
-          {currentProject?.myRole === 'LEADER' && (
-            <button
-              type="button"
-              onClick={() => {
-                setInviteKeyword('');
-                setInvitePage(0);
-                setProjectInviteErrorMessage('');
-                setProjectInviteResultMessage('');
-                setIsProjectInviteModalOpen(true);
-              }}
-              className="mt-[15px] mr-[7px] ml-auto flex size-6 shrink-0 items-center justify-center"
-            >
-              <AddUserIcon />
-            </button>
-          )}
-        </div>
-
-        <main className="relative z-10 min-h-[1032px] overflow-hidden rounded-[10px] bg-[var(--color-white)]">
-          {isBannerVisible && (
-            <section className="flex h-16 items-center bg-[var(--color-action-primary)] px-[21px]">
-              <span className="body-3 flex h-9 w-[75px] shrink-0 items-center justify-center rounded-[300px] bg-[var(--color-white)] text-[var(--color-gray-900)]">
-                {getProjectDayLabel(currentProject)}
-              </span>
-              <p className="subhead-3 ml-5 min-w-0 flex-1 truncate text-[var(--color-gray-700)]">
-                {currentProject.description || description}
-              </p>
-              <ContentVisibilityToggle
-                isVisible
-                onClick={() => setIsBannerVisible(false)}
-                className="ml-4"
-              />
-            </section>
-          )}
-
-          {!isBannerVisible && (
-            <ContentVisibilityToggle
-              isVisible={false}
-              onClick={() => setIsBannerVisible(true)}
-              showLabel="설명 보기"
-              className="absolute top-[22px] right-[21px] z-10"
-            />
-          )}
-
-          <div className="px-[22px] pt-10">
-            <ProjectNotice
-              key={projectId}
-              notices={announcements}
-              isLoading={isAnnouncementsLoading}
-              errorMessage={announcementsErrorMessage}
-              onCreateClick={handleOpenCreateAnnouncement}
-              onDetailClick={handleOpenAnnouncementDetail}
-            />
-
-            <section className="mt-[38px]">
-              <h2 className="subhead-1 text-[var(--color-black)]">내 팀</h2>
-              <div className="mt-[19px] flex [scrollbar-width:none] gap-[14px] overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden">
-                {isTeamsLoading && (
-                  <p className="body-4 py-10 text-[var(--color-gray-500)]">
-                    내 팀을 불러오는 중입니다.
-                  </p>
-                )}
-                {!isTeamsLoading && teamsErrorMessage && (
-                  <p className="body-4 py-10 text-[var(--color-red)]">{teamsErrorMessage}</p>
-                )}
-                {!isTeamsLoading && !teamsErrorMessage && myTeams.length === 0 && (
-                  <p className="body-4 py-10 text-[var(--color-gray-500)]">
-                    아직 가입한 팀이 없습니다.
-                  </p>
-                )}
-                {!isTeamsLoading &&
-                  !teamsErrorMessage &&
-                  myTeams.map((team) => (
-                    <MyTeamCard
-                      key={team.id}
-                      team={team}
-                      onMove={(teamId) =>
-                        navigate(`/projects/${projectId}/teams/${teamId}/meetings`, {
-                          state: {
-                            projectName: currentProject.name,
-                            teamName: team.name,
-                          },
-                        })
-                      }
-                      className="shrink-0"
-                    />
-                  ))}
-              </div>
-            </section>
-
-            <section className="mt-[38px]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-[10px]">
-                  <h2 className="subhead-1 text-[var(--color-black)]">
-                    {currentProject.name}의 팀
-                  </h2>
-                  <span className="subhead-2 text-[var(--color-gray-500)]">
-                    {projectTeams.length}개
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTeamCreateErrorMessage('');
-                    setIsTeamCreateModalOpen(true);
-                  }}
-                  className="text-[14px] leading-[1.4] tracking-[-0.21px] whitespace-nowrap text-[var(--color-gray-700)] underline"
-                >
-                  팀 추가하기
-                </button>
-              </div>
-
-              <div className="mt-[10px] flex [scrollbar-width:none] gap-[14px] overflow-x-auto overflow-y-hidden pb-6 [&::-webkit-scrollbar]:hidden">
-                {isTeamsLoading && (
-                  <p className="body-4 py-10 text-[var(--color-gray-500)]">
-                    프로젝트 팀을 불러오는 중입니다.
-                  </p>
-                )}
-                {!isTeamsLoading && teamsErrorMessage && (
-                  <p className="body-4 py-10 text-[var(--color-red)]">{teamsErrorMessage}</p>
-                )}
-                {!isTeamsLoading && !teamsErrorMessage && projectTeams.length === 0 && (
-                  <p className="body-4 py-10 text-[var(--color-gray-500)]">
-                    아직 생성된 팀이 없습니다.
-                  </p>
-                )}
-                {!isTeamsLoading &&
-                  !teamsErrorMessage &&
-                  projectTeams.map((team) => (
-                    <ProjectTeamCard
-                      key={team.id}
-                      team={team}
-                      onAsk={(teamId) => navigate('/qa', { state: { teamId } })}
-                      className="shrink-0"
-                    />
-                  ))}
-              </div>
-            </section>
-          </div>
-        </main>
+            navigate(`/projects/${projectId}/teams/${nextTeamId}/meetings`, {
+              state: {
+                projectName: currentProject.name,
+                teamName: team?.name,
+              },
+            });
+          }}
+          onCreateTeam={() => {
+            setTeamCreateErrorMessage('');
+            setIsTeamCreateModalOpen(true);
+          }}
+          onAskTeam={(nextTeamId) => navigate('/qa', { state: { teamId: nextTeamId } })}
+        />
       </div>
 
       <AnnouncementFormModal
