@@ -1,51 +1,23 @@
-import { useMemo, useState } from 'react';
-
 import NotificationItem from './NotificationItem';
 
 const notificationTabs = [
-  { id: 'all', label: '전체' },
-  { id: 'unread', label: '읽지 않음' },
-  { id: 'project', label: '프로젝트' },
+  { id: 'ALL', label: '전체' },
+  { id: 'UNREAD', label: '읽지 않음' },
 ];
 
 function NotificationModal({
   isOpen,
   notifications,
+  filter,
+  unreadCount,
   isLoading,
   errorMessage,
   onClose,
+  onFilterChange,
   onNotificationClick,
+  onNotificationHide,
 }) {
-  const [selectedTab, setSelectedTab] = useState('all');
-  const [readNotificationIds, setReadNotificationIds] = useState([]);
-
-  const unreadCount = notifications.filter(
-    (notification) => !readNotificationIds.includes(notification.id),
-  ).length;
-
-  const visibleNotifications = useMemo(() => {
-    if (selectedTab === 'unread') {
-      return notifications.filter((notification) => !readNotificationIds.includes(notification.id));
-    }
-
-    if (selectedTab === 'project') {
-      return notifications.filter(
-        (notification) =>
-          notification.invitationKind === 'project' || notification.type === 'project',
-      );
-    }
-
-    return notifications;
-  }, [notifications, readNotificationIds, selectedTab]);
-
   if (!isOpen) return null;
-
-  const handleNotificationClick = (notification) => {
-    setReadNotificationIds((currentIds) =>
-      currentIds.includes(notification.id) ? currentIds : [...currentIds, notification.id],
-    );
-    onNotificationClick?.(notification);
-  };
 
   return (
     <div
@@ -62,19 +34,19 @@ function NotificationModal({
 
           <div className="flex h-8 items-center gap-1">
             {notificationTabs.map((tab) => {
-              const isSelected = selectedTab === tab.id;
+              const isSelected = filter === tab.id;
 
               return (
                 <button
                   key={tab.id}
                   type="button"
-                  onClick={() => setSelectedTab(tab.id)}
+                  onClick={() => onFilterChange?.(tab.id)}
                   className={`flex h-[30px] items-center justify-center rounded-[10px] bg-[#F2F7F4] px-3 text-[14px] leading-[1.3] font-normal tracking-[-0.28px] ${
                     isSelected ? 'h-8 border border-[#31F5A0] text-[#11E489]' : 'text-[#343836]'
                   }`}
                 >
                   {tab.label}
-                  {tab.id === 'unread' && unreadCount > 0 && (
+                  {tab.id === 'UNREAD' && unreadCount > 0 && (
                     <span className="ml-[10px] flex h-4 min-w-4 items-center justify-center rounded-[30px] bg-[#6EFFC0] px-0.5 text-[12px] leading-[1.3] font-medium tracking-[-0.24px] text-[#101211]">
                       {unreadCount}
                     </span>
@@ -94,7 +66,7 @@ function NotificationModal({
             <div className="flex h-full items-center justify-center">
               <p className="text-[16px] leading-[1.4] text-[#AEB5B2]">{errorMessage}</p>
             </div>
-          ) : visibleNotifications.length === 0 ? (
+          ) : notifications.length === 0 ? (
             <div className="flex h-full items-center justify-center">
               <p className="text-[16px] leading-[1.4] text-[#AEB5B2]">새로운 알림이 없습니다.</p>
             </div>
@@ -103,12 +75,12 @@ function NotificationModal({
               {errorMessage && (
                 <p className="px-5 pb-3 text-center text-[14px] text-[#707673]">{errorMessage}</p>
               )}
-              {visibleNotifications.map((notification) => (
+              {notifications.map((notification) => (
                 <NotificationItem
                   key={notification.id}
                   notification={notification}
-                  isRead={readNotificationIds.includes(notification.id)}
-                  onClick={handleNotificationClick}
+                  onClick={onNotificationClick}
+                  onHide={onNotificationHide}
                 />
               ))}
             </div>

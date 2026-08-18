@@ -2,8 +2,19 @@ import { useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { clearAuthSession, getApiErrorMessage } from '../api/axios';
-import { getProjectInvitations, getMyProfile, getTeamInvitations } from '../api/mypageApi';
+import { getMyProfile } from '../api/mypageApi';
+import {
+  getNotifications,
+  hideNotification,
+  hideNotificationGroup,
+  readNotification,
+  readNotificationGroup,
+} from '../api/notificationApi';
 import NotificationModal from '../components/common/notification/NotificationModal';
+import {
+  getNotificationGroupPayload,
+  normalizeNotification,
+} from '../components/common/notification/notificationUtils';
 import SearchToolbar from '../components/common/SearchToolbar';
 import SidebarNavigation from '../components/common/SidebarNavigation';
 
@@ -29,6 +40,8 @@ function AppLayout() {
   const location = useLocation();
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [notificationFilter, setNotificationFilter] = useState('ALL');
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [isNotificationLoading, setIsNotificationLoading] = useState(true);
   const [notificationErrorMessage, setNotificationErrorMessage] = useState('');
   const [profile, setProfile] = useState(null);
@@ -62,48 +75,96 @@ function AppLayout() {
       setIsNotificationLoading(true);
       setNotificationErrorMessage('');
 
-      const [projectResponse, teamResponse] = await Promise.all([
-        getProjectInvitations(),
-        getTeamInvitations(),
-      ]);
-      const projectInvitations = projectResponse?.result ?? [];
-      const teamInvitations = teamResponse?.result ?? [];
-      const invitationNotifications = projectInvitations.map((invitation) => ({
-        id: `project-invitation-${invitation.inviteId}`,
-        type: 'invitation',
-        invitationKind: 'project',
-        scope: invitation.projectName,
-        createdAt: '방금 전',
-        title: '프로젝트 초대장이 날라왔어요',
-        message: `${invitation.inviterName}님이 ${invitation.projectName} 프로젝트에 초대했어요.`,
-        inviteId: invitation.inviteId,
-        projectId: invitation.projectId,
-      }));
-      const teamInvitationNotifications = teamInvitations.map((invitation) => ({
-        id: `team-invitation-${invitation.inviteId}`,
-        type: 'invitation',
-        invitationKind: 'team',
-        scope: invitation.teamName,
-        createdAt: '방금 전',
-        title: '팀 초대장이 날라왔어요',
-        message: `${invitation.inviterName}님이 ${invitation.teamName} 팀에 초대했어요.`,
-        inviteId: invitation.inviteId,
-        teamId: invitation.teamId,
-      }));
+      const result = await getNotifications({ filter: notificationFilter });
 
-      setNotifications([...invitationNotifications, ...teamInvitationNotifications]);
+      setNotifications((result.items ?? []).map(normalizeNotification));
+      setUnreadNotificationCount(result.unreadCount ?? 0);
     } catch (error) {
       console.error('Failed to load notifications:', error);
-      setNotificationErrorMessage(getApiErrorMessage(error, '초대 알림을 불러오지 못했습니다.'));
+      setNotificationErrorMessage(getApiErrorMessage(error, '알림을 불러오지 못했습니다.'));
       setNotifications([]);
     } finally {
       setIsNotificationLoading(false);
     }
-  }, []);
+  }, [notificationFilter]);
 
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
+
+  const navigateFromNotification = (notification) => {
+    const navigation = notification.navigation ?? {};
+
+    if (navigation.type === 'QA_QUESTION') {
+      navigate('/qa', {
+        state: {
+          questionId: navigation.referenceId,
+          teamId: navigation.teamId,
+        },
+      });
+      return;
+    }
+
+    if (navigation.type === 'MEETING_SUMMARY') {
+      navigate(`/meetings/${navigation.referenceId}/record`, {
+        state: { teamId: navigation.teamId },
+      });
+      return;
+    }
+
+    if (navigation.type === 'TEAM') {
+      navigate(`/projects/${navigation.projectId}/teams/${navigation.teamId}/meetings`);
+      return;
+    }
+
+    if (navigation.type === 'PROJECT') {
+      navigate(`/projects/${navigation.projectId ?? navigation.referenceId}`);
+      return;
+    }
+
+    if (notification.type?.includes('INVITATION')) {
+      navigate('/mypage');
+    }
+  };
+
+  const handleNotificationClick = async (notification) => {
+    try {
+      setNotificationErrorMessage('');
+
+      if (!notification.read) {
+        if (notification.grouped) {
+          await readNotificationGroup(getNotificationGroupPayload(notification));
+        } else {
+          await readNotification(notification.notificationId);
+        }
+      }
+
+      setIsNotificationModalOpen(false);
+      navigateFromNotification(notification);
+      await loadNotifications();
+    } catch (error) {
+      setNotificationErrorMessage(getApiErrorMessage(error, '알림을 읽음 처리하지 못했습니다.'));
+    }
+  };
+
+  const handleNotificationHide = async (notification) => {
+    try {
+      setNotificationErrorMessage('');
+
+      if (notification.grouped) {
+        await hideNotificationGroup({
+          ...getNotificationGroupPayload(notification),
+          read: notification.read,
+        });
+      } else {
+        await hideNotification(notification.notificationId);
+      }
+
+      await loadNotifications();
+    } catch (error) {
+      setNotificationErrorMessage(getApiErrorMessage(error, '알림을 숨기지 못했습니다.'));
+    }
+  };
 
   const activeItem = Object.entries(navigationPaths).find(
     ([, path]) => location.pathname === path || location.pathname.startsWith(`${path}/`),
@@ -147,7 +208,7 @@ function AppLayout() {
           </div>
 
           <SearchToolbar
-            notificationCount={notifications.length}
+            notificationCount={unreadNotificationCount}
             profileName={profile?.name}
             profileOrganization={profile?.organizationName}
             profileEmail={profile?.email}
@@ -176,31 +237,14 @@ function AppLayout() {
       <NotificationModal
         isOpen={isNotificationModalOpen}
         notifications={notifications}
+        filter={notificationFilter}
+        unreadCount={unreadNotificationCount}
         isLoading={isNotificationLoading}
         errorMessage={notificationErrorMessage}
         onClose={() => setIsNotificationModalOpen(false)}
-        onNotificationClick={(notification) => {
-          setIsNotificationModalOpen(false);
-
-          if (notification.type === 'invitation') {
-            navigate('/mypage');
-            return;
-          }
-
-          if (notification.type === 'reply') {
-            navigate('/qa', {
-              state: {
-                questionId: notification.questionId,
-                teamId: notification.teamId,
-              },
-            });
-            return;
-          }
-
-          if (notification.type === 'meeting' || notification.type === 'meeting-summary') {
-            navigate('/meetings');
-          }
-        }}
+        onFilterChange={setNotificationFilter}
+        onNotificationClick={handleNotificationClick}
+        onNotificationHide={handleNotificationHide}
       />
     </div>
   );
