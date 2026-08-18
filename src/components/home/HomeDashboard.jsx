@@ -3,10 +3,8 @@ import { useNavigate } from 'react-router-dom';
 
 import { deleteActionItem, getMyActionItems, updateActionItem } from '../../api/actionItemApi';
 import { getApiErrorMessage, getUserId } from '../../api/axios';
+import { getUnreadAnswerCards, getUnreadAnswerCountsByProject } from '../../api/homeApi';
 import { getMeetings } from '../../api/meetingApi';
-import { getMyProfile } from '../../api/mypageApi';
-import { getMemberProjects } from '../../api/projects';
-import { getTeamQaFeed } from '../../api/qaApi';
 import { getMyTeams, getTeamMembers } from '../../api/teams';
 import { ActionItemForm, EditIcon, TrashIcon } from '../feature/meeting/ActionItemPanel';
 import logo from '../../assets/logo-green.svg';
@@ -66,38 +64,32 @@ const formatQaTime = (dateValue) => {
     .replace(/\. /g, '. ');
 };
 
-const normalizeQaFeed = (feed, currentUser) =>
-  (feed?.items ?? []).map((item) => {
-    const source = feed.canViewSources ? item.answer?.sources?.[0] : null;
-    const answeredAt = item.answer?.updatedAt ?? item.answer?.createdAt ?? item.question.createdAt;
-    const currentUserId = currentUser?.userId ?? getUserId();
+const normalizeUnreadAnswerCards = (cards) =>
+  (cards?.items ?? []).map((item) => {
+    const source = item.sources?.[0];
+    const currentUserId = getUserId();
 
     return {
-      id: item.answer?.answerId ?? `question-${item.question.questionId}`,
-      questionId: item.question.questionId,
+      id: item.answerId ?? `question-${item.questionId}`,
+      notificationId: item.notificationId,
+      questionId: item.questionId,
       isMine: currentUserId
-        ? Number(item.question.questionerId) === Number(currentUserId)
-        : item.question.questionerName === currentUser?.name,
-      name: item.question.questionerName,
-      role: '',
-      time: formatQaTime(item.question.createdAt),
-      projectId: feed.projectId,
-      projectName: feed.projectName,
-      teamId: feed.teamId,
-      teamName: feed.teamName,
-      question: item.question.content,
-      answer: item.answer?.content ?? 'AI가 답변을 생성하고 있습니다.',
-      status:
-        item.status === 'COMPLETED'
-          ? '답변이 완료되었어요.'
-          : item.status === 'PROCESSING'
-            ? 'AI가 답변을 생성하고 있어요.'
-            : item.status === 'PENDING'
-              ? '답변을 준비하고 있어요.'
-              : item.status,
+        ? Number(item.questioner?.userId) === Number(currentUserId)
+        : false,
+      name: item.questioner?.name ?? '알 수 없는 사용자',
+      role: [item.questioner?.department, item.questioner?.position].filter(Boolean).join(' · '),
+      time: formatQaTime(item.questionCreatedAt),
+      projectId: item.projectId,
+      projectName: item.projectName,
+      teamId: item.teamId,
+      teamName: item.teamName,
+      question: item.questionContent,
+      answer: item.answerContent,
+      status: '답변이 완료되었어요.',
       referenceId: source?.referenceId,
       reference: source?.sourceTitle ?? '참고 회의록 없음',
-      answeredAt,
+      referenceNavigation: source?.navigation,
+      answeredAt: item.questionCreatedAt,
     };
   });
 
@@ -294,19 +286,20 @@ function TodoLinkIcon({ isCompleted }) {
 }
 
 function AiReplyStatus({ replies, projects, isLoading, errorMessage, onDetail, onReference }) {
-  const [selectedProjectName, setSelectedProjectName] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [selectedReplyIndex, setSelectedReplyIndex] = useState(0);
   const [isAnswerOverflowing, setIsAnswerOverflowing] = useState(false);
   const answerRef = useRef(null);
-  const projectCounts = replies.reduce((counts, reply) => {
-    counts[reply.projectName] = (counts[reply.projectName] ?? 0) + 1;
-
-    return counts;
-  }, {});
-  const activeProjectName = projectCounts[selectedProjectName]
-    ? selectedProjectName
-    : replies[0]?.projectName;
-  const projectReplies = replies.filter((reply) => reply.projectName === activeProjectName);
+  const selectedProject = projects.find(
+    (project) =>
+      Number(project.projectId) === Number(selectedProjectId) && project.unreadAnswerCount > 0,
+  );
+  const activeProjectId =
+    selectedProject?.projectId ??
+    projects.find((project) => project.unreadAnswerCount > 0)?.projectId;
+  const projectReplies = replies.filter(
+    (reply) => Number(reply.projectId) === Number(activeProjectId),
+  );
   const selectedReply = projectReplies[selectedReplyIndex];
 
   const moveReply = (direction) => {
@@ -364,27 +357,27 @@ function AiReplyStatus({ replies, projects, isLoading, errorMessage, onDetail, o
 
         <div className="mt-3 flex [scrollbar-width:none] gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden">
           {projects.map((project) => {
-            const count = projectCounts[project] ?? 0;
+            const count = project.unreadAnswerCount ?? 0;
 
             return (
               <button
-                key={project}
+                key={project.projectId}
                 type="button"
                 disabled={count === 0}
                 onClick={() => {
-                  setSelectedProjectName(project);
+                  setSelectedProjectId(project.projectId);
                   setSelectedReplyIndex(0);
                 }}
                 className={`flex h-[30px] shrink-0 items-center gap-2 rounded-[30px] py-1.5 pr-1.5 pl-3 text-[14px] leading-[1.3] tracking-[-0.28px] ${
-                  activeProjectName === project
+                  Number(activeProjectId) === Number(project.projectId)
                     ? 'bg-[#101211] text-white'
                     : 'bg-[#F2F7F4] text-[#343836] disabled:opacity-50'
                 }`}
               >
-                {project}
+                {project.projectName}
                 <span
                   className={`flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[12px] font-medium tracking-[-0.24px] ${
-                    activeProjectName === project
+                    Number(activeProjectId) === Number(project.projectId)
                       ? 'bg-[#6EFFC0] text-[#101211]'
                       : 'bg-[#C5CCC9] text-white'
                   }`}
@@ -836,16 +829,16 @@ function HomeDashboard() {
         setMeetingErrorMessage('');
         setAiRepliesErrorMessage('');
 
-        const [memberProjects, myTeams, profileResponse] = await Promise.all([
-          getMemberProjects(getUserId()),
+        const [answerProjects, myTeams] = await Promise.all([
+          getUnreadAnswerCountsByProject(),
           getMyTeams(),
-          getMyProfile(),
         ]);
-        const currentUser = profileResponse?.result ?? profileResponse;
 
-        const [meetingResults, feedResults] = await Promise.all([
+        const [meetingResults, answerCardResults] = await Promise.all([
           Promise.allSettled(myTeams.map((team) => getMeetings(team.teamId))),
-          Promise.allSettled(myTeams.map((team) => getTeamQaFeed(team.teamId))),
+          Promise.allSettled(
+            answerProjects.map((project) => getUnreadAnswerCards(project.projectId)),
+          ),
         ]);
         const nextMeetings = meetingResults
           .flatMap((result, index) => {
@@ -860,9 +853,9 @@ function HomeDashboard() {
               `${secondMeeting.date}T${secondMeeting.time}`,
             ),
           );
-        const nextAiReplies = feedResults
+        const nextAiReplies = answerCardResults
           .flatMap((result) =>
-            result.status === 'fulfilled' ? normalizeQaFeed(result.value, currentUser) : [],
+            result.status === 'fulfilled' ? normalizeUnreadAnswerCards(result.value) : [],
           )
           .sort(
             (firstReply, secondReply) =>
@@ -871,13 +864,13 @@ function HomeDashboard() {
           );
 
         if (isCurrentRequest) {
-          setProjects(memberProjects);
+          setProjects(answerProjects);
           setMeetings(nextMeetings);
           setAiReplies(nextAiReplies);
 
           if (
-            feedResults.length > 0 &&
-            feedResults.every((result) => result.status === 'rejected')
+            answerCardResults.length > 0 &&
+            answerCardResults.every((result) => result.status === 'rejected')
           ) {
             setAiRepliesErrorMessage('AI 답변을 불러오지 못했습니다.');
           }
@@ -907,7 +900,6 @@ function HomeDashboard() {
     };
   }, []);
 
-  const projectNames = projects.map((project) => project.name);
   const today = new Date();
   const initialMeetingDate = formatDateKey(today.getFullYear(), today.getMonth(), today.getDate());
 
@@ -934,7 +926,10 @@ function HomeDashboard() {
   const handleOpenReference = (reply) => {
     if (!reply.referenceId) return;
 
-    navigate(`/projects/${reply.projectId}/teams/${reply.teamId}/meetings/${reply.referenceId}`, {
+    const meetingId = reply.referenceNavigation?.meetingId ?? reply.referenceId;
+    const teamId = reply.referenceNavigation?.teamId ?? reply.teamId;
+
+    navigate(`/projects/${reply.projectId}/teams/${teamId}/meetings/${meetingId}`, {
       state: { teamName: reply.teamName },
     });
   };
@@ -964,7 +959,7 @@ function HomeDashboard() {
           </div>
           <AiReplyStatus
             replies={aiReplies}
-            projects={projectNames}
+            projects={projects}
             isLoading={isAiRepliesLoading}
             errorMessage={aiRepliesErrorMessage}
             onDetail={handleOpenQaDetail}
