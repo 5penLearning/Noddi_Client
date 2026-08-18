@@ -19,6 +19,10 @@ function ProjectOverview({
   onCreateAnnouncement,
   onOpenAnnouncement,
   onMoveTeam,
+  onTodoToggle,
+  onTodoEdit,
+  onTodoDelete,
+  onTodoOpen,
   onCreateTeam,
   onAskTeam,
 }) {
@@ -74,6 +78,10 @@ function ProjectOverview({
                   key={team.id}
                   team={team}
                   onMove={onMoveTeam}
+                  onTodoToggle={onTodoToggle}
+                  onTodoEdit={onTodoEdit}
+                  onTodoDelete={onTodoDelete}
+                  onTodoOpen={onTodoOpen}
                   className="shrink-0"
                 />
               ))}

@@ -1,10 +1,19 @@
 import { useEffect, useState } from 'react';
 
-import { deleteActionItem, getMyActionItems, updateActionItem } from '../../api/actionItemApi';
+import {
+  deleteActionItem,
+  getMyActionItemsByTeam,
+  updateActionItem,
+} from '../../api/actionItemApi';
 import { getApiErrorMessage } from '../../api/axios';
 import { getTeamMembers } from '../../api/teams';
 import todoLinkChainIcon from '../../assets/icons/home-todo/link-chain.svg';
 import todoLinkLineIcon from '../../assets/icons/home-todo/link-line.svg';
+import {
+  getStoredCompletedActionItems,
+  removeStoredCompletedActionItem,
+  syncStoredCompletedActionItem,
+} from '../../utils/completedActionItems';
 import { ActionItemForm, EditIcon, TrashIcon } from '../feature/meeting/ActionItemPanel';
 
 function TodoLinkIcon({ isCompleted }) {
@@ -30,10 +39,12 @@ const INITIAL_ACTION_ITEM_FORM = {
 };
 
 export default function TodoList({ description, meetings, onOpenMeetingRecord }) {
-  const [todoItems, setTodoItems] = useState([]);
+  const [projectTodos, setProjectTodos] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [updatingItemId, setUpdatingItemId] = useState(null);
   const [deletingItemId, setDeletingItemId] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [editingForm, setEditingForm] = useState(INITIAL_ACTION_ITEM_FORM);
   const [editingMembers, setEditingMembers] = useState([]);
@@ -48,14 +59,58 @@ export default function TodoList({ description, meetings, onOpenMeetingRecord })
         setIsLoading(true);
         setErrorMessage('');
 
-        const actionItems = await getMyActionItems();
+        const teamGroups = await getMyActionItemsByTeam();
+        const projectGroupMap = new Map();
+
+        teamGroups.forEach((teamGroup) => {
+          const projectKey = String(teamGroup.projectId);
+          const currentProject = projectGroupMap.get(projectKey) ?? {
+            projectId: teamGroup.projectId,
+            projectName: teamGroup.projectName,
+            actionItems: [],
+          };
+
+          currentProject.actionItems.push(
+            ...(teamGroup.actionItems ?? []).map((item) => ({
+              ...item,
+              projectId: teamGroup.projectId,
+              projectName: teamGroup.projectName,
+              teamId: teamGroup.teamId,
+              teamName: teamGroup.teamName,
+            })),
+          );
+          projectGroupMap.set(projectKey, currentProject);
+        });
+
+        getStoredCompletedActionItems().forEach((item) => {
+          const projectKey = String(item.projectId);
+          const currentProject = projectGroupMap.get(projectKey);
+
+          if (!currentProject) return;
+          if (currentProject.actionItems.some((todo) => todo.actionItemId === item.actionItemId)) {
+            return;
+          }
+
+          currentProject.actionItems.push(item);
+        });
+
+        const nextProjectTodos = [...projectGroupMap.values()];
 
         if (isCurrentRequest) {
-          setTodoItems(actionItems);
+          setProjectTodos(nextProjectTodos);
+          setSelectedProjectId((currentProjectId) => {
+            const hasCurrentProject = nextProjectTodos.some(
+              (project) => String(project.projectId) === String(currentProjectId),
+            );
+
+            return hasCurrentProject
+              ? currentProjectId
+              : (nextProjectTodos[0]?.projectId ?? null);
+          });
         }
       } catch (error) {
         if (isCurrentRequest) {
-          setTodoItems([]);
+          setProjectTodos([]);
           setErrorMessage(getApiErrorMessage(error, '할 일 목록을 불러오지 못했습니다.'));
         }
       } finally {
@@ -78,10 +133,15 @@ export default function TodoList({ description, meetings, onOpenMeetingRecord })
     try {
       setUpdatingItemId(actionItem.actionItemId);
       setErrorMessage('');
-      setTodoItems((currentItems) =>
-        currentItems.map((item) =>
-          item.actionItemId === actionItem.actionItemId ? { ...item, status: nextStatus } : item,
-        ),
+      setProjectTodos((currentProjects) =>
+        currentProjects.map((project) => ({
+          ...project,
+          actionItems: project.actionItems.map((item) =>
+            item.actionItemId === actionItem.actionItemId
+              ? { ...item, status: nextStatus }
+              : item,
+          ),
+        })),
       );
 
       await updateActionItem(actionItem.actionItemId, {
@@ -90,13 +150,17 @@ export default function TodoList({ description, meetings, onOpenMeetingRecord })
         dueDate: actionItem.dueDate,
         status: nextStatus,
       });
+      syncStoredCompletedActionItem({ ...actionItem, status: nextStatus });
     } catch (error) {
-      setTodoItems((currentItems) =>
-        currentItems.map((item) =>
-          item.actionItemId === actionItem.actionItemId
-            ? { ...item, status: actionItem.status }
-            : item,
-        ),
+      setProjectTodos((currentProjects) =>
+        currentProjects.map((project) => ({
+          ...project,
+          actionItems: project.actionItems.map((item) =>
+            item.actionItemId === actionItem.actionItemId
+              ? { ...item, status: actionItem.status }
+              : item,
+          ),
+        })),
       );
       setErrorMessage(getApiErrorMessage(error, '할 일 상태를 변경하지 못했습니다.'));
     } finally {
@@ -115,10 +179,7 @@ export default function TodoList({ description, meetings, onOpenMeetingRecord })
     setEditingMembers([]);
     setErrorMessage('');
 
-    const matchingMeeting = meetings.find(
-      (meeting) => String(meeting.meetingId) === String(actionItem.meetingId),
-    );
-    const teamId = matchingMeeting?.rawMeeting?.teamId;
+    const teamId = actionItem.teamId;
 
     if (!teamId) return;
 
@@ -168,21 +229,34 @@ export default function TodoList({ description, meetings, onOpenMeetingRecord })
         dueDate: editingForm.dueDate || null,
         status: editingForm.status,
       });
-      setTodoItems((currentItems) =>
-        currentItems.map((item) =>
-          item.actionItemId === editingItem.actionItemId
-            ? {
-                ...item,
-                content,
-                assigneeUserId: editingForm.assigneeUserId
-                  ? Number(editingForm.assigneeUserId)
-                  : null,
-                dueDate: editingForm.dueDate || null,
-                status: editingForm.status,
-              }
-            : item,
-        ),
+      setProjectTodos((currentProjects) =>
+        currentProjects.map((project) => ({
+          ...project,
+          actionItems: project.actionItems.map((item) =>
+            item.actionItemId === editingItem.actionItemId
+              ? {
+                  ...item,
+                  content,
+                  assigneeUserId: editingForm.assigneeUserId
+                    ? Number(editingForm.assigneeUserId)
+                    : null,
+                  dueDate: editingForm.dueDate || null,
+                  status: editingForm.status,
+                }
+              : item,
+          ),
+        })),
       );
+      const updatedItem = {
+        ...editingItem,
+        content,
+        assigneeUserId: editingForm.assigneeUserId
+          ? Number(editingForm.assigneeUserId)
+          : null,
+        dueDate: editingForm.dueDate || null,
+        status: editingForm.status,
+      };
+      syncStoredCompletedActionItem(updatedItem);
       setEditingItem(null);
       setEditingForm(INITIAL_ACTION_ITEM_FORM);
       setEditingMembers([]);
@@ -200,8 +274,14 @@ export default function TodoList({ description, meetings, onOpenMeetingRecord })
       setDeletingItemId(actionItem.actionItemId);
       setErrorMessage('');
       await deleteActionItem(actionItem.actionItemId);
-      setTodoItems((currentItems) =>
-        currentItems.filter((item) => item.actionItemId !== actionItem.actionItemId),
+      removeStoredCompletedActionItem(actionItem.actionItemId);
+      setProjectTodos((currentProjects) =>
+        currentProjects.map((project) => ({
+          ...project,
+          actionItems: project.actionItems.filter(
+            (item) => item.actionItemId !== actionItem.actionItemId,
+          ),
+        })),
       );
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, '할 일을 삭제하지 못했습니다.'));
@@ -210,21 +290,52 @@ export default function TodoList({ description, meetings, onOpenMeetingRecord })
     }
   };
 
+  const selectedProject =
+    projectTodos.find(
+      (project) => String(project.projectId) === String(selectedProjectId),
+    ) ?? projectTodos[0];
+  const todoItems = selectedProject?.actionItems ?? [];
   const visibleItems = todoItems.slice(0, 10);
 
   return (
-    <section className="flex h-[311px] min-h-0 flex-col gap-5 overflow-hidden rounded-[10px] bg-white p-5">
-      <div className="flex flex-col gap-3">
+    <section className="flex h-[311px] min-h-0 flex-col gap-3 overflow-hidden rounded-[10px] bg-white p-5">
+      <div className="flex items-center justify-between">
         <div className="flex items-end gap-2">
           <h2 className="text-[20px] leading-[1.3] font-semibold text-black">To-do list</h2>
           <p className="text-[16px] leading-[1.4] font-medium tracking-[-0.16px] text-[#8E9592]">
             {description}
           </p>
         </div>
-
+        <button
+          type="button"
+          onClick={() => setIsEditing((currentValue) => !currentValue)}
+          aria-pressed={isEditing}
+          className="shrink-0 text-[14px] leading-[1.4] tracking-[-0.21px] text-[#525654] underline"
+        >
+          편집하기
+        </button>
       </div>
 
-      <div className="relative grid h-[184px] grid-flow-col grid-cols-2 grid-rows-5 gap-x-[60px] gap-y-4">
+      <div className="flex shrink-0 [scrollbar-width:none] gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden">
+        {projectTodos.map((project) => {
+          const isSelected = String(project.projectId) === String(selectedProject?.projectId);
+
+          return (
+            <button
+              key={project.projectId}
+              type="button"
+              onClick={() => setSelectedProjectId(project.projectId)}
+              className={`h-[30px] shrink-0 rounded-[30px] px-3 py-1.5 text-[14px] leading-[1.3] tracking-[-0.28px] ${
+                isSelected ? 'bg-[#101211] text-white' : 'bg-[#F2F7F4] text-[#343836]'
+              }`}
+            >
+              {project.projectName}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="relative grid min-h-0 flex-1 grid-flow-col grid-cols-2 grid-rows-5 gap-x-[60px] gap-y-4">
         {isLoading && (
           <p className="absolute inset-0 flex items-center justify-center text-[14px] text-[#8E9592]">
             할 일 목록을 불러오는 중입니다.
@@ -235,9 +346,14 @@ export default function TodoList({ description, meetings, onOpenMeetingRecord })
             {errorMessage}
           </p>
         )}
-        {!isLoading && !errorMessage && todoItems.length === 0 && (
+        {!isLoading && !errorMessage && projectTodos.length === 0 && (
           <p className="absolute inset-0 flex items-center justify-center text-[14px] text-[#8E9592]">
-            등록된 할 일이 없습니다.
+            참여 중인 프로젝트가 없습니다.
+          </p>
+        )}
+        {!isLoading && !errorMessage && projectTodos.length > 0 && todoItems.length === 0 && (
+          <p className="absolute inset-0 flex items-center justify-center text-[14px] text-[#8E9592]">
+            선택한 프로젝트에 미완료 할 일이 없습니다.
           </p>
         )}
         {!isLoading &&
@@ -277,19 +393,21 @@ export default function TodoList({ description, meetings, onOpenMeetingRecord })
                     <TodoLinkIcon isCompleted={isCompleted} />
                   </button>
                 </div>
-                <div className="ml-auto flex shrink-0 items-center gap-1 text-[#707673]">
-                  <button type="button" onClick={() => openEditModal(item)} className="size-5">
-                    <EditIcon />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={deletingItemId === item.actionItemId}
-                    onClick={() => handleDeleteTodo(item)}
-                    className="size-5 disabled:opacity-40"
-                  >
-                    <TrashIcon />
-                  </button>
-                </div>
+                {isEditing && (
+                  <div className="ml-auto flex shrink-0 items-center gap-1 text-[#707673]">
+                    <button type="button" onClick={() => openEditModal(item)} className="size-5">
+                      <EditIcon />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deletingItemId === item.actionItemId}
+                      onClick={() => handleDeleteTodo(item)}
+                      className="size-5 disabled:opacity-40"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -333,4 +451,3 @@ export default function TodoList({ description, meetings, onOpenMeetingRecord })
     </section>
   );
 }
-

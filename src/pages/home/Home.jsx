@@ -125,7 +125,7 @@ function Home() {
     if (!actionItem.meetingId) return;
 
     navigate(`/meetings/${actionItem.meetingId}/record`, {
-      state: { teamName: meeting?.teams[0] },
+      state: { teamName: meeting?.teams[0] ?? actionItem.teamName },
     });
   };
 
