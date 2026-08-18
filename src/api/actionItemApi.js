@@ -35,3 +35,9 @@ export const getMyActionItems = async () => {
 
   return data.result ?? [];
 };
+
+export const getMyActionItemsByTeam = async () => {
+  const { data } = await api.get('/api/v1/action-items/me/by-team');
+
+  return data.result ?? [];
+};

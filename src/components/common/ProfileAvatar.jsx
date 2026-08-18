@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 
 import { getUserProfileImage } from '../../api/mypageApi';
+import profileEmptyLogo from '../../assets/icons/profile/profile-empty-logo.svg';
 
 function ProfileAvatar({
   userId,
   profileImageUrl,
   name = '사용자',
   fallbackSrc,
+  showBrandFallback = true,
   refreshKey,
   className = '',
 }) {
@@ -63,13 +65,29 @@ function ProfileAvatar({
     };
   }, [globalRefreshKey, profileImageUrl, refreshKey, userId]);
 
-  if (imageUrl || fallbackSrc) {
+  if (imageUrl || (fallbackSrc && !showBrandFallback)) {
     return (
       <img
         src={imageUrl || fallbackSrc}
         alt={`${name} 프로필`}
         className={`rounded-full object-cover ${className}`}
       />
+    );
+  }
+
+  if (showBrandFallback) {
+    return (
+      <span
+        role="img"
+        aria-label={`${name} 프로필`}
+        className={`relative inline-flex items-center justify-center rounded-full border border-[#D7DEDB] bg-[#E9EFED] ${className}`}
+      >
+        <img
+          src={profileEmptyLogo}
+          alt=""
+          className="h-[58.33%] w-[45.83%]"
+        />
+      </span>
     );
   }
 

@@ -16,6 +16,12 @@ import {
   updateAnnouncement,
 } from '../../api/announcements';
 import { getApiErrorMessage, getUserId } from '../../api/axios';
+import { getMeetings } from '../../api/meetingApi';
+import {
+  deleteActionItem,
+  getMyActionItemsByTeam,
+  updateActionItem,
+} from '../../api/actionItemApi';
 import {
   getInvitableOrganizationMembers,
   getMemberProjects,
@@ -32,6 +38,11 @@ import {
   inviteTeamMember,
 } from '../../api/teams';
 import { projectPageMockData } from '../../mocks/projectPageData';
+import {
+  getStoredCompletedActionItems,
+  removeStoredCompletedActionItem,
+  syncStoredCompletedActionItem,
+} from '../../utils/completedActionItems';
 
 function ProjectPage() {
   const navigate = useNavigate();
@@ -196,13 +207,20 @@ function ProjectPage() {
         setIsTeamsLoading(true);
         setTeamsErrorMessage('');
 
-        const [teamList, myTeamList] = await Promise.all([
+        const [teamList, myTeamList, todoGroups] = await Promise.all([
           getProjectTeams(projectId),
           getMyTeams(),
+          getMyActionItemsByTeam(),
         ]);
-        const teamMemberResults = await Promise.allSettled(
-          teamList.map((team) => getTeamMembers(team.id)),
-        );
+        const [teamMemberResults, teamMeetingResults] = await Promise.all([
+          Promise.allSettled(teamList.map((team) => getTeamMembers(team.id))),
+          Promise.allSettled(teamList.map((team) => getMeetings(team.id))),
+        ]);
+        const today = new Date();
+        const todayDateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
+          2,
+          '0',
+        )}-${String(today.getDate()).padStart(2, '0')}`;
         const teamsWithMembers = teamList.map((team, index) => ({
           ...team,
           members:
@@ -213,17 +231,83 @@ function ProjectPage() {
                   avatarUrl: member.profileImageUrl ?? member.avatarUrl,
                 }))
               : [],
+          todayMeetings:
+            teamMeetingResults[index].status === 'fulfilled'
+              ? teamMeetingResults[index].value
+                  .filter((meeting) => {
+                    const startAt = new Date(meeting.scheduledStartAt);
+
+                    if (Number.isNaN(startAt.getTime())) return false;
+
+                    const meetingDateKey = `${startAt.getFullYear()}-${String(
+                      startAt.getMonth() + 1,
+                    ).padStart(2, '0')}-${String(startAt.getDate()).padStart(2, '0')}`;
+
+                    return meetingDateKey === todayDateKey;
+                  })
+                  .sort(
+                    (firstMeeting, secondMeeting) =>
+                      new Date(firstMeeting.scheduledStartAt).getTime() -
+                      new Date(secondMeeting.scheduledStartAt).getTime(),
+                  )
+                  .map((meeting) => {
+                    const startAt = new Date(meeting.scheduledStartAt);
+                    const time = `${String(startAt.getHours()).padStart(2, '0')}:${String(startAt.getMinutes()).padStart(2, '0')}`;
+
+                    return {
+                      ...meeting,
+                      id: meeting.meetingId,
+                      title: `${time} ${meeting.title}`,
+                    };
+                  })
+              : [],
         }));
         const teamMembersById = new Map(
           teamsWithMembers.map((team) => [String(team.id), team.members]),
         );
+        const todoGroupByTeamId = new Map(
+          todoGroups.map((group) => [String(group.teamId), group]),
+        );
+        getStoredCompletedActionItems().forEach((item) => {
+          const todoGroup = todoGroupByTeamId.get(String(item.teamId));
+
+          if (!todoGroup || String(todoGroup.projectId) !== String(projectId)) return;
+          if (
+            (todoGroup.actionItems ?? []).some(
+              (todo) => todo.actionItemId === item.actionItemId,
+            )
+          ) {
+            return;
+          }
+
+          todoGroup.actionItems = [...(todoGroup.actionItems ?? []), item];
+        });
         const currentProjectTeamIds = new Set(teamsWithMembers.map((team) => String(team.id)));
         const currentProjectMyTeams = myTeamList
           .filter((team) => currentProjectTeamIds.has(String(team.id)))
-          .map((team) => ({
-            ...team,
-            members: teamMembersById.get(String(team.id)) ?? [],
-          }));
+          .map((team) => {
+            const todoGroup = todoGroupByTeamId.get(String(team.id));
+
+            return {
+              ...team,
+              members: teamMembersById.get(String(team.id)) ?? [],
+              todayMeetings:
+                teamsWithMembers.find(
+                  (projectTeam) => String(projectTeam.id) === String(team.id),
+                )?.todayMeetings ?? [],
+              todoCount: todoGroup?.todoCount ?? 0,
+              todos: (todoGroup?.actionItems ?? []).map((item) => ({
+                ...item,
+                projectId: todoGroup?.projectId ?? Number(projectId),
+                projectName: todoGroup?.projectName ?? currentProject.name,
+                teamId: team.id,
+                teamName: team.name,
+                id: item.actionItemId,
+                title: item.content,
+                completed: item.status === 'COMPLETED',
+              })),
+            };
+          });
 
         if (isCurrentRequest) {
           setProjectTeams(teamsWithMembers);
@@ -368,6 +452,95 @@ function ProjectPage() {
       setTeamCreateErrorMessage(getApiErrorMessage(error, '팀을 생성하지 못했습니다.'));
     } finally {
       setIsTeamCreating(false);
+    }
+  };
+
+  const handleToggleTeamTodo = async (actionItemId) => {
+    const actionItem = myTeams
+      .flatMap((team) => team.todos ?? [])
+      .find((item) => item.actionItemId === actionItemId);
+
+    if (!actionItem) return;
+
+    const nextStatus = actionItem.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+
+    try {
+      setTeamsErrorMessage('');
+      await updateActionItem(actionItemId, {
+        content: actionItem.content,
+        assigneeUserId: actionItem.assigneeUserId,
+        dueDate: actionItem.dueDate,
+        status: nextStatus,
+      });
+      syncStoredCompletedActionItem({ ...actionItem, status: nextStatus });
+      setMyTeams((currentTeams) =>
+        currentTeams.map((team) => ({
+          ...team,
+          todos: (team.todos ?? []).map((todo) =>
+            todo.actionItemId === actionItemId
+              ? { ...todo, status: nextStatus, completed: nextStatus === 'COMPLETED' }
+              : todo,
+          ),
+        })),
+      );
+    } catch (error) {
+      setTeamsErrorMessage(getApiErrorMessage(error, '할 일 상태를 변경하지 못했습니다.'));
+    }
+  };
+
+  const handleEditTeamTodo = async (actionItemId, changes) => {
+    const actionItem = myTeams
+      .flatMap((team) => team.todos ?? [])
+      .find((item) => item.actionItemId === actionItemId);
+
+    if (!actionItem) return;
+
+    try {
+      setTeamsErrorMessage('');
+      await updateActionItem(actionItemId, changes);
+      const updatedActionItem = { ...actionItem, ...changes };
+      syncStoredCompletedActionItem(updatedActionItem);
+      setMyTeams((currentTeams) =>
+        currentTeams.map((team) => ({
+          ...team,
+          todos: (team.todos ?? []).map((todo) =>
+            todo.actionItemId === actionItemId
+              ? {
+                  ...todo,
+                  ...changes,
+                  title: changes.content,
+                  completed: changes.status === 'COMPLETED',
+                }
+              : todo,
+          ),
+        })),
+      );
+    } catch (error) {
+      setTeamsErrorMessage(getApiErrorMessage(error, '할 일을 수정하지 못했습니다.'));
+      throw error;
+    }
+  };
+
+  const handleDeleteTeamTodo = async (actionItemId) => {
+    if (!window.confirm('이 할 일을 삭제할까요?')) return;
+
+    try {
+      setTeamsErrorMessage('');
+      await deleteActionItem(actionItemId);
+      removeStoredCompletedActionItem(actionItemId);
+      setMyTeams((currentTeams) =>
+        currentTeams.map((team) => {
+          const nextTodos = (team.todos ?? []).filter(
+            (todo) => todo.actionItemId !== actionItemId,
+          );
+
+          return nextTodos.length === (team.todos ?? []).length
+            ? team
+            : { ...team, todos: nextTodos, todoCount: nextTodos.length };
+        }),
+      );
+    } catch (error) {
+      setTeamsErrorMessage(getApiErrorMessage(error, '할 일을 삭제하지 못했습니다.'));
     }
   };
 
@@ -549,6 +722,16 @@ function ProjectPage() {
                 projectName: currentProject.name,
                 teamName: team?.name,
               },
+            });
+          }}
+          onTodoToggle={handleToggleTeamTodo}
+          onTodoEdit={handleEditTeamTodo}
+          onTodoDelete={handleDeleteTeamTodo}
+          onTodoOpen={(todo) => {
+            if (!todo.meetingId) return;
+
+            navigate(`/meetings/${todo.meetingId}/record`, {
+              state: { teamName: todo.teamName },
             });
           }}
           onCreateTeam={() => {
