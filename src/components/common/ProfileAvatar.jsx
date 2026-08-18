@@ -1,6 +1,12 @@
-import { useEffect, useState } from 'react';
+import {
+  useEffect,
+  useState,
+} from 'react';
 
-import { getUserProfileImage } from '../../api/mypageApi';
+import {
+  getUserProfileImage,
+} from '../../api/mypageApi';
+
 import profileEmptyLogo from '../../assets/icons/profile/profile-empty-logo.svg';
 
 function ProfileAvatar({
@@ -12,18 +18,33 @@ function ProfileAvatar({
   refreshKey,
   className = '',
 }) {
-  const [imageUrl, setImageUrl] = useState(profileImageUrl ?? '');
-  const [globalRefreshKey, setGlobalRefreshKey] = useState(0);
+  const [
+    imageUrl,
+    setImageUrl,
+  ] = useState(profileImageUrl ?? '');
+
+  const [
+    globalRefreshKey,
+    setGlobalRefreshKey,
+  ] = useState(0);
 
   useEffect(() => {
     const refreshProfileImage = () => {
-      setGlobalRefreshKey((currentKey) => currentKey + 1);
+      setGlobalRefreshKey(
+        (currentKey) => currentKey + 1,
+      );
     };
 
-    window.addEventListener('profile-updated', refreshProfileImage);
+    window.addEventListener(
+      'profile-updated',
+      refreshProfileImage,
+    );
 
     return () => {
-      window.removeEventListener('profile-updated', refreshProfileImage);
+      window.removeEventListener(
+        'profile-updated',
+        refreshProfileImage,
+      );
     };
   }, []);
 
@@ -33,7 +54,10 @@ function ProfileAvatar({
 
     setImageUrl(profileImageUrl ?? '');
 
-    if (!userId || profileImageUrl === null) {
+    if (
+      !userId ||
+      profileImageUrl === null
+    ) {
       return () => {
         isCurrentRequest = false;
       };
@@ -41,11 +65,19 @@ function ProfileAvatar({
 
     const loadProfileImage = async () => {
       try {
-        const imageBlob = await getUserProfileImage(userId);
+        const imageBlob =
+          await getUserProfileImage(userId);
 
-        if (!isCurrentRequest || !imageBlob?.size) return;
+        if (
+          !isCurrentRequest ||
+          !imageBlob?.size
+        ) {
+          return;
+        }
 
-        objectUrl = URL.createObjectURL(imageBlob);
+        objectUrl =
+          URL.createObjectURL(imageBlob);
+
         setImageUrl(objectUrl);
       } catch {
         if (isCurrentRequest) {
@@ -63,14 +95,22 @@ function ProfileAvatar({
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [globalRefreshKey, profileImageUrl, refreshKey, userId]);
+  }, [
+    globalRefreshKey,
+    profileImageUrl,
+    refreshKey,
+    userId,
+  ]);
 
-  if (imageUrl || (fallbackSrc && !showBrandFallback)) {
+  if (
+    imageUrl ||
+    (fallbackSrc && !showBrandFallback)
+  ) {
     return (
       <img
         src={imageUrl || fallbackSrc}
         alt={`${name} 프로필`}
-        className={`rounded-full object-cover ${className}`}
+        className={`rounded-full bg-[#EFFFF7] object-cover ${className}`}
       />
     );
   }
@@ -80,12 +120,12 @@ function ProfileAvatar({
       <span
         role="img"
         aria-label={`${name} 프로필`}
-        className={`relative inline-flex items-center justify-center rounded-full border border-[#D7DEDB] bg-[#E9EFED] ${className}`}
+        className={`relative inline-flex items-center justify-center overflow-hidden rounded-full border border-[#CDEEDD] bg-[#EFFFF7] ${className}`}
       >
         <img
           src={profileEmptyLogo}
           alt=""
-          className="h-[58.33%] w-[45.83%]"
+          className="h-[56%] w-[44%]"
         />
       </span>
     );
@@ -95,7 +135,7 @@ function ProfileAvatar({
     <span
       role="img"
       aria-label={`${name} 프로필`}
-      className={`inline-flex items-center justify-center rounded-full bg-[#EFFFF7] font-semibold text-[#101211] ${className}`}
+      className={`inline-flex items-center justify-center rounded-full bg-[#DFFFF0] font-semibold text-[#176C4B] ${className}`}
     >
       {name.trim().charAt(0) || '사'}
     </span>

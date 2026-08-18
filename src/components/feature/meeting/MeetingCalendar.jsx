@@ -1,3 +1,4 @@
+import calendarArrowIcon from '../../../assets/icons/home-meeting/calendar-arrow.svg';
 import scheduleDotPrimary from '../../../assets/icons/home-meeting/schedule-dot-primary.svg';
 import scheduleDotSecondary from '../../../assets/icons/home-meeting/schedule-dot-secondary.svg';
 
@@ -25,9 +26,7 @@ function formatDateKey(date) {
   return `${year}-${month}-${day}`;
 }
 
-function getCalendarDates(
-  viewDate,
-) {
+function getCalendarDates(viewDate) {
   const year =
     viewDate.getFullYear();
 
@@ -155,16 +154,20 @@ function MeetingCalendar({
         </h2>
       </div>
 
-      <div className="mt-5 flex items-center justify-center gap-5">
+      <div className="mt-5 flex items-center justify-center gap-4">
         <button
           type="button"
           onClick={() =>
             moveMonth(-1)
           }
-          className="text-[24px] font-light leading-none text-[#ABB4B0] transition-colors hover:text-[#31F5A0] active:text-[#31F5A0]"
+          className="flex size-8 items-center justify-center rounded-[8px] transition hover:bg-[#EFFFF7] active:bg-[#DFFFF0]"
           aria-label="이전 달"
         >
-          ‹
+          <img
+            src={calendarArrowIcon}
+            alt=""
+            className="h-[7.12px] w-[15.5px] -rotate-90"
+          />
         </button>
 
         <strong className="min-w-[110px] text-center text-[16px] font-semibold text-[#101211]">
@@ -179,10 +182,14 @@ function MeetingCalendar({
           onClick={() =>
             moveMonth(1)
           }
-          className="text-[24px] font-light leading-none text-[#ABB4B0] transition-colors hover:text-[#31F5A0] active:text-[#31F5A0]"
+          className="flex size-8 items-center justify-center rounded-[8px] transition hover:bg-[#EFFFF7] active:bg-[#DFFFF0]"
           aria-label="다음 달"
         >
-          ›
+          <img
+            src={calendarArrowIcon}
+            alt=""
+            className="h-[7.12px] w-[15.5px] rotate-90"
+          />
         </button>
       </div>
 
