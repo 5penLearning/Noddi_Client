@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import OutlineButton from '../../components/common/OutlineButton';
 import AnnouncementDetailModal from '../../components/project/AnnouncementDetailModal';
 import AnnouncementFormModal from '../../components/project/AnnouncementFormModal';
 import AddUserIcon from '../../components/project/AddUserIcon';
+import ContentVisibilityToggle from '../../components/project/ContentVisibilityToggle';
 import MyTeamCard from '../../components/project/MyTeamCard';
 import ProjectCreateButton from '../../components/project/ProjectCreateButton';
 import ProjectInviteModal from '../../components/project/ProjectInviteModal';
@@ -27,10 +27,14 @@ import {
   removeProjectMember,
   updateProjectMemberRole,
 } from '../../api/projects';
-import { createTeam, getMyTeams, getProjectTeams, getTeamMembers } from '../../api/teams';
+import {
+  createTeam,
+  getMyTeams,
+  getProjectTeams,
+  getTeamMembers,
+  inviteTeamMember,
+} from '../../api/teams';
 import { projectPageMockData } from '../../mocks/projectPageData';
-
-import chevronIcon from '../../assets/icons/profile/chevron.svg';
 
 const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
 
@@ -209,10 +213,10 @@ function ProjectPage() {
   }, [isProjectInviteModalOpen, loadInvitableMembers]);
 
   useEffect(() => {
-    if (!isProjectInviteModalOpen) return;
+    if (!isProjectInviteModalOpen && !isTeamCreateModalOpen) return;
 
     loadProjectMembers();
-  }, [isProjectInviteModalOpen, loadProjectMembers]);
+  }, [isProjectInviteModalOpen, isTeamCreateModalOpen, loadProjectMembers]);
 
   useEffect(() => {
     if (!projectId || !currentProject) return;
@@ -369,7 +373,7 @@ function ProjectPage() {
     }
   };
 
-  const handleCreateTeam = async ({ name, description: teamDescription }) => {
+  const handleCreateTeam = async ({ name, description: teamDescription, selectedUserIds = [] }) => {
     try {
       setIsTeamCreating(true);
       setTeamCreateErrorMessage('');
@@ -378,6 +382,12 @@ function ProjectPage() {
         name,
         description: teamDescription,
       });
+
+      if (selectedUserIds.length > 0) {
+        await Promise.allSettled(
+          selectedUserIds.map((targetUserId) => inviteTeamMember(createdTeamId, targetUserId)),
+        );
+      }
 
       setIsTeamCreateModalOpen(false);
       navigate(`/projects/${projectId}/teams/${createdTeamId}/meetings`, {
@@ -582,26 +592,21 @@ function ProjectPage() {
               <p className="subhead-3 ml-5 min-w-0 flex-1 truncate text-[var(--color-gray-700)]">
                 {currentProject.description || description}
               </p>
-              <button
-                type="button"
+              <ContentVisibilityToggle
+                isVisible
                 onClick={() => setIsBannerVisible(false)}
-                className="body-4 ml-4 flex shrink-0 items-center gap-[7px] tracking-[-0.16px] text-[var(--color-gray-600)]"
-              >
-                <img src={chevronIcon} alt="" className="h-[7px] w-[15px]" />
-                숨기기
-              </button>
+                className="ml-4"
+              />
             </section>
           )}
 
           {!isBannerVisible && (
-            <button
-              type="button"
+            <ContentVisibilityToggle
+              isVisible={false}
               onClick={() => setIsBannerVisible(true)}
-              className="body-4 absolute top-[22px] right-[21px] z-10 flex items-center gap-[7px] tracking-[-0.16px] text-[var(--color-gray-600)]"
-            >
-              <img src={chevronIcon} alt="" className="h-[7px] w-[15px] rotate-180" />
-              설명 보기
-            </button>
+              showLabel="설명 보기"
+              className="absolute top-[22px] right-[21px] z-10"
+            />
           )}
 
           <div className="px-[22px] pt-10">
@@ -660,18 +665,19 @@ function ProjectPage() {
                     {projectTeams.length}개
                   </span>
                 </div>
-                <OutlineButton
+                <button
+                  type="button"
                   onClick={() => {
                     setTeamCreateErrorMessage('');
                     setIsTeamCreateModalOpen(true);
                   }}
-                  className="h-[44px] w-[114px] !px-0 !py-0"
+                  className="text-[14px] leading-[1.4] tracking-[-0.21px] whitespace-nowrap text-[var(--color-gray-700)] underline"
                 >
                   팀 추가하기
-                </OutlineButton>
+                </button>
               </div>
 
-              <div className="mt-[10px] flex [scrollbar-width:none] gap-[14px] overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden">
+              <div className="mt-[10px] flex [scrollbar-width:none] gap-[14px] overflow-x-auto overflow-y-hidden pb-6 [&::-webkit-scrollbar]:hidden">
                 {isTeamsLoading && (
                   <p className="body-4 py-10 text-[var(--color-gray-500)]">
                     프로젝트 팀을 불러오는 중입니다.
@@ -688,7 +694,12 @@ function ProjectPage() {
                 {!isTeamsLoading &&
                   !teamsErrorMessage &&
                   projectTeams.map((team) => (
-                    <ProjectTeamCard key={team.id} team={team} className="shrink-0" />
+                    <ProjectTeamCard
+                      key={team.id}
+                      team={team}
+                      onAsk={(teamId) => navigate('/qa', { state: { teamId } })}
+                      className="shrink-0"
+                    />
                   ))}
               </div>
             </section>
@@ -732,6 +743,9 @@ function ProjectPage() {
 
       <TeamCreateModal
         isOpen={isTeamCreateModalOpen}
+        members={projectMembers}
+        currentUserId={getUserId()}
+        isLoadingMembers={isProjectMembersLoading}
         isSubmitting={isTeamCreating}
         errorMessage={teamCreateErrorMessage}
         onClose={() => {

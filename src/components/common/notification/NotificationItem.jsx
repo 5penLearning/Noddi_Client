@@ -1,75 +1,37 @@
 import NotificationTypeIcon from './NotificationTypeIcon';
 
-import itemCloseIcon from '../../../assets/icons/notification/item-close.svg';
-
-function NotificationItem({
-  notification,
-  isResponding,
-  onDismiss,
-  onDetail,
-  onInvitationResponse,
-  className = '',
-}) {
+function NotificationItem({ notification, isRead, onClick }) {
   return (
-    <article className={`flex w-full items-start justify-between ${className}`}>
-      <div className="flex w-[460px] flex-col">
-        <div className="flex w-full items-center justify-between pr-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="size-6 shrink-0">
-              <NotificationTypeIcon type={notification.type} />
-            </span>
-            <p className="body-2 truncate tracking-[-0.1px] text-[var(--color-gray-600)]">
-              [{notification.scope}]
-            </p>
-          </div>
-          <time className="body-4 ml-3 shrink-0 tracking-[-0.16px] text-[var(--color-gray-400)]">
-            {notification.createdAt}
-          </time>
-        </div>
+    <button
+      type="button"
+      onClick={() => onClick?.(notification)}
+      className={`flex w-full items-start gap-3 border-t border-[#E9EFED] p-5 text-left transition-colors hover:bg-[#F2F7F4] ${
+        notification.type === 'invitation' ? 'min-h-[139px]' : 'min-h-[117px]'
+      }`}
+    >
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white p-1">
+        <NotificationTypeIcon type={notification.type} />
+      </span>
 
-        <div className="flex flex-col items-start gap-[10px] pl-[34px]">
-          <p className="body-2 line-clamp-2 max-h-14 w-full tracking-[-0.1px] text-[var(--color-black)]">
-            {notification.message}
-          </p>
-          {notification.type === 'invitation' ? (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                disabled={isResponding}
-                onClick={() => onInvitationResponse?.(notification, false)}
-                className="flex h-11 w-[110px] items-center justify-center rounded-[10px] border border-[var(--color-gray-300)] bg-[var(--color-white)] text-[16px] leading-[1.3] font-semibold text-[var(--color-gray-700)] disabled:opacity-40"
-              >
-                거절
-              </button>
-              <button
-                type="button"
-                disabled={isResponding}
-                onClick={() => onInvitationResponse?.(notification, true)}
-                className="flex h-11 w-[110px] items-center justify-center rounded-[10px] bg-[var(--color-gray-900)] text-[16px] leading-[1.3] font-semibold text-[var(--color-white)] disabled:opacity-40"
-              >
-                {isResponding ? '처리 중' : '수락'}
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onDetail?.(notification)}
-              className="flex h-11 w-[110px] items-center justify-center rounded-[10px] bg-[var(--color-gray-100)] text-[16px] leading-[1.3] font-semibold text-[var(--color-gray-700)]"
-            >
-              자세히보기
-            </button>
-          )}
-        </div>
-      </div>
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="flex w-full items-center justify-between gap-3">
+          <strong className="truncate text-[20px] leading-[1.4] font-medium tracking-[-0.1px] text-[#0C0D0D]">
+            {notification.scope}
+          </strong>
+          <span className="flex shrink-0 items-center gap-1 px-1">
+            <time className="text-[16px] leading-[1.4] font-normal tracking-[-0.16px] text-[#707673]">
+              {notification.createdAt}
+            </time>
+            {!isRead && <span className="size-[7px] rounded-full bg-[#31F5A0]" />}
+          </span>
+        </span>
 
-      <button
-        type="button"
-        onClick={() => onDismiss?.(notification.id)}
-        className="relative size-6 shrink-0"
-      >
-        <img src={itemCloseIcon} className="absolute top-[7.25px] left-[7.25px] size-[9.5px]" />
-      </button>
-    </article>
+        <span className="flex w-full flex-col text-[16px] leading-[1.4] tracking-[-0.16px]">
+          <span className="truncate font-medium text-[#343836]">{notification.title}</span>
+          <span className="line-clamp-2 font-normal text-[#707673]">{notification.message}</span>
+        </span>
+      </span>
+    </button>
   );
 }
 

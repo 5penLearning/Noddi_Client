@@ -14,6 +14,8 @@ const normalizeMyTeam = (team) => ({
   teamId: team.teamId,
   name: team.name,
   description: team.description,
+  projectId: team.projectId,
+  projectName: team.projectName,
   myRole: team.myRole,
   members: [],
   todayMeeting: null,

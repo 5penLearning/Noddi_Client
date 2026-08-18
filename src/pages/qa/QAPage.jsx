@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import {
   createQuestion,
@@ -261,6 +262,9 @@ function LoadingSpinner() {
 }
 
 function QAPage() {
+  const location = useLocation();
+  const targetQuestionId = location.state?.questionId;
+  const targetTeamId = location.state?.teamId;
   const [teams, setTeams] = useState([]);
 
   const [selectedTeamId, setSelectedTeamId] = useState(null);
@@ -295,7 +299,7 @@ function QAPage() {
     return teams.find((team) => Number(team.teamId) === Number(selectedTeamId)) ?? null;
   }, [teams, selectedTeamId]);
 
-  const selectedQuestionTeamId = selectedQuestion?.targetTeamId;
+  const selectedQuestionTeamId = selectedQuestion?.targetTeamId ?? questionDetail?.targetTeamId;
 
   const canEditAnswer = useMemo(() => {
     if (!selectedQuestionTeamId) {
@@ -398,11 +402,16 @@ function QAPage() {
 
       setMyQuestions(nextMyQuestions);
 
-      if (nextTeams.length > 0) {
-        setSelectedTeamId(nextTeams[0].teamId);
+      if (targetTeamId || nextTeams.length > 0) {
+        setSelectedTeamId(targetTeamId ?? nextTeams[0].teamId);
       }
 
-      if (nextMyQuestions.length > 0) {
+      if (targetQuestionId) {
+        setSelectedQuestion({
+          questionId: targetQuestionId,
+          targetTeamId,
+        });
+      } else if (nextMyQuestions.length > 0) {
         setSelectedQuestion(nextMyQuestions[0]);
       }
     } catch (requestError) {
@@ -412,7 +421,7 @@ function QAPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [targetQuestionId, targetTeamId]);
 
   useEffect(() => {
     loadInitialData();

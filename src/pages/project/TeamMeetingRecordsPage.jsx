@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import AddUserIcon from '../../components/project/AddUserIcon';
+import MeetingDateFilterCalendar from '../../components/project/MeetingDateFilterCalendar';
 import MeetingRecordCard from '../../components/project/MeetingRecordCard';
+import SharedMemoDetail from '../../components/project/SharedMemoDetail';
+import SharedMemoList from '../../components/project/SharedMemoList';
 import TeamCreateModal from '../../components/project/TeamCreateModal';
 import TeamMemberInviteModal from '../../components/project/TeamMemberInviteModal';
 import { getApiErrorMessage, getUserId } from '../../api/axios';
 import { getMeetings } from '../../api/meetingApi';
+import { createTeamPage, getTeamPage, getTeamPages } from '../../api/teamPages';
 import {
   deleteTeam,
   getMyTeams,
@@ -19,6 +23,8 @@ import {
 } from '../../api/teams';
 
 import calendarIcon from '../../assets/icons/meeting-records/calendar.svg';
+import aiIcon from '../../assets/icons/meeting-records/ai.svg';
+import filterArrowIcon from '../../assets/icons/meeting-records/filter-arrow.svg';
 import searchIcon from '../../assets/icons/search/search.svg';
 
 const formatMeetingDate = (dateValue) => {
@@ -33,12 +39,15 @@ const formatMeetingDate = (dateValue) => {
   const day = String(date.getDate()).padStart(2, '0');
   const hours = String(date.getHours()).padStart(2, '0');
   const minutes = String(date.getMinutes()).padStart(2, '0');
+  const weekday = new Intl.DateTimeFormat('ko-KR', { weekday: 'short' })
+    .format(date)
+    .replace('요일', '');
 
   return {
     date: `${year}-${month}-${day}`,
     displayDate: `${year}. ${month}. ${day}`,
     displayTime: `${hours}:${minutes}`,
-    titleDate: `${year}년 ${month}월 ${day}일`,
+    titleDate: `${year}년 ${month}월 ${day}일 (${weekday})`,
   };
 };
 
@@ -51,7 +60,8 @@ const formatMeetingRecord = (meeting, teamName) => {
     ...meeting,
     id: meeting.meetingId,
     date: meetingDate?.date ?? '',
-    title: meetingDate ? `${meetingDate.titleDate} - ${meeting.title}` : meeting.title,
+    meetingDate: meetingDate?.titleDate ?? '-',
+    title: meeting.title,
     createdDate: meetingDate?.displayDate ?? '-',
     createdTime: meetingDate?.displayTime ?? '-',
     teams: teamName ? [teamName] : [],
@@ -63,9 +73,19 @@ function TeamMeetingRecordsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { projectId, teamId } = useParams();
-  const dateInputRef = useRef(null);
+  const [activeTab, setActiveTab] = useState('records');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [memoSearchKeyword, setMemoSearchKeyword] = useState('');
+  const [sharedMemos, setSharedMemos] = useState([]);
+  const [selectedMemoId, setSelectedMemoId] = useState(null);
+  const [selectedMemo, setSelectedMemo] = useState(null);
+  const [isSharedMemosLoading, setIsSharedMemosLoading] = useState(false);
+  const [isSharedMemoDetailLoading, setIsSharedMemoDetailLoading] = useState(false);
+  const [isSharedMemoCreating, setIsSharedMemoCreating] = useState(false);
+  const [sharedMemosErrorMessage, setSharedMemosErrorMessage] = useState('');
+  const [sharedMemoDetailErrorMessage, setSharedMemoDetailErrorMessage] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [sortType, setSortType] = useState('recent');
   const [isMemberInviteModalOpen, setIsMemberInviteModalOpen] = useState(false);
   const [projectMembers, setProjectMembers] = useState([]);
@@ -106,6 +126,92 @@ function TeamMeetingRecordsPage() {
       isCurrentRequest = false;
     };
   }, [teamId]);
+
+  useEffect(() => {
+    if (activeTab !== 'memos' || !teamId) return;
+
+    let isCurrentRequest = true;
+
+    const loadSharedMemos = async () => {
+      try {
+        setIsSharedMemosLoading(true);
+        setSharedMemosErrorMessage('');
+
+        const pageResult = await getTeamPages(teamId, {
+          page: 0,
+          size: 20,
+          sort: 'updatedAt,desc',
+        });
+        const nextMemos = pageResult.content ?? [];
+
+        if (!isCurrentRequest) return;
+
+        setSharedMemos(nextMemos);
+        setSelectedMemoId((currentMemoId) => {
+          const hasCurrentMemo = nextMemos.some((memo) => memo.pageId === currentMemoId);
+
+          return hasCurrentMemo ? currentMemoId : (nextMemos[0]?.pageId ?? null);
+        });
+      } catch (error) {
+        if (isCurrentRequest) {
+          setSharedMemos([]);
+          setSelectedMemoId(null);
+          setSharedMemosErrorMessage(
+            getApiErrorMessage(error, '공유 메모 목록을 불러오지 못했습니다.'),
+          );
+        }
+      } finally {
+        if (isCurrentRequest) {
+          setIsSharedMemosLoading(false);
+        }
+      }
+    };
+
+    loadSharedMemos();
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [activeTab, teamId]);
+
+  useEffect(() => {
+    if (activeTab !== 'memos' || !teamId || !selectedMemoId) {
+      setSelectedMemo(null);
+      return;
+    }
+
+    let isCurrentRequest = true;
+
+    const loadSharedMemoDetail = async () => {
+      try {
+        setIsSharedMemoDetailLoading(true);
+        setSharedMemoDetailErrorMessage('');
+
+        const nextMemo = await getTeamPage(teamId, selectedMemoId);
+
+        if (isCurrentRequest) {
+          setSelectedMemo(nextMemo);
+        }
+      } catch (error) {
+        if (isCurrentRequest) {
+          setSelectedMemo(null);
+          setSharedMemoDetailErrorMessage(
+            getApiErrorMessage(error, '공유 메모를 불러오지 못했습니다.'),
+          );
+        }
+      } finally {
+        if (isCurrentRequest) {
+          setIsSharedMemoDetailLoading(false);
+        }
+      }
+    };
+
+    loadSharedMemoDetail();
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [activeTab, selectedMemoId, teamId]);
 
   useEffect(() => {
     let isCurrentRequest = true;
@@ -170,15 +276,6 @@ function TeamMeetingRecordsPage() {
     serverMeetings,
     sortType,
   ]);
-
-  const openDatePicker = () => {
-    if (dateInputRef.current?.showPicker) {
-      dateInputRef.current.showPicker();
-      return;
-    }
-
-    dateInputRef.current?.click();
-  };
 
   const loadMembers = useCallback(async () => {
     try {
@@ -333,195 +430,292 @@ function TeamMeetingRecordsPage() {
     }
   };
 
+  const handleCreateSharedMemo = async () => {
+    try {
+      setIsSharedMemoCreating(true);
+      setSharedMemosErrorMessage('');
+
+      const createdPage = await createTeamPage(teamId, {
+        title: '새 공유 메모',
+        content: '공유할 내용을 입력해주세요.',
+      });
+      const createdPageId = createdPage.pageId;
+      const pageResult = await getTeamPages(teamId, {
+        page: 0,
+        size: 20,
+        sort: 'updatedAt,desc',
+      });
+
+      setSharedMemos(pageResult.content ?? []);
+      setSelectedMemoId(createdPageId ?? pageResult.content?.[0]?.pageId ?? null);
+    } catch (error) {
+      setSharedMemosErrorMessage(getApiErrorMessage(error, '공유 메모를 생성하지 못했습니다.'));
+    } finally {
+      setIsSharedMemoCreating(false);
+    }
+  };
+
   return (
     <div className="mx-auto flex h-full w-full max-w-[1347px] flex-col">
-      <nav className="flex h-[61px] shrink-0 items-center pr-[7px] pl-[29px]">
-        <button type="button" className="subhead-1 text-[var(--color-black)]">
+      <nav className="flex h-[45px] shrink-0 items-start gap-1 pr-[7px] pl-5">
+        <button
+          type="button"
+          onClick={() => setActiveTab('records')}
+          className={`px-4 py-2 text-[20px] leading-[1.3] ${
+            activeTab === 'records'
+              ? 'border-b-[3px] border-[var(--color-primary)] font-semibold text-[var(--color-black)]'
+              : 'font-medium text-[var(--color-gray-400)]'
+          }`}
+        >
           회의록
         </button>
-        <button type="button" className="subhead-1 ml-[79px] text-[var(--color-gray-500)]">
-          채팅방
+        <button
+          type="button"
+          onClick={() => setActiveTab('memos')}
+          className={`px-4 py-2 text-[20px] leading-[1.3] ${
+            activeTab === 'memos'
+              ? 'border-b-[3px] border-[var(--color-primary)] font-semibold text-[var(--color-black)]'
+              : 'font-medium text-[var(--color-gray-400)]'
+          }`}
+        >
+          공유 메모
         </button>
-        <button type="button" className="subhead-1 ml-[78px] text-[var(--color-gray-500)]">
-          자료 모음
-        </button>
-        {currentTeam?.myRole === 'LEADER' && (
-          <button
-            type="button"
-            onClick={() => {
-              setMemberErrorMessage('');
-              setInviteResultMessage('');
-              setIsMemberInviteModalOpen(true);
-            }}
-            className="ml-auto flex size-6 items-center justify-center"
-          >
-            <AddUserIcon />
-          </button>
-        )}
       </nav>
 
-      <main className="min-h-0 flex-1 overflow-hidden rounded-[10px] bg-white">
-        <div className="flex items-center gap-[17px] px-[37px] pt-[27px]">
-          <label className="flex h-[44px] w-[959px] shrink-0 items-center rounded-[10px] border border-[var(--color-gray-100)] bg-[var(--color-gray-50)] px-[14px]">
-            <input
-              type="search"
-              value={searchKeyword}
-              onChange={(event) => setSearchKeyword(event.target.value)}
-              className="min-w-0 flex-1 bg-transparent outline-none"
-            />
-            <img src={searchIcon} alt="" className="h-[20.46px] w-5 shrink-0" />
-          </label>
-
-          <button
-            type="button"
-            onClick={openDatePicker}
-            className="flex size-[44px] shrink-0 items-center justify-center bg-[var(--color-gray-50)]"
-          >
-            <img src={calendarIcon} alt="" className="size-6" />
-          </button>
-          <input
-            ref={dateInputRef}
-            type="date"
-            value={selectedDate}
-            onChange={(event) => setSelectedDate(event.target.value)}
-            className="pointer-events-none absolute h-0 w-0 opacity-0"
-          />
-        </div>
-
-        <div className="mt-[14px] flex items-center gap-[14px] px-[42px]">
-          <button
-            type="button"
-            onClick={() => setSortType('recent')}
-            className={`subhead-3 ${
-              sortType === 'recent' ? 'text-[var(--color-black)]' : 'text-[var(--color-gray-500)]'
-            }`}
-          >
-            최근 회의 순
-          </button>
-          <button
-            type="button"
-            onClick={() => setSortType('team')}
-            className={`subhead-3 ${
-              sortType === 'team' ? 'text-[var(--color-black)]' : 'text-[var(--color-gray-500)]'
-            }`}
-          >
-            협업 회의 별
-          </button>
-        </div>
-
-        <div className="mt-[40px] h-[calc(100%_-_151px)] [scrollbar-width:thin] [scrollbar-color:#d9d9d9_transparent] overflow-y-auto pb-[43px]">
-          <div className="flex min-h-full flex-col">
-            <div className="ml-[37px] w-[959px] space-y-[12px]">
-              {isMeetingsLoading && (
-                <p className="body-4 py-10 text-center text-[var(--color-gray-500)]">
-                  회의 목록을 불러오는 중입니다.
-                </p>
-              )}
-              {!isMeetingsLoading && meetingErrorMessage && (
-                <p className="body-4 py-10 text-center text-[var(--color-red)]">
-                  {meetingErrorMessage}
-                </p>
-              )}
-              {!isMeetingsLoading && !meetingErrorMessage && meetingRecords.length === 0 && (
-                <p className="body-4 py-10 text-center text-[var(--color-gray-500)]">
-                  표시할 회의가 없습니다.
-                </p>
-              )}
-              {!isMeetingsLoading &&
-                !meetingErrorMessage &&
-                meetingRecords.map((record) => (
-                  <MeetingRecordCard
-                    key={record.id}
-                    title={record.title}
-                    createdDate={record.createdDate}
-                    createdTime={record.createdTime}
-                    teams={record.teams}
-                    summary={record.summary}
-                    onClick={() =>
-                      navigate(`/projects/${projectId}/teams/${teamId}/meetings/${record.id}`, {
-                        state: {
-                          ...location.state,
-                          meetingRecord: record,
-                        },
-                      })
-                    }
-                  />
-                ))}
-            </div>
-
-            {currentTeam?.myRole === 'LEADER' && (
-              <div className="mt-auto flex flex-col items-center pt-10">
-                {teamActionErrorMessage && (
-                  <p className="body-5 mb-3 text-[var(--color-red)]">{teamActionErrorMessage}</p>
-                )}
-                <div className="flex items-center gap-3 text-[12px] leading-[1.3] text-[var(--color-gray-500)]">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTeamActionErrorMessage('');
-                      setIsTeamEditModalOpen(true);
-                    }}
-                  >
-                    수정하기
-                  </button>
-                  <span>·</span>
-                  <button type="button" onClick={handleDeleteTeam} disabled={isTeamDeleting}>
-                    {isTeamDeleting ? '삭제 중' : '삭제하기'}
-                  </button>
-                </div>
+      {activeTab === 'records' ? (
+        <main className="relative min-h-0 flex-1 overflow-hidden rounded-[10px] bg-white">
+          <div className="ml-5 flex h-full w-[916px] flex-col pt-7">
+            <header className="flex flex-col gap-1">
+              <div className="flex items-center gap-1">
+                <h2 className="text-[20px] leading-[1.3] font-semibold text-black">
+                  AI 요약 회의록
+                </h2>
+                <img src={aiIcon} alt="" className="size-6" />
               </div>
-            )}
-            {currentTeam && currentTeam.myRole !== 'LEADER' && (
-              <div className="mt-auto flex flex-col items-center pt-10">
-                {teamActionErrorMessage && (
-                  <p className="body-5 mb-3 text-[var(--color-red)]">{teamActionErrorMessage}</p>
-                )}
+              <p className="text-[16px] leading-[1.4] font-medium tracking-[-0.16px] text-[var(--color-gray-700)]">
+                AI가 화상 회의 내용을 기반으로 회의록을 만들었어요
+              </p>
+            </header>
+
+            <div className="mt-5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <label className="flex h-11 w-[600px] shrink-0 items-center rounded-[10px] border border-[var(--color-gray-200)] bg-white px-3">
+                  <input
+                    type="search"
+                    value={searchKeyword}
+                    onChange={(event) => setSearchKeyword(event.target.value)}
+                    placeholder="회의록 내용을 검색해보세요"
+                    className="min-w-0 flex-1 bg-transparent text-[16px] leading-[1.4] tracking-[-0.16px] outline-none placeholder:text-[var(--color-gray-500)]"
+                  />
+                  <img src={searchIcon} alt="" className="size-6 shrink-0 opacity-45" />
+                </label>
                 <button
                   type="button"
-                  onClick={handleLeaveTeam}
-                  disabled={isTeamDeleting}
-                  className="text-[12px] leading-[1.3] text-[var(--color-gray-500)]"
+                  className="flex h-11 w-[110px] items-center justify-center rounded-[10px] bg-[var(--color-primary)] text-[16px] leading-[1.3] font-semibold text-[var(--color-black)]"
                 >
-                  {isTeamDeleting ? '탈퇴 중' : '팀 탈퇴하기'}
+                  검색하기
                 </button>
               </div>
-            )}
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSortType((type) => (type === 'team' ? 'recent' : 'team'))}
+                  className="flex items-center gap-2 bg-white px-2 py-[10px] text-[16px] leading-[1.3] font-medium text-[var(--color-gray-900)]"
+                >
+                  참여 팀별
+                  <span className="flex size-6 shrink-0 items-center justify-center">
+                    <img src={filterArrowIcon} alt="" className="size-6" />
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsCalendarOpen((isOpen) => !isOpen)}
+                  className={`flex size-11 shrink-0 items-center justify-center rounded-full ${
+                    isCalendarOpen ? 'bg-white' : 'bg-[var(--color-gray-50)]'
+                  }`}
+                >
+                  <img
+                    src={calendarIcon}
+                    alt=""
+                    className={`size-6 ${isCalendarOpen ? 'brightness-50' : ''}`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 min-h-0 flex-1 [scrollbar-width:thin] [scrollbar-color:#d9d9d9_transparent] overflow-y-auto pb-[43px]">
+              <div className="flex min-h-full flex-col">
+                <div className="w-[904px] space-y-2">
+                  {isMeetingsLoading && (
+                    <p className="body-4 py-10 text-center text-[var(--color-gray-500)]">
+                      회의 목록을 불러오는 중입니다.
+                    </p>
+                  )}
+                  {!isMeetingsLoading && meetingErrorMessage && (
+                    <p className="body-4 py-10 text-center text-[var(--color-red)]">
+                      {meetingErrorMessage}
+                    </p>
+                  )}
+                  {!isMeetingsLoading && !meetingErrorMessage && meetingRecords.length === 0 && (
+                    <p className="body-4 py-10 text-center text-[var(--color-gray-500)]">
+                      표시할 회의가 없습니다.
+                    </p>
+                  )}
+                  {!isMeetingsLoading &&
+                    !meetingErrorMessage &&
+                    meetingRecords.map((record) => (
+                      <MeetingRecordCard
+                        key={record.id}
+                        meetingDate={record.meetingDate}
+                        title={record.title}
+                        teams={record.teams}
+                        summary={record.summary}
+                        onClick={() =>
+                          navigate(`/projects/${projectId}/teams/${teamId}/meetings/${record.id}`, {
+                            state: {
+                              ...location.state,
+                              meetingRecord: record,
+                            },
+                          })
+                        }
+                      />
+                    ))}
+                </div>
+
+                {currentTeam?.myRole === 'LEADER' && (
+                  <div className="relative left-[195px] mt-auto flex flex-col items-center pt-10">
+                    {teamActionErrorMessage && (
+                      <p className="body-5 mb-3 text-[var(--color-red)]">
+                        {teamActionErrorMessage}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-3 text-[12px] leading-[1.3] text-[var(--color-gray-500)]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTeamActionErrorMessage('');
+                          setIsTeamEditModalOpen(true);
+                        }}
+                      >
+                        수정하기
+                      </button>
+                      <span>·</span>
+                      <button type="button" onClick={handleDeleteTeam} disabled={isTeamDeleting}>
+                        {isTeamDeleting ? '삭제 중' : '삭제하기'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {currentTeam && currentTeam.myRole !== 'LEADER' && (
+                  <div className="relative left-[195px] mt-auto flex flex-col items-center pt-10">
+                    {teamActionErrorMessage && (
+                      <p className="body-5 mb-3 text-[var(--color-red)]">
+                        {teamActionErrorMessage}
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleLeaveTeam}
+                      disabled={isTeamDeleting}
+                      className="text-[12px] leading-[1.3] text-[var(--color-gray-500)]"
+                    >
+                      {isTeamDeleting ? '탈퇴 중' : '팀 탈퇴하기'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
 
-        <TeamMemberInviteModal
-          isOpen={isMemberInviteModalOpen}
-          projectMembers={projectMembers}
-          teamMembers={teamMembers}
-          currentUserId={getUserId()}
-          isLoading={isMembersLoading}
-          isSubmitting={isInviting}
-          memberActionUserId={memberActionUserId}
-          errorMessage={memberErrorMessage}
-          resultMessage={inviteResultMessage}
-          onClose={() => {
-            setIsMemberInviteModalOpen(false);
-            setMemberErrorMessage('');
-            setInviteResultMessage('');
-          }}
-          onInvite={handleInviteMembers}
-          onRoleChange={handleChangeTeamMemberRole}
-          onRemoveMember={handleRemoveTeamMember}
-        />
+          {isCalendarOpen && (
+            <MeetingDateFilterCalendar
+              selectedDate={selectedDate}
+              meetingDates={serverMeetings
+                .map((meeting) =>
+                  formatMeetingDate(
+                    meeting.scheduledStartAt ?? meeting.startedAt ?? meeting.createdAt,
+                  ),
+                )
+                .map((meetingDate) => meetingDate?.date)
+                .filter(Boolean)}
+              onSelect={setSelectedDate}
+              className="absolute top-[92px] right-5"
+            />
+          )}
 
-        <TeamCreateModal
-          isOpen={isTeamEditModalOpen}
-          mode="edit"
-          initialTeam={currentTeam}
-          isSubmitting={isTeamUpdating}
-          errorMessage={teamActionErrorMessage}
-          onClose={() => {
-            setIsTeamEditModalOpen(false);
-            setTeamActionErrorMessage('');
-          }}
-          onSubmit={handleUpdateTeam}
-        />
-      </main>
+          {currentTeam?.myRole === 'LEADER' && (
+            <button
+              type="button"
+              onClick={() => {
+                setMemberErrorMessage('');
+                setInviteResultMessage('');
+                setIsMemberInviteModalOpen(true);
+              }}
+              className="absolute right-5 bottom-5 flex size-11 items-center justify-center rounded-full bg-[var(--color-black)] p-[10px]"
+            >
+              <AddUserIcon variant="white" />
+            </button>
+          )}
+
+          <TeamMemberInviteModal
+            isOpen={isMemberInviteModalOpen}
+            projectName={location.state?.projectName ?? '프로젝트'}
+            teamName={currentTeam?.name ?? location.state?.teamName ?? '팀'}
+            projectMembers={projectMembers}
+            teamMembers={teamMembers}
+            currentUserId={getUserId()}
+            isLoading={isMembersLoading}
+            isSubmitting={isInviting}
+            memberActionUserId={memberActionUserId}
+            errorMessage={memberErrorMessage}
+            resultMessage={inviteResultMessage}
+            onClose={() => {
+              setIsMemberInviteModalOpen(false);
+              setMemberErrorMessage('');
+              setInviteResultMessage('');
+            }}
+            onInvite={handleInviteMembers}
+            onRoleChange={handleChangeTeamMemberRole}
+            onRemoveMember={handleRemoveTeamMember}
+          />
+
+          <TeamCreateModal
+            isOpen={isTeamEditModalOpen}
+            mode="edit"
+            initialTeam={currentTeam}
+            isSubmitting={isTeamUpdating}
+            errorMessage={teamActionErrorMessage}
+            onClose={() => {
+              setIsTeamEditModalOpen(false);
+              setTeamActionErrorMessage('');
+            }}
+            onSubmit={handleUpdateTeam}
+          />
+        </main>
+      ) : (
+        <main className="grid min-h-0 flex-1 grid-cols-[428px_minmax(0,1fr)] gap-6 bg-transparent">
+          <SharedMemoList
+            memos={sharedMemos}
+            keyword={memoSearchKeyword}
+            selectedMemoId={selectedMemoId}
+            isLoading={isSharedMemosLoading}
+            isCreating={isSharedMemoCreating}
+            errorMessage={sharedMemosErrorMessage}
+            onKeywordChange={setMemoSearchKeyword}
+            onSelect={setSelectedMemoId}
+            onCreate={handleCreateSharedMemo}
+          />
+          <SharedMemoDetail
+            memo={selectedMemo}
+            projectName={location.state?.projectName ?? '노디 프로젝트'}
+            teamName={currentTeam?.name ?? location.state?.teamName ?? '마케팅팀'}
+            isLoading={isSharedMemoDetailLoading}
+            errorMessage={sharedMemoDetailErrorMessage}
+          />
+        </main>
+      )}
     </div>
   );
 }

@@ -85,6 +85,23 @@ export const meetingRecordMockData = [
   },
 ];
 
+export const sharedMemoMockData = [
+  {
+    id: 'shared-memo-1',
+    title: '세금 계산서 해야해요..',
+    subtitle: '노디프로젝트 발주 넣은 거',
+    description: '이런거 이런거 추가해주세요...',
+    content: '노션에 있는 거 오키오키,, 확인..\n\n알잘딱?\n\n/',
+  },
+  {
+    id: 'shared-memo-2',
+    title: '랜딩페이지 수정 내용',
+    subtitle: '메인 카피 최종 확인',
+    description: '회의에서 정리한 수정 사항을 반영해주세요.',
+    content: '디자인 수정본 링크 확인\n\n모바일 시안도 함께 검토하기',
+  },
+];
+
 export const projectPageMockData = {
   projects: [2, 1, 3, 1, 2, 4].map((myTeamCount, index) => ({
     id: `project-${index + 1}`,
