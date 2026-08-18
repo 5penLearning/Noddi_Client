@@ -3,8 +3,6 @@ import homeInactiveIcon from '../../assets/icons/sidebar/home-inactive.svg';
 import logoIcon from '../../assets/icons/sidebar/logo-simple.svg';
 import messageDotIcon from '../../assets/icons/sidebar/message-dot.svg';
 import messageIcon from '../../assets/icons/sidebar/message.svg';
-import settingsCenterIcon from '../../assets/icons/sidebar/settings-center.svg';
-import settingsIcon from '../../assets/icons/sidebar/settings.svg';
 import userAvatarIcon from '../../assets/icons/sidebar/user-avatar.svg';
 import userBodyIcon from '../../assets/icons/sidebar/user-body.svg';
 import userGroupSideIcon from '../../assets/icons/sidebar/user-group-side.svg';
@@ -172,38 +170,16 @@ function UserIcon({ isActive }) {
   );
 }
 
-function SettingsIcon() {
-  return (
-    <span
-      className="relative block size-7"
-      aria-hidden="true"
-    >
-      <img
-        src={settingsIcon}
-        alt=""
-        className="absolute left-[2px] top-[1.5px] h-[25px] w-[24px] opacity-65"
-      />
-
-      <img
-        src={settingsCenterIcon}
-        alt=""
-        className="absolute left-[12.6px] top-[12.6px] size-[2.9px] opacity-65"
-      />
-    </span>
-  );
-}
-
 function SidebarNavigation({
   activeItem = 'home',
   className = '',
   onNavigate,
-  onSettingsClick,
 }) {
   return (
     <aside
-      className={`flex h-full w-[76px] shrink-0 flex-col items-center justify-between rounded-[12px] border border-[#DCEDE4] bg-white px-3 py-4 ${className}`}
+      className={`flex h-full w-[76px] shrink-0 flex-col items-center rounded-[12px] border border-[#DCEDE4] bg-white px-3 py-4 ${className}`}
     >
-      <div className="flex size-12 items-center justify-center rounded-[13px] bg-[#31F5A0]">
+      <div className="flex size-12 shrink-0 items-center justify-center rounded-[13px] bg-[#31F5A0]">
         <img
           src={logoIcon}
           alt="Noddi"
@@ -212,7 +188,7 @@ function SidebarNavigation({
       </div>
 
       <nav
-        className="flex flex-col gap-3.5"
+        className="flex flex-1 flex-col items-center justify-center gap-3.5"
         aria-label="주요 메뉴"
       >
         {navigationItems.map(({ id, label, icon: Icon }) => {
@@ -235,16 +211,6 @@ function SidebarNavigation({
           );
         })}
       </nav>
-
-      <button
-        type="button"
-        aria-label="설정"
-        title="설정"
-        onClick={onSettingsClick}
-        className="flex size-12 items-center justify-center rounded-[13px] transition-colors hover:bg-[#EFFFF7] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#31F5A0]"
-      >
-        <SettingsIcon />
-      </button>
     </aside>
   );
 }

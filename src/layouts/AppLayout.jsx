@@ -32,7 +32,6 @@ const pageTitles = {
   '/meetings': '화상회의',
   '/qa': 'Q&A',
   '/mypage': '마이페이지',
-  '/settings': '설정',
 };
 
 function AppLayout() {
@@ -109,6 +108,7 @@ function AppLayout() {
           teamId: navigation.teamId,
         },
       });
+
       return;
     }
 
@@ -118,6 +118,7 @@ function AppLayout() {
           teamId: navigation.teamId,
         },
       });
+
       return;
     }
 
@@ -125,11 +126,13 @@ function AppLayout() {
       navigate(
         `/projects/${navigation.projectId}/teams/${navigation.teamId}/meetings`,
       );
+
       return;
     }
 
     if (navigation.type === 'PROJECT') {
       navigate(`/projects/${navigation.projectId ?? navigation.referenceId}`);
+
       return;
     }
 
@@ -144,7 +147,9 @@ function AppLayout() {
 
       if (!notification.read) {
         if (notification.grouped) {
-          await readNotificationGroup(getNotificationGroupPayload(notification));
+          await readNotificationGroup(
+            getNotificationGroupPayload(notification),
+          );
         } else {
           await readNotification(notification.notificationId);
         }
@@ -156,7 +161,10 @@ function AppLayout() {
       await loadNotifications();
     } catch (error) {
       setNotificationErrorMessage(
-        getApiErrorMessage(error, '알림을 읽음 처리하지 못했습니다.'),
+        getApiErrorMessage(
+          error,
+          '알림을 읽음 처리하지 못했습니다.',
+        ),
       );
     }
   };
@@ -177,7 +185,10 @@ function AppLayout() {
       await loadNotifications();
     } catch (error) {
       setNotificationErrorMessage(
-        getApiErrorMessage(error, '알림을 숨기지 못했습니다.'),
+        getApiErrorMessage(
+          error,
+          '알림을 숨기지 못했습니다.',
+        ),
       );
     }
   };
@@ -204,7 +215,8 @@ function AppLayout() {
   const isTeamPage = Boolean(teamPageMatch);
   const currentProjectId = teamPageMatch?.[1];
 
-  const teamPageTitle = `${location.state?.projectName ?? '프로젝트'} / ${location.state?.teamName ?? '팀'
+  const teamPageTitle = `${location.state?.projectName ?? '프로젝트'
+    } / ${location.state?.teamName ?? '팀'
     }`;
 
   return (
@@ -212,7 +224,6 @@ function AppLayout() {
       <SidebarNavigation
         activeItem={activeItem ?? ''}
         onNavigate={(id) => navigate(navigationPaths[id])}
-        onSettingsClick={() => navigate('/settings')}
       />
 
       <main className="ml-[10px] flex min-w-0 flex-1 flex-col gap-[10px]">
