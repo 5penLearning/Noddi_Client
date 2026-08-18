@@ -18,13 +18,13 @@ export const createTeamPage = async (teamId, { title, content }) => {
     content,
   });
 
-  return data.result ?? data;
+  return data.result;
 };
 
 export const getTeamPage = async (teamId, pageId) => {
   const { data } = await api.get(`/api/v1/teams/${teamId}/pages/${pageId}`);
 
-  return data.result ?? data;
+  return data.result;
 };
 
 export const updateTeamPage = async (teamId, pageId, { title, content }) => {
@@ -33,11 +33,11 @@ export const updateTeamPage = async (teamId, pageId, { title, content }) => {
     content,
   });
 
-  return data.result ?? data;
+  return data.result;
 };
 
 export const deleteTeamPage = async (teamId, pageId) => {
   const { data } = await api.delete(`/api/v1/teams/${teamId}/pages/${pageId}`);
 
-  return data.result ?? data;
+  return data.result;
 };

@@ -1,7 +1,15 @@
-import avatarDefault from '../../assets/icons/profile/avatar-default.svg';
 import chevronIcon from '../../assets/icons/profile/chevron.svg';
+import avatarDefault from '../../assets/icons/profile/avatar-default.svg';
+import ProfileAvatar from './ProfileAvatar';
 
-function ProfileMenu({ name = '사용자', department = '소속 조직', onClick, className = '' }) {
+function ProfileMenu({
+  userId,
+  profileImageUrl,
+  name = '사용자',
+  department = '소속 조직',
+  onClick,
+  className = '',
+}) {
   return (
     <button
       type="button"
@@ -9,7 +17,13 @@ function ProfileMenu({ name = '사용자', department = '소속 조직', onClick
       className={`flex h-10 w-[346px] shrink-0 items-center justify-between rounded-[10px] bg-[var(--color-white)] p-[10px] text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-gray-400)] ${className}`}
     >
       <span className="flex items-center gap-3">
-        <img src={avatarDefault} alt="" className="size-7 shrink-0" />
+        <ProfileAvatar
+          userId={userId}
+          profileImageUrl={profileImageUrl}
+          name={name}
+          fallbackSrc={avatarDefault}
+          className="size-7 shrink-0"
+        />
         <span className="flex items-center gap-5 whitespace-nowrap">
           <span className="body-3 tracking-[-0.16px] text-[var(--color-black)]">{name}</span>
           <span className="caption-1 tracking-[-0.28px] text-[var(--color-text-secondary)]">

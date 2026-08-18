@@ -10,6 +10,7 @@ import {
 } from '../../api/qaApi';
 
 import { getMyTeams } from '../../api/teams';
+import ProfileAvatar from '../../components/common/ProfileAvatar';
 
 function ChatIcon() {
   return (
@@ -193,14 +194,6 @@ function formatDate(value) {
     month: '2-digit',
     day: '2-digit',
   });
-}
-
-function getInitial(name) {
-  if (!name) {
-    return 'Q';
-  }
-
-  return name.trim().charAt(0) || 'Q';
 }
 
 function QuestionListItem({ question, selected, onClick }) {
@@ -781,11 +774,21 @@ function QAPage() {
                       <div className="flex items-center justify-between gap-4">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#E5E9E7] text-[11px] font-semibold text-[#59625F]">
-                              {getInitial(
-                                questionDetail?.questionerName ?? selectedQuestion.questionerName,
-                              )}
-                            </div>
+                            <ProfileAvatar
+                              userId={
+                                questionDetail?.questionerId ?? selectedQuestion.questionerId
+                              }
+                              profileImageUrl={
+                                questionDetail?.questionerProfileImageUrl ??
+                                selectedQuestion.questionerProfileImageUrl
+                              }
+                              name={
+                                questionDetail?.questionerName ??
+                                selectedQuestion.questionerName ??
+                                '질문자'
+                              }
+                              className="size-8 shrink-0 text-[11px]"
+                            />
 
                             <div className="min-w-0">
                               <p className="truncate text-xs font-semibold text-[#101211]">
@@ -828,11 +831,21 @@ function QAPage() {
                         <div className="mx-auto max-w-[720px]">
                           {/* 사용자 질문 */}
                           <div className="flex items-start gap-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E5E9E7] text-xs font-semibold text-[#59625F]">
-                              {getInitial(
-                                questionDetail?.questionerName ?? selectedQuestion.questionerName,
-                              )}
-                            </div>
+                            <ProfileAvatar
+                              userId={
+                                questionDetail?.questionerId ?? selectedQuestion.questionerId
+                              }
+                              profileImageUrl={
+                                questionDetail?.questionerProfileImageUrl ??
+                                selectedQuestion.questionerProfileImageUrl
+                              }
+                              name={
+                                questionDetail?.questionerName ??
+                                selectedQuestion.questionerName ??
+                                '질문자'
+                              }
+                              className="size-9 shrink-0 text-xs"
+                            />
 
                             <div className="min-w-0">
                               <p className="text-xs font-semibold text-[#303633]">

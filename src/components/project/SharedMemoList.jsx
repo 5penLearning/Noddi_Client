@@ -11,6 +11,23 @@ function SharedMemoFolderIcon() {
   );
 }
 
+const formatCreatedAt = (dateValue) => {
+  if (!dateValue) return '-';
+
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) return '-';
+
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+};
+
 function SharedMemoList({
   memos,
   keyword,
@@ -66,12 +83,30 @@ function SharedMemoList({
               key={memo.pageId}
               type="button"
               onClick={() => onSelect(memo.pageId)}
-              className={`flex w-full items-center gap-2 border-b border-[var(--color-gray-200)] px-5 py-[18px] text-left text-[16px] leading-[1.3] font-medium text-black ${
+              className={`flex w-full items-start gap-3 border-b border-[var(--color-gray-200)] px-5 py-[18px] text-left ${
                 selectedMemoId === memo.pageId ? 'bg-[var(--color-gray-50)]' : 'bg-white'
               }`}
             >
               <SharedMemoFolderIcon />
-              <span className="truncate">{memo.title}</span>
+              <span className="min-w-0 flex-1">
+                <strong className="block truncate text-[16px] leading-[1.3] font-medium text-black">
+                  {memo.title || '제목 없음'}
+                </strong>
+                <span className="mt-2 flex min-w-0 items-center gap-2 text-[12px] text-[var(--color-gray-500)]">
+                  <span className="max-w-[120px] truncate">
+                    {memo.authorName ??
+                      memo.creatorName ??
+                      memo.createdByName ??
+                      memo.author?.name ??
+                      memo.createdBy?.name ??
+                      '작성자 정보 없음'}
+                  </span>
+                  <span aria-hidden="true">·</span>
+                  <time className="truncate" dateTime={memo.createdAt}>
+                    {formatCreatedAt(memo.createdAt)}
+                  </time>
+                </span>
+              </span>
             </button>
           ))}
 

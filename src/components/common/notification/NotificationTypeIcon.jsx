@@ -64,8 +64,8 @@ function MeetingIcon() {
 }
 
 function NotificationTypeIcon({ type }) {
-  if (type === 'reply') return <ReplyIcon />;
-  if (type === 'meeting') return <MeetingIcon />;
+  if (type?.includes('QA')) return <ReplyIcon />;
+  if (type?.includes('MEETING')) return <MeetingIcon />;
 
   return <InvitationIcon />;
 }

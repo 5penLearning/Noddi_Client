@@ -9,12 +9,18 @@ import {
 } from 'react-router-dom';
 
 import {
+  deleteMyProfileImage,
   getMyProfile,
+  updateMyProfileImage,
   updateMyPassword,
   updateMyProfile,
 } from '../../api/mypageApi';
 
+import ProfileAvatar from '../../components/common/ProfileAvatar';
 import PasswordChangeModal from '../../components/feature/mypage/PasswordChangeModal';
+
+const MAX_PROFILE_IMAGE_SIZE = 5 * 1024 * 1024;
+const PROFILE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 function ArrowLeftIcon() {
   return (
@@ -233,6 +239,16 @@ function ProfileSettingsPage() {
     setPasswordError,
   ] = useState('');
 
+  const [
+    isUpdatingImage,
+    setIsUpdatingImage,
+  ] = useState(false);
+
+  const [
+    profileImageRefreshKey,
+    setProfileImageRefreshKey,
+  ] = useState(0);
+
   useEffect(() => {
     if (
       !location.state
@@ -340,6 +356,7 @@ function ProfileSettingsPage() {
           trimmedName,
         );
 
+        window.dispatchEvent(new Event('profile-updated'));
         navigate('/mypage');
       } catch (
       requestError
@@ -414,6 +431,75 @@ function ProfileSettingsPage() {
       );
     };
 
+  const handleProfileImageChange =
+    async (event) => {
+      const image = event.target.files?.[0];
+      event.target.value = '';
+
+      if (!image || isUpdatingImage) return;
+
+      if (!PROFILE_IMAGE_TYPES.includes(image.type)) {
+        setError('JPEG, PNG, WebP 이미지만 등록할 수 있습니다.');
+        return;
+      }
+
+      if (image.size > MAX_PROFILE_IMAGE_SIZE) {
+        setError('프로필 이미지는 최대 5MB까지 등록할 수 있습니다.');
+        return;
+      }
+
+      try {
+        setIsUpdatingImage(true);
+        setError('');
+        setSuccessMessage('');
+
+        const response = await updateMyProfileImage(image);
+        const profileImageUrl = response?.result?.profileImageUrl ?? null;
+
+        setProfile((currentProfile) => ({
+          ...currentProfile,
+          profileImageUrl,
+        }));
+        setProfileImageRefreshKey((currentKey) => currentKey + 1);
+        setSuccessMessage('프로필 이미지가 변경되었습니다.');
+        window.dispatchEvent(new Event('profile-updated'));
+      } catch (requestError) {
+        console.error('Failed to update profile image:', requestError);
+        setError(
+          requestError?.response?.data?.message ?? '프로필 이미지를 변경하지 못했습니다.',
+        );
+      } finally {
+        setIsUpdatingImage(false);
+      }
+    };
+
+  const handleProfileImageDelete =
+    async () => {
+      if (isUpdatingImage) return;
+
+      try {
+        setIsUpdatingImage(true);
+        setError('');
+        setSuccessMessage('');
+
+        await deleteMyProfileImage();
+        setProfile((currentProfile) => ({
+          ...currentProfile,
+          profileImageUrl: null,
+        }));
+        setProfileImageRefreshKey((currentKey) => currentKey + 1);
+        setSuccessMessage('프로필 이미지가 삭제되었습니다.');
+        window.dispatchEvent(new Event('profile-updated'));
+      } catch (requestError) {
+        console.error('Failed to delete profile image:', requestError);
+        setError(
+          requestError?.response?.data?.message ?? '프로필 이미지를 삭제하지 못했습니다.',
+        );
+      } finally {
+        setIsUpdatingImage(false);
+      }
+    };
+
   const handleDeleteAccount =
     () => {
       setError(
@@ -425,11 +511,6 @@ function ProfileSettingsPage() {
     name ||
     profile?.name ||
     '사용자';
-
-  const displayInitial =
-    displayName
-      .trim()
-      .charAt(0);
 
   const hasNameChanged =
     name.trim() !==
@@ -492,11 +573,15 @@ function ProfileSettingsPage() {
             <div className="space-y-8">
               {/* 프로필 헤더 */}
               <section className="flex items-center gap-5 rounded-2xl border border-[#E3E9E6] bg-white px-7 py-6">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-[#C7F9DF] bg-[#EFFFF7] text-2xl font-semibold text-[#101211]">
-                  {displayInitial}
-                </div>
+                <ProfileAvatar
+                  userId={profile?.userId}
+                  profileImageUrl={profile?.profileImageUrl}
+                  name={displayName}
+                  refreshKey={profileImageRefreshKey}
+                  className="size-20 shrink-0 border border-[#C7F9DF] text-2xl"
+                />
 
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-xl font-semibold text-[#101211]">
                     {displayName}
                   </p>
@@ -509,6 +594,27 @@ function ProfileSettingsPage() {
                   <p className="mt-2 text-xs text-[#9AA39F]">
                     현재 프로필 정보
                   </p>
+
+                  <div className="mt-3 flex gap-2">
+                    <label className="flex h-8 cursor-pointer items-center rounded-lg bg-[#101211] px-3 text-xs font-semibold text-white">
+                      {isUpdatingImage ? '처리 중...' : '이미지 변경'}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        disabled={isUpdatingImage}
+                        onChange={handleProfileImageChange}
+                        className="hidden"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={isUpdatingImage}
+                      onClick={handleProfileImageDelete}
+                      className="h-8 rounded-lg border border-[#D8DFDC] px-3 text-xs font-semibold text-[#59625F] disabled:opacity-50"
+                    >
+                      이미지 삭제
+                    </button>
+                  </div>
                 </div>
               </section>
 

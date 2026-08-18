@@ -8,6 +8,33 @@ export const getMyProfile = async () => {
   return data;
 };
 
+export const updateMyProfileImage = async (image) => {
+  const formData = new FormData();
+  formData.append('image', image);
+
+  const { data } = await api.put('/api/v1/users/me/profile-image', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+
+  return data;
+};
+
+export const deleteMyProfileImage = async () => {
+  const { data } = await api.delete('/api/v1/users/me/profile-image');
+
+  return data;
+};
+
+export const getUserProfileImage = async (userId) => {
+  const { data } = await api.get(`/api/v1/users/${userId}/profile-image`, {
+    responseType: 'blob',
+  });
+
+  return data;
+};
+
 export const updateMyProfile = async (
   name,
 ) => {

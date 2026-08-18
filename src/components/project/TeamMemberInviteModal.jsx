@@ -4,13 +4,16 @@ import closeIcon from '../../assets/icons/project-create/modal-close-x.svg';
 import defaultMemberAvatar from '../../assets/icons/my-team-avatar.svg';
 import searchIcon from '../../assets/icons/project-create/search.svg';
 import teamLogo from '../../assets/icons/my-team-logo.svg';
+import ProfileAvatar from '../common/ProfileAvatar';
 
 function MemberProfile({ member, selected = false, onClick }) {
   const content = (
     <>
-      <img
-        src={member.profileImageUrl || member.avatarUrl || defaultMemberAvatar}
-        alt=""
+      <ProfileAvatar
+        userId={member.userId ?? member.id}
+        profileImageUrl={member.profileImageUrl ?? member.avatarUrl}
+        name={member.name}
+        fallbackSrc={defaultMemberAvatar}
         className="size-6 rounded-full object-cover"
       />
       <span className="flex min-w-0 items-end gap-[6px] whitespace-nowrap">

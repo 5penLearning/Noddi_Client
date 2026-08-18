@@ -1,4 +1,5 @@
 import OutlineButton from '../common/OutlineButton';
+import ProfileAvatar from '../common/ProfileAvatar';
 
 import defaultTeamAvatar from '../../assets/icons/my-team-avatar.svg';
 import teamLogo from '../../assets/icons/my-team-logo.svg';
@@ -31,10 +32,12 @@ function MyTeamCard({ team, onMove, onTodoToggle, className = '' }) {
         <div className="flex items-center gap-1">
           <div className="flex items-center">
             {visibleMembers.map((member, index) => (
-              <img
+              <ProfileAvatar
                 key={member.id}
-                src={member.avatarUrl || defaultTeamAvatar}
-                alt=""
+                userId={member.userId ?? member.id}
+                profileImageUrl={member.profileImageUrl ?? member.avatarUrl}
+                name={member.name}
+                fallbackSrc={defaultTeamAvatar}
                 className={`size-6 rounded-full border-[0.5px] border-[var(--color-gray-200)] bg-[var(--color-gray-100)] object-cover ${index === 0 ? '' : '-ml-[7px]'}`}
               />
             ))}

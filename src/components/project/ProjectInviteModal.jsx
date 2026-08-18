@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import OutlineButton from '../common/OutlineButton';
+import ProfileAvatar from '../common/ProfileAvatar';
 
 import clearXIcon from '../../assets/icons/project-create/clear-x.svg';
 import defaultMemberAvatar from '../../assets/icons/project-create/modal-member-avatar.svg';
@@ -167,7 +168,13 @@ function ProjectInviteModal({
                               : 'hover:bg-[var(--color-gray-50)]'
                           }`}
                         >
-                          <img src={defaultMemberAvatar} className="size-10 rounded-full" />
+                          <ProfileAvatar
+                            userId={member.userId}
+                            profileImageUrl={member.profileImageUrl}
+                            name={member.name}
+                            fallbackSrc={defaultMemberAvatar}
+                            className="size-10"
+                          />
                           <span className="subhead-2 ml-4">{member.name}</span>
                           <span className="body-4 ml-3 text-[var(--color-gray-500)]">
                             {member.email}
@@ -240,7 +247,13 @@ function ProjectInviteModal({
                     key={member.userId}
                     className="flex h-14 items-center rounded-[10px] px-3 hover:bg-[var(--color-gray-50)]"
                   >
-                    <img src={defaultMemberAvatar} className="size-10 rounded-full" />
+                    <ProfileAvatar
+                      userId={member.userId}
+                      profileImageUrl={member.profileImageUrl}
+                      name={member.name}
+                      fallbackSrc={defaultMemberAvatar}
+                      className="size-10"
+                    />
                     <div className="ml-4 min-w-0">
                       <p className="subhead-2 truncate">{member.name}</p>
                       <p className="body-5 truncate text-[var(--color-gray-500)]">{member.email}</p>
