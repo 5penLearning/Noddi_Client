@@ -1,20 +1,21 @@
 import { useState } from 'react';
 
-import logo from '../../assets/logo-green.svg';
-import { homePageMockData } from '../../mocks/homePageData';
-
 import calendarArrowIcon from '../../assets/icons/home-meeting/calendar-arrow.svg';
 import meetingSymbolIcon from '../../assets/icons/home-meeting/meeting-symbol.svg';
 import meetingSymbolSecondaryIcon from '../../assets/icons/home-meeting/meeting-symbol-secondary.svg';
 import scheduleDotPrimaryIcon from '../../assets/icons/home-meeting/schedule-dot-primary.svg';
 import scheduleDotSecondaryIcon from '../../assets/icons/home-meeting/schedule-dot-secondary.svg';
+import { formatDateKey } from './homeUtils';
 
 const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-const formatDateKey = (year, month, day) =>
-  `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-
-function MeetingSchedule({ initialDate, meetings }) {
+export default function MeetingSchedule({
+  initialDate,
+  meetings,
+  isLoading,
+  errorMessage,
+  onJoin,
+}) {
   const initial = new Date(`${initialDate}T00:00:00`);
   const [visibleMonth, setVisibleMonth] = useState(
     () => new Date(initial.getFullYear(), initial.getMonth(), 1),
@@ -126,6 +127,21 @@ function MeetingSchedule({ initialDate, meetings }) {
           <div
             className={`mt-2 [scrollbar-width:none] overflow-y-auto px-1 py-5 pr-4 [&::-webkit-scrollbar]:hidden ${isLongMonth ? 'h-[311px]' : 'h-[263px]'}`}
           >
+            {isLoading && (
+              <p className="py-10 text-center text-[14px] text-[var(--color-gray-500)]">
+                회의 일정을 불러오는 중입니다.
+              </p>
+            )}
+            {!isLoading && errorMessage && (
+              <p className="py-10 text-center text-[14px] text-[var(--color-gray-500)]">
+                {errorMessage}
+              </p>
+            )}
+            {!isLoading && !errorMessage && selectedMeetings.length === 0 && (
+              <p className="py-10 text-center text-[14px] text-[var(--color-gray-500)]">
+                선택한 날짜에 회의가 없습니다.
+              </p>
+            )}
             {selectedMeetings.map((meeting, index) => (
               <article
                 key={meeting.id}
@@ -163,6 +179,7 @@ function MeetingSchedule({ initialDate, meetings }) {
                 <button
                   type="button"
                   disabled={!meeting.canJoin}
+                  onClick={() => onJoin(meeting)}
                   className="ml-3 h-11 w-[110px] shrink-0 rounded-[10px] bg-[var(--color-action-primary)] text-[16px] leading-[1.3] font-semibold disabled:bg-[var(--color-gray-100)] disabled:text-[var(--color-gray-300)]"
                 >
                   참여하기
@@ -175,94 +192,3 @@ function MeetingSchedule({ initialDate, meetings }) {
     </section>
   );
 }
-
-function AiReplyStatus({ replies }) {
-  return (
-    <section className="h-full overflow-hidden rounded-[10px] bg-[var(--color-white)] p-6">
-      <h2 className="subhead-1">AI 답변 현황</h2>
-
-      <div className="mt-5 divide-y divide-[var(--color-gray-100)]">
-        {replies.map((reply) => (
-          <article key={reply.id} className="py-6 first:pt-0">
-            <div className="flex items-center gap-2">
-              <span className="size-6 shrink-0 rounded-full bg-[var(--color-gray-200)]" />
-              <p className="body-5 font-medium">{reply.name}</p>
-              <p className="caption-1 text-[var(--color-text-tertiary)]">{reply.role}</p>
-              <time className="caption-2 ml-auto whitespace-nowrap text-[var(--color-gray-800)]">
-                {reply.time}
-              </time>
-            </div>
-            <p className="body-5 mt-5">{reply.question}</p>
-            <p className="body-5 mt-5 ml-auto max-w-[250px] text-right">{reply.answer}</p>
-            <button
-              type="button"
-              className="body-5 mt-5 ml-auto block rounded-[10px] bg-[var(--color-background-subtle)] px-5 py-3"
-            >
-              자세히 보기
-            </button>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function TodoList({ description, items }) {
-  return (
-    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-[10px] bg-[var(--color-white)] p-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="subhead-1">To-do list</h2>
-          <p className="caption-1 mt-2 text-[var(--color-text-tertiary)]">{description}</p>
-        </div>
-        <button type="button" className="body-3">
-          수정하기
-        </button>
-      </div>
-      <div className="min-h-0 flex-1 [scrollbar-width:none] overflow-y-auto [&::-webkit-scrollbar]:hidden">
-        {items.map((item, index) =>
-          item.title ? (
-            <label
-              key={item.id}
-              className={`body-3 flex items-center gap-3 ${index === 0 ? 'mt-6' : 'mt-3'}`}
-            >
-              <input
-                type="checkbox"
-                defaultChecked={item.completed}
-                className="size-6 appearance-none bg-[var(--color-gray-200)]"
-              />
-              {item.title}
-            </label>
-          ) : (
-            <div key={item.id} className="mt-3 size-6 bg-[var(--color-gray-200)]" />
-          ),
-        )}
-      </div>
-    </section>
-  );
-}
-
-function HomeDashboard() {
-  const { hero, meetingSchedule, aiReplies, todoList } = homePageMockData;
-
-  return (
-    <div className="h-full overflow-auto">
-      <div className="mx-auto flex min-h-full w-full max-w-[1346px] flex-col gap-5">
-        <section className="h-[183px] shrink-0 rounded-[10px] bg-[linear-gradient(180deg,#2affa3_0%,#37efd9_100%)] px-6 py-5 text-[var(--color-black)]">
-          <img src={logo} alt="Noddi" className="h-auto w-[190px] brightness-0" />
-          <p className="subhead-3 mt-2">{hero.tagline}</p>
-        </section>
-
-        <div className="grid min-h-[400px] flex-1 grid-cols-[minmax(0,818px)_minmax(370px,1fr)] gap-4">
-          <div className="grid grid-rows-[auto_1fr] gap-3">
-            <MeetingSchedule {...meetingSchedule} />
-            <TodoList {...todoList} />
-          </div>
-          <AiReplyStatus replies={aiReplies} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default HomeDashboard;

@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import OutlineButton from '../../components/common/OutlineButton';
 import AnnouncementDetailModal from '../../components/project/AnnouncementDetailModal';
 import AnnouncementFormModal from '../../components/project/AnnouncementFormModal';
-import AddUserIcon from '../../components/project/AddUserIcon';
-import MyTeamCard from '../../components/project/MyTeamCard';
 import ProjectCreateButton from '../../components/project/ProjectCreateButton';
 import ProjectInviteModal from '../../components/project/ProjectInviteModal';
-import ProjectNotice from '../../components/project/ProjectNotice';
-import ProjectTeamCard from '../../components/project/ProjectTeamCard';
+import ProjectNavigation from '../../components/project/ProjectNavigation';
+import ProjectOverview from '../../components/project/ProjectOverview';
 import TeamCreateModal from '../../components/project/TeamCreateModal';
 import {
   createAnnouncement,
@@ -19,6 +16,12 @@ import {
   updateAnnouncement,
 } from '../../api/announcements';
 import { getApiErrorMessage, getUserId } from '../../api/axios';
+import { getMeetings } from '../../api/meetingApi';
+import {
+  deleteActionItem,
+  getMyActionItemsByTeam,
+  updateActionItem,
+} from '../../api/actionItemApi';
 import {
   getInvitableOrganizationMembers,
   getMemberProjects,
@@ -27,39 +30,19 @@ import {
   removeProjectMember,
   updateProjectMemberRole,
 } from '../../api/projects';
-import { createTeam, getMyTeams, getProjectTeams, getTeamMembers } from '../../api/teams';
+import {
+  createTeam,
+  getMyTeams,
+  getProjectTeams,
+  getTeamMembers,
+  inviteTeamMember,
+} from '../../api/teams';
 import { projectPageMockData } from '../../mocks/projectPageData';
-
-import chevronIcon from '../../assets/icons/profile/chevron.svg';
-
-const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
-
-const getDateAtMidnight = (dateValue) => {
-  const date = new Date(dateValue);
-
-  if (Number.isNaN(date.getTime())) return null;
-
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-};
-
-const getProjectDayLabel = (project) => {
-  const today = getDateAtMidnight(new Date());
-  const deadline = getDateAtMidnight(project.endDate ?? project.deadline ?? project.dueDate);
-
-  if (deadline) {
-    const remainingDays = Math.max(0, Math.ceil((deadline - today) / MILLISECONDS_PER_DAY));
-
-    return `D-${remainingDays}`;
-  }
-
-  const createdAt = getDateAtMidnight(project.createdAt);
-
-  if (!createdAt) return 'D+0';
-
-  const elapsedDays = Math.max(0, Math.floor((today - createdAt) / MILLISECONDS_PER_DAY));
-
-  return `D+${elapsedDays}`;
-};
+import {
+  getStoredCompletedActionItems,
+  removeStoredCompletedActionItem,
+  syncStoredCompletedActionItem,
+} from '../../utils/completedActionItems';
 
 function ProjectPage() {
   const navigate = useNavigate();
@@ -209,10 +192,10 @@ function ProjectPage() {
   }, [isProjectInviteModalOpen, loadInvitableMembers]);
 
   useEffect(() => {
-    if (!isProjectInviteModalOpen) return;
+    if (!isProjectInviteModalOpen && !isTeamCreateModalOpen) return;
 
     loadProjectMembers();
-  }, [isProjectInviteModalOpen, loadProjectMembers]);
+  }, [isProjectInviteModalOpen, isTeamCreateModalOpen, loadProjectMembers]);
 
   useEffect(() => {
     if (!projectId || !currentProject) return;
@@ -224,13 +207,20 @@ function ProjectPage() {
         setIsTeamsLoading(true);
         setTeamsErrorMessage('');
 
-        const [teamList, myTeamList] = await Promise.all([
+        const [teamList, myTeamList, todoGroups] = await Promise.all([
           getProjectTeams(projectId),
           getMyTeams(),
+          getMyActionItemsByTeam(),
         ]);
-        const teamMemberResults = await Promise.allSettled(
-          teamList.map((team) => getTeamMembers(team.id)),
-        );
+        const [teamMemberResults, teamMeetingResults] = await Promise.all([
+          Promise.allSettled(teamList.map((team) => getTeamMembers(team.id))),
+          Promise.allSettled(teamList.map((team) => getMeetings(team.id))),
+        ]);
+        const today = new Date();
+        const todayDateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
+          2,
+          '0',
+        )}-${String(today.getDate()).padStart(2, '0')}`;
         const teamsWithMembers = teamList.map((team, index) => ({
           ...team,
           members:
@@ -241,17 +231,83 @@ function ProjectPage() {
                   avatarUrl: member.profileImageUrl ?? member.avatarUrl,
                 }))
               : [],
+          todayMeetings:
+            teamMeetingResults[index].status === 'fulfilled'
+              ? teamMeetingResults[index].value
+                  .filter((meeting) => {
+                    const startAt = new Date(meeting.scheduledStartAt);
+
+                    if (Number.isNaN(startAt.getTime())) return false;
+
+                    const meetingDateKey = `${startAt.getFullYear()}-${String(
+                      startAt.getMonth() + 1,
+                    ).padStart(2, '0')}-${String(startAt.getDate()).padStart(2, '0')}`;
+
+                    return meetingDateKey === todayDateKey;
+                  })
+                  .sort(
+                    (firstMeeting, secondMeeting) =>
+                      new Date(firstMeeting.scheduledStartAt).getTime() -
+                      new Date(secondMeeting.scheduledStartAt).getTime(),
+                  )
+                  .map((meeting) => {
+                    const startAt = new Date(meeting.scheduledStartAt);
+                    const time = `${String(startAt.getHours()).padStart(2, '0')}:${String(startAt.getMinutes()).padStart(2, '0')}`;
+
+                    return {
+                      ...meeting,
+                      id: meeting.meetingId,
+                      title: `${time} ${meeting.title}`,
+                    };
+                  })
+              : [],
         }));
         const teamMembersById = new Map(
           teamsWithMembers.map((team) => [String(team.id), team.members]),
         );
+        const todoGroupByTeamId = new Map(
+          todoGroups.map((group) => [String(group.teamId), group]),
+        );
+        getStoredCompletedActionItems().forEach((item) => {
+          const todoGroup = todoGroupByTeamId.get(String(item.teamId));
+
+          if (!todoGroup || String(todoGroup.projectId) !== String(projectId)) return;
+          if (
+            (todoGroup.actionItems ?? []).some(
+              (todo) => todo.actionItemId === item.actionItemId,
+            )
+          ) {
+            return;
+          }
+
+          todoGroup.actionItems = [...(todoGroup.actionItems ?? []), item];
+        });
         const currentProjectTeamIds = new Set(teamsWithMembers.map((team) => String(team.id)));
         const currentProjectMyTeams = myTeamList
           .filter((team) => currentProjectTeamIds.has(String(team.id)))
-          .map((team) => ({
-            ...team,
-            members: teamMembersById.get(String(team.id)) ?? [],
-          }));
+          .map((team) => {
+            const todoGroup = todoGroupByTeamId.get(String(team.id));
+
+            return {
+              ...team,
+              members: teamMembersById.get(String(team.id)) ?? [],
+              todayMeetings:
+                teamsWithMembers.find(
+                  (projectTeam) => String(projectTeam.id) === String(team.id),
+                )?.todayMeetings ?? [],
+              todoCount: todoGroup?.todoCount ?? 0,
+              todos: (todoGroup?.actionItems ?? []).map((item) => ({
+                ...item,
+                projectId: todoGroup?.projectId ?? Number(projectId),
+                projectName: todoGroup?.projectName ?? currentProject.name,
+                teamId: team.id,
+                teamName: team.name,
+                id: item.actionItemId,
+                title: item.content,
+                completed: item.status === 'COMPLETED',
+              })),
+            };
+          });
 
         if (isCurrentRequest) {
           setProjectTeams(teamsWithMembers);
@@ -369,7 +425,7 @@ function ProjectPage() {
     }
   };
 
-  const handleCreateTeam = async ({ name, description: teamDescription }) => {
+  const handleCreateTeam = async ({ name, description: teamDescription, selectedUserIds = [] }) => {
     try {
       setIsTeamCreating(true);
       setTeamCreateErrorMessage('');
@@ -378,6 +434,12 @@ function ProjectPage() {
         name,
         description: teamDescription,
       });
+
+      if (selectedUserIds.length > 0) {
+        await Promise.allSettled(
+          selectedUserIds.map((targetUserId) => inviteTeamMember(createdTeamId, targetUserId)),
+        );
+      }
 
       setIsTeamCreateModalOpen(false);
       navigate(`/projects/${projectId}/teams/${createdTeamId}/meetings`, {
@@ -390,6 +452,95 @@ function ProjectPage() {
       setTeamCreateErrorMessage(getApiErrorMessage(error, '팀을 생성하지 못했습니다.'));
     } finally {
       setIsTeamCreating(false);
+    }
+  };
+
+  const handleToggleTeamTodo = async (actionItemId) => {
+    const actionItem = myTeams
+      .flatMap((team) => team.todos ?? [])
+      .find((item) => item.actionItemId === actionItemId);
+
+    if (!actionItem) return;
+
+    const nextStatus = actionItem.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
+
+    try {
+      setTeamsErrorMessage('');
+      await updateActionItem(actionItemId, {
+        content: actionItem.content,
+        assigneeUserId: actionItem.assigneeUserId,
+        dueDate: actionItem.dueDate,
+        status: nextStatus,
+      });
+      syncStoredCompletedActionItem({ ...actionItem, status: nextStatus });
+      setMyTeams((currentTeams) =>
+        currentTeams.map((team) => ({
+          ...team,
+          todos: (team.todos ?? []).map((todo) =>
+            todo.actionItemId === actionItemId
+              ? { ...todo, status: nextStatus, completed: nextStatus === 'COMPLETED' }
+              : todo,
+          ),
+        })),
+      );
+    } catch (error) {
+      setTeamsErrorMessage(getApiErrorMessage(error, '할 일 상태를 변경하지 못했습니다.'));
+    }
+  };
+
+  const handleEditTeamTodo = async (actionItemId, changes) => {
+    const actionItem = myTeams
+      .flatMap((team) => team.todos ?? [])
+      .find((item) => item.actionItemId === actionItemId);
+
+    if (!actionItem) return;
+
+    try {
+      setTeamsErrorMessage('');
+      await updateActionItem(actionItemId, changes);
+      const updatedActionItem = { ...actionItem, ...changes };
+      syncStoredCompletedActionItem(updatedActionItem);
+      setMyTeams((currentTeams) =>
+        currentTeams.map((team) => ({
+          ...team,
+          todos: (team.todos ?? []).map((todo) =>
+            todo.actionItemId === actionItemId
+              ? {
+                  ...todo,
+                  ...changes,
+                  title: changes.content,
+                  completed: changes.status === 'COMPLETED',
+                }
+              : todo,
+          ),
+        })),
+      );
+    } catch (error) {
+      setTeamsErrorMessage(getApiErrorMessage(error, '할 일을 수정하지 못했습니다.'));
+      throw error;
+    }
+  };
+
+  const handleDeleteTeamTodo = async (actionItemId) => {
+    if (!window.confirm('이 할 일을 삭제할까요?')) return;
+
+    try {
+      setTeamsErrorMessage('');
+      await deleteActionItem(actionItemId);
+      removeStoredCompletedActionItem(actionItemId);
+      setMyTeams((currentTeams) =>
+        currentTeams.map((team) => {
+          const nextTodos = (team.todos ?? []).filter(
+            (todo) => todo.actionItemId !== actionItemId,
+          );
+
+          return nextTodos.length === (team.todos ?? []).length
+            ? team
+            : { ...team, todos: nextTodos, todoCount: nextTodos.length };
+        }),
+      );
+    } catch (error) {
+      setTeamsErrorMessage(getApiErrorMessage(error, '할 일을 삭제하지 못했습니다.'));
     }
   };
 
@@ -534,166 +685,61 @@ function ProjectPage() {
   return (
     <div className="h-full [scrollbar-width:none] overflow-y-auto [&::-webkit-scrollbar]:hidden">
       <div className="mx-auto w-full max-w-[1350px]">
-        <div className="flex h-[82px] items-start gap-[14px] pt-[17px]">
-          {projects.map((project) => {
-            const isActive = String(project.projectId) === projectId;
+        <ProjectNavigation
+          projects={projects}
+          currentProjectId={projectId}
+          canInvite={currentProject.myRole === 'LEADER'}
+          onSelectProject={(nextProjectId) => navigate(`/projects/${nextProjectId}`)}
+          onCreateProject={() => navigate('/projects/new')}
+          onInviteMember={() => {
+            setInviteKeyword('');
+            setInvitePage(0);
+            setProjectInviteErrorMessage('');
+            setProjectInviteResultMessage('');
+            setIsProjectInviteModalOpen(true);
+          }}
+        />
 
-            return (
-              <button
-                key={project.projectId}
-                type="button"
-                onClick={() => navigate(`/projects/${project.projectId}`)}
-                className={`subhead-3 flex w-[162px] shrink-0 justify-center text-[var(--color-black)] ${
-                  isActive
-                    ? 'h-[75px] items-start rounded-t-[10px] bg-[var(--color-action-primary)] pt-[14px]'
-                    : 'h-[54px] items-center rounded-[10px] bg-[var(--color-gray-50)]'
-                }`}
-              >
-                {project.name}
-              </button>
-            );
-          })}
+        <ProjectOverview
+          project={currentProject}
+          fallbackDescription={description}
+          isBannerVisible={isBannerVisible}
+          announcements={announcements}
+          isAnnouncementsLoading={isAnnouncementsLoading}
+          announcementsErrorMessage={announcementsErrorMessage}
+          myTeams={myTeams}
+          projectTeams={projectTeams}
+          isTeamsLoading={isTeamsLoading}
+          teamsErrorMessage={teamsErrorMessage}
+          onBannerVisibilityChange={setIsBannerVisible}
+          onCreateAnnouncement={handleOpenCreateAnnouncement}
+          onOpenAnnouncement={handleOpenAnnouncementDetail}
+          onMoveTeam={(nextTeamId) => {
+            const team = myTeams.find((item) => String(item.id) === String(nextTeamId));
 
-          <ProjectCreateButton onClick={() => navigate('/projects/new')} />
+            navigate(`/projects/${projectId}/teams/${nextTeamId}/meetings`, {
+              state: {
+                projectName: currentProject.name,
+                teamName: team?.name,
+              },
+            });
+          }}
+          onTodoToggle={handleToggleTeamTodo}
+          onTodoEdit={handleEditTeamTodo}
+          onTodoDelete={handleDeleteTeamTodo}
+          onTodoOpen={(todo) => {
+            if (!todo.meetingId) return;
 
-          {currentProject?.myRole === 'LEADER' && (
-            <button
-              type="button"
-              onClick={() => {
-                setInviteKeyword('');
-                setInvitePage(0);
-                setProjectInviteErrorMessage('');
-                setProjectInviteResultMessage('');
-                setIsProjectInviteModalOpen(true);
-              }}
-              className="mt-[15px] mr-[7px] ml-auto flex size-6 shrink-0 items-center justify-center"
-            >
-              <AddUserIcon />
-            </button>
-          )}
-        </div>
-
-        <main className="relative z-10 min-h-[1032px] overflow-hidden rounded-[10px] bg-[var(--color-white)]">
-          {isBannerVisible && (
-            <section className="flex h-16 items-center bg-[var(--color-action-primary)] px-[21px]">
-              <span className="body-3 flex h-9 w-[75px] shrink-0 items-center justify-center rounded-[300px] bg-[var(--color-white)] text-[var(--color-gray-900)]">
-                {getProjectDayLabel(currentProject)}
-              </span>
-              <p className="subhead-3 ml-5 min-w-0 flex-1 truncate text-[var(--color-gray-700)]">
-                {currentProject.description || description}
-              </p>
-              <button
-                type="button"
-                onClick={() => setIsBannerVisible(false)}
-                className="body-4 ml-4 flex shrink-0 items-center gap-[7px] tracking-[-0.16px] text-[var(--color-gray-600)]"
-              >
-                <img src={chevronIcon} alt="" className="h-[7px] w-[15px]" />
-                숨기기
-              </button>
-            </section>
-          )}
-
-          {!isBannerVisible && (
-            <button
-              type="button"
-              onClick={() => setIsBannerVisible(true)}
-              className="body-4 absolute top-[22px] right-[21px] z-10 flex items-center gap-[7px] tracking-[-0.16px] text-[var(--color-gray-600)]"
-            >
-              <img src={chevronIcon} alt="" className="h-[7px] w-[15px] rotate-180" />
-              설명 보기
-            </button>
-          )}
-
-          <div className="px-[22px] pt-10">
-            <ProjectNotice
-              key={projectId}
-              notices={announcements}
-              isLoading={isAnnouncementsLoading}
-              errorMessage={announcementsErrorMessage}
-              onCreateClick={handleOpenCreateAnnouncement}
-              onDetailClick={handleOpenAnnouncementDetail}
-            />
-
-            <section className="mt-[38px]">
-              <h2 className="subhead-1 text-[var(--color-black)]">내 팀</h2>
-              <div className="mt-[19px] flex [scrollbar-width:none] gap-[14px] overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden">
-                {isTeamsLoading && (
-                  <p className="body-4 py-10 text-[var(--color-gray-500)]">
-                    내 팀을 불러오는 중입니다.
-                  </p>
-                )}
-                {!isTeamsLoading && teamsErrorMessage && (
-                  <p className="body-4 py-10 text-[var(--color-red)]">{teamsErrorMessage}</p>
-                )}
-                {!isTeamsLoading && !teamsErrorMessage && myTeams.length === 0 && (
-                  <p className="body-4 py-10 text-[var(--color-gray-500)]">
-                    아직 가입한 팀이 없습니다.
-                  </p>
-                )}
-                {!isTeamsLoading &&
-                  !teamsErrorMessage &&
-                  myTeams.map((team) => (
-                    <MyTeamCard
-                      key={team.id}
-                      team={team}
-                      onMove={(teamId) =>
-                        navigate(`/projects/${projectId}/teams/${teamId}/meetings`, {
-                          state: {
-                            projectName: currentProject.name,
-                            teamName: team.name,
-                          },
-                        })
-                      }
-                      className="shrink-0"
-                    />
-                  ))}
-              </div>
-            </section>
-
-            <section className="mt-[38px]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-[10px]">
-                  <h2 className="subhead-1 text-[var(--color-black)]">
-                    {currentProject.name}의 팀
-                  </h2>
-                  <span className="subhead-2 text-[var(--color-gray-500)]">
-                    {projectTeams.length}개
-                  </span>
-                </div>
-                <OutlineButton
-                  onClick={() => {
-                    setTeamCreateErrorMessage('');
-                    setIsTeamCreateModalOpen(true);
-                  }}
-                  className="h-[44px] w-[114px] !px-0 !py-0"
-                >
-                  팀 추가하기
-                </OutlineButton>
-              </div>
-
-              <div className="mt-[10px] flex [scrollbar-width:none] gap-[14px] overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden">
-                {isTeamsLoading && (
-                  <p className="body-4 py-10 text-[var(--color-gray-500)]">
-                    프로젝트 팀을 불러오는 중입니다.
-                  </p>
-                )}
-                {!isTeamsLoading && teamsErrorMessage && (
-                  <p className="body-4 py-10 text-[var(--color-red)]">{teamsErrorMessage}</p>
-                )}
-                {!isTeamsLoading && !teamsErrorMessage && projectTeams.length === 0 && (
-                  <p className="body-4 py-10 text-[var(--color-gray-500)]">
-                    아직 생성된 팀이 없습니다.
-                  </p>
-                )}
-                {!isTeamsLoading &&
-                  !teamsErrorMessage &&
-                  projectTeams.map((team) => (
-                    <ProjectTeamCard key={team.id} team={team} className="shrink-0" />
-                  ))}
-              </div>
-            </section>
-          </div>
-        </main>
+            navigate(`/meetings/${todo.meetingId}/record`, {
+              state: { teamName: todo.teamName },
+            });
+          }}
+          onCreateTeam={() => {
+            setTeamCreateErrorMessage('');
+            setIsTeamCreateModalOpen(true);
+          }}
+          onAskTeam={(nextTeamId) => navigate('/qa', { state: { teamId: nextTeamId } })}
+        />
       </div>
 
       <AnnouncementFormModal
@@ -732,6 +778,9 @@ function ProjectPage() {
 
       <TeamCreateModal
         isOpen={isTeamCreateModalOpen}
+        members={projectMembers}
+        currentUserId={getUserId()}
+        isLoadingMembers={isProjectMembersLoading}
         isSubmitting={isTeamCreating}
         errorMessage={teamCreateErrorMessage}
         onClose={() => {

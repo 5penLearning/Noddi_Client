@@ -1,49 +1,96 @@
-import OutlineButton from '../common/OutlineButton';
-
 import defaultTeamAvatar from '../../assets/icons/my-team-avatar.svg';
+import questionDotIcon from '../../assets/icons/project-question-dot.svg';
+import questionMessageIcon from '../../assets/icons/project-question-message.svg';
+import questionSparkleIcon from '../../assets/icons/project-question-sparkle.svg';
+import ProfileAvatar from '../common/ProfileAvatar';
 
 const MAX_VISIBLE_MEMBERS = 4;
 
+function QuestionIcon() {
+  return (
+    <span className="relative block size-4 shrink-0">
+      <img
+        src={questionMessageIcon}
+        alt=""
+        className="absolute top-[0.83px] left-[0.83px] size-[14.33px]"
+      />
+      {[3.87, 7.2, 10.53].map((left) => (
+        <img
+          key={left}
+          src={questionDotIcon}
+          alt=""
+          className="absolute top-[7.2px] size-[1.67px]"
+          style={{ left }}
+        />
+      ))}
+      <img
+        src={questionSparkleIcon}
+        alt=""
+        className="absolute top-0 left-[9.33px] size-[6.67px]"
+      />
+    </span>
+  );
+}
+
 function ProjectTeamCard({ team, onAsk, className = '' }) {
-  const visibleMembers = team.members.slice(0, MAX_VISIBLE_MEMBERS);
-  const remainingMemberCount = Math.max(team.members.length - visibleMembers.length, 0);
+  const members = team.members ?? [];
+  const visibleMembers = members.slice(0, MAX_VISIBLE_MEMBERS);
+  const remainingMemberCount = Math.max(members.length - visibleMembers.length, 0);
+  const updatedAt = team.updatedAt
+    ? new Intl.DateTimeFormat('ko-KR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(new Date(team.updatedAt))
+    : null;
 
   return (
     <section
-      className={`h-[149px] w-[453px] overflow-hidden rounded-[10px] bg-[var(--color-gray-50)] px-[22px] pt-[23px] ${className}`}
+      className={`flex h-[173px] w-[442px] flex-col gap-[10px] overflow-hidden rounded-[10px] border border-[var(--color-gray-200)] bg-white p-4 ${className}`}
     >
-      <header className="flex h-[31px] items-center">
-        <h2 className="headline-3 tracking-[0.24px] text-black">{team.name}</h2>
+      <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-3">
+          <header className="flex items-start justify-between">
+            <h2 className="text-[20px] leading-[1.3] font-semibold text-black">{team.name}</h2>
 
-        <div className="ml-auto flex items-center">
-          <div className="flex">
-            {visibleMembers.map((member, index) => (
-              <img
-                key={member.id}
-                src={member.avatarUrl || defaultTeamAvatar}
-                alt=""
-                className={`size-7 rounded-full ${index === 0 ? '' : '-ml-[7px]'}`}
-              />
-            ))}
-          </div>
-          {remainingMemberCount > 0 && (
-            <span className="ml-[6px] text-base leading-[1.3] font-medium">
-              +{remainingMemberCount}
-            </span>
-          )}
+            <div className="flex items-center gap-1">
+              <div className="flex items-center">
+                {visibleMembers.map((member, index) => (
+                  <ProfileAvatar
+                    key={member.id}
+                    userId={member.userId ?? member.id}
+                    profileImageUrl={member.profileImageUrl ?? member.avatarUrl}
+                    name={member.name}
+                    fallbackSrc={defaultTeamAvatar}
+                    className={`size-6 rounded-full border-[0.5px] border-[var(--color-gray-200)] bg-[var(--color-gray-100)] object-cover ${index === 0 ? '' : '-ml-[7px]'}`}
+                  />
+                ))}
+              </div>
+              {remainingMemberCount > 0 && (
+                <span className="text-[20px] leading-[1.4] tracking-[-0.1px] text-[var(--color-action-primary)]">
+                  +{remainingMemberCount}
+                </span>
+              )}
+            </div>
+          </header>
+
+          <p className="truncate text-[16px] leading-[1.3] font-medium text-[var(--color-gray-800)]">
+            {team.description || team.status || '팀 소개가 아직 없습니다.'}
+          </p>
         </div>
-      </header>
-
-      <div className="mt-[32px] flex items-center justify-between">
-        <p className="subhead-2 text-[var(--color-gray-500)]">{team.status}</p>
-        <OutlineButton
-          variant="dark"
-          onClick={() => onAsk?.(team.id)}
-          className="h-[42px] !min-h-0 w-[114px] !px-0 !py-0"
-        >
-          질문하러 가기
-        </OutlineButton>
+        <p className="text-[14px] leading-[1.4] tracking-[-0.21px] text-[var(--color-gray-600)]">
+          마지막 업데이트 · {updatedAt ? `오늘 ${updatedAt}` : '업데이트 정보 없음'}
+        </p>
       </div>
+
+      <button
+        type="button"
+        onClick={() => onAsk?.(team.id)}
+        className="flex h-11 w-[110px] shrink-0 flex-row items-center justify-center gap-1 rounded-[10px] bg-[var(--color-gray-100)] px-5 py-[10px] text-[16px] leading-[1.3] font-semibold whitespace-nowrap text-[var(--color-gray-700)]"
+      >
+        <QuestionIcon />
+        <span className="shrink-0 whitespace-nowrap">질문하기</span>
+      </button>
     </section>
   );
 }

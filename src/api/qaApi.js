@@ -4,16 +4,13 @@ export const getMyQuestions = async ({
   page = 0,
   size = 30,
 } = {}) => {
-  const { data } = await api.get(
-    '/api/v1/qa/questions/me',
-    {
-      params: {
-        page,
-        size,
-        sort: 'createdAt,desc',
-      },
+  const { data } = await api.get('/api/v1/qa/questions/me', {
+    params: {
+      page,
+      size,
+      sort: 'createdAt,desc',
     },
-  );
+  });
 
   return data;
 };
@@ -39,6 +36,30 @@ export const getTeamQuestions = async (
   return data;
 };
 
+export const getTeamQaFeed = async (
+  teamId,
+  {
+    cursor,
+    size = 20,
+  } = {},
+) => {
+  const { data } = await api.get(
+    `/api/v1/teams/${teamId}/qa/feed`,
+    {
+      params: {
+        ...(cursor
+          ? {
+              cursor,
+            }
+          : {}),
+        size,
+      },
+    },
+  );
+
+  return data.result ?? null;
+};
+
 export const getQuestionDetail = async (
   questionId,
 ) => {
@@ -53,13 +74,10 @@ export const createQuestion = async ({
   targetTeamId,
   content,
 }) => {
-  const { data } = await api.post(
-    '/api/v1/qa/questions',
-    {
-      targetTeamId,
-      content,
-    },
-  );
+  const { data } = await api.post('/api/v1/qa/questions', {
+    targetTeamId,
+    content,
+  });
 
   return data;
 };
@@ -73,6 +91,16 @@ export const reviseAnswer = async (
     {
       content,
     },
+  );
+
+  return data;
+};
+
+export const getAnswerRevisions = async (
+  answerId,
+) => {
+  const { data } = await api.get(
+    `/api/v1/qa/answers/${answerId}/revisions`,
   );
 
   return data;
