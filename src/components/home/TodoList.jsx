@@ -9,11 +9,6 @@ import { getApiErrorMessage } from '../../api/axios';
 import { getTeamMembers } from '../../api/teams';
 import todoLinkChainIcon from '../../assets/icons/home-todo/link-chain.svg';
 import todoLinkLineIcon from '../../assets/icons/home-todo/link-line.svg';
-import {
-  getStoredCompletedActionItems,
-  removeStoredCompletedActionItem,
-  syncStoredCompletedActionItem,
-} from '../../utils/completedActionItems';
 import { ActionItemForm, EditIcon, TrashIcon } from '../feature/meeting/ActionItemPanel';
 
 function TodoLinkIcon({ isCompleted }) {
@@ -82,18 +77,6 @@ export default function TodoList({ description, meetings, onOpenMeetingRecord })
           projectGroupMap.set(projectKey, currentProject);
         });
 
-        getStoredCompletedActionItems().forEach((item) => {
-          const projectKey = String(item.projectId);
-          const currentProject = projectGroupMap.get(projectKey);
-
-          if (!currentProject) return;
-          if (currentProject.actionItems.some((todo) => todo.actionItemId === item.actionItemId)) {
-            return;
-          }
-
-          currentProject.actionItems.push(item);
-        });
-
         const nextProjectTodos = [...projectGroupMap.values()];
 
         if (isCurrentRequest) {
@@ -150,7 +133,6 @@ export default function TodoList({ description, meetings, onOpenMeetingRecord })
         dueDate: actionItem.dueDate,
         status: nextStatus,
       });
-      syncStoredCompletedActionItem({ ...actionItem, status: nextStatus });
     } catch (error) {
       setProjectTodos((currentProjects) =>
         currentProjects.map((project) => ({
@@ -247,16 +229,6 @@ export default function TodoList({ description, meetings, onOpenMeetingRecord })
           ),
         })),
       );
-      const updatedItem = {
-        ...editingItem,
-        content,
-        assigneeUserId: editingForm.assigneeUserId
-          ? Number(editingForm.assigneeUserId)
-          : null,
-        dueDate: editingForm.dueDate || null,
-        status: editingForm.status,
-      };
-      syncStoredCompletedActionItem(updatedItem);
       setEditingItem(null);
       setEditingForm(INITIAL_ACTION_ITEM_FORM);
       setEditingMembers([]);
@@ -274,7 +246,6 @@ export default function TodoList({ description, meetings, onOpenMeetingRecord })
       setDeletingItemId(actionItem.actionItemId);
       setErrorMessage('');
       await deleteActionItem(actionItem.actionItemId);
-      removeStoredCompletedActionItem(actionItem.actionItemId);
       setProjectTodos((currentProjects) =>
         currentProjects.map((project) => ({
           ...project,

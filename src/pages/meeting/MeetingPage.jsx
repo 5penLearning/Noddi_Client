@@ -831,12 +831,6 @@ function MeetingPage() {
   return (
     <>
       <div className="h-full w-full overflow-y-auto pb-6">
-        <header className="mb-5">
-          <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-[#101211]">
-            meeting
-          </h1>
-        </header>
-
         {currentMeeting && (
           <div className="mb-3">
             <MeetingStatusBanner

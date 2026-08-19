@@ -2,24 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import OutlineButton from '../../components/common/OutlineButton';
-import ProjectMemberModal from '../../components/project/ProjectMemberModal';
-import ProjectTeamSetupCard from '../../components/project/ProjectTeamSetupCard';
 import { getApiErrorMessage } from '../../api/axios';
 import { createProject } from '../../api/projects';
-import {
-  projectCreateTeamsMockData,
-  projectMemberModalMockData,
-} from '../../mocks/projectPageData';
 
 import chevronIcon from '../../assets/icons/profile/chevron.svg';
 import clearXIcon from '../../assets/icons/project-create/clear-x.svg';
-import addHorizontalIcon from '../../assets/icons/project-create/add-horizontal.svg';
-import addVerticalIcon from '../../assets/icons/project-create/add-vertical.svg';
-
-const projectColors = Array.from({ length: 12 }, (_, index) => ({
-  id: `project-color-${index + 1}`,
-  color: '#d9d9d9',
-}));
 
 const formatDatePart = (value) => String(value).padStart(2, '0');
 
@@ -28,8 +15,6 @@ function ProjectCreatePage() {
   const [startDate] = useState(() => new Date());
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
-  const [teams, setTeams] = useState(projectCreateTeamsMockData);
-  const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [endYear, setEndYear] = useState('');
   const [endMonth, setEndMonth] = useState('');
   const [endDay, setEndDay] = useState('');
@@ -65,10 +50,6 @@ function ProjectCreatePage() {
     setEndDay('');
   };
 
-  const handleRemoveTeam = (teamId) => {
-    setTeams((currentTeams) => currentTeams.filter((team) => team.id !== teamId));
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -101,24 +82,9 @@ function ProjectCreatePage() {
     <main className="h-full [scrollbar-width:none] overflow-y-auto rounded-[10px] bg-[var(--color-white)] [&::-webkit-scrollbar]:hidden">
       <form
         onSubmit={handleSubmit}
-        className="mx-auto grid min-h-[970px] w-full max-w-[1347px] grid-cols-[283px_887px] gap-x-[46px] px-[46px] pt-[79px] pb-[44px]"
+        className="mx-auto grid min-h-[970px] w-full max-w-[887px] justify-items-center px-[46px] pt-[79px] pb-[44px]"
       >
-        <section>
-          <h2 className="body-4 tracking-[-0.16px]">대표 컬러 선정</h2>
-          <div className="mx-auto mt-[34px] size-[117px] rounded-full bg-[#d9d9d9]" />
-          <div className="mt-[29px] grid grid-cols-6 gap-x-3 gap-y-[15px] px-[9px]">
-            {projectColors.map((projectColor) => (
-              <button
-                key={projectColor.id}
-                type="button"
-                style={{ backgroundColor: projectColor.color }}
-                className="size-[26px] rounded-full"
-              />
-            ))}
-          </div>
-        </section>
-
-        <div>
+        <div className="w-full">
           <label className="body-4 tracking-[-0.16px]">
             프로젝트명 <span className="text-[#ff4851]">*</span>
           </label>
@@ -233,29 +199,6 @@ function ProjectCreatePage() {
             <span className="body-4 ml-auto">{totalDays ? `총 ${totalDays}일` : '총 0일'}</span>
           </div>
 
-          <h2 className="body-4 mt-[47px] tracking-[-0.16px]">팀/팀장 설정</h2>
-          <div className="mt-[12px] flex flex-wrap items-center gap-3">
-            {teams.map((team) => (
-              <ProjectTeamSetupCard key={team.id} team={team} onRemove={handleRemoveTeam} />
-            ))}
-            <button
-              type="button"
-              onClick={() => setIsMemberModalOpen(true)}
-              className="relative ml-[-1px] flex size-9 items-center justify-center rounded-full bg-[var(--color-gray-200)]"
-            >
-              <span className="relative size-6">
-                <img
-                  src={addHorizontalIcon}
-                  className="absolute top-1/2 left-1/2 h-[1.5px] w-[7.5px] -translate-x-1/2 -translate-y-1/2 brightness-0 invert"
-                />
-                <img
-                  src={addVerticalIcon}
-                  className="absolute top-1/2 left-1/2 h-[1.5px] w-[7.5px] -translate-x-1/2 -translate-y-1/2 rotate-90 brightness-0 invert"
-                />
-              </span>
-            </button>
-          </div>
-
           <div className="mt-[44px] flex justify-center">
             <OutlineButton
               type="submit"
@@ -271,12 +214,6 @@ function ProjectCreatePage() {
           )}
         </div>
       </form>
-      {isMemberModalOpen && (
-        <ProjectMemberModal
-          data={projectMemberModalMockData}
-          onClose={() => setIsMemberModalOpen(false)}
-        />
-      )}
     </main>
   );
 }

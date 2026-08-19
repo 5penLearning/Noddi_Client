@@ -2,6 +2,23 @@ import { useEffect, useState } from 'react';
 
 import editIcon from '../../assets/icons/project-create/edit.svg';
 
+const formatMemoDate = (dateValue) => {
+  if (!dateValue) return '-';
+
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) return '-';
+
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+};
+
 function SharedMemoDetail({
   memo,
   projectName,
@@ -9,7 +26,6 @@ function SharedMemoDetail({
   isLoading,
   isUpdating,
   errorMessage,
-  onBack,
   onUpdate,
 }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -73,18 +89,8 @@ function SharedMemoDetail({
         </p>
       )}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 text-[16px] leading-[1.3] font-medium text-[var(--color-gray-900)]">
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex size-6 items-center justify-center"
-            aria-label="공유 페이지 선택으로 돌아가기"
-          >
-            <span className="text-[24px] leading-none font-light" aria-hidden="true">
-              &lt;
-            </span>
-          </button>
-          <span>
+        <div className="flex h-6 items-center text-[16px] font-medium text-[var(--color-gray-900)]">
+          <span className="flex h-6 items-center leading-none">
             {projectName} / {teamName}
           </span>
         </div>
@@ -150,6 +156,15 @@ function SharedMemoDetail({
       ) : (
         <article className="mt-[27px] px-[15px] text-black">
           <h2 className="text-[20px] leading-[1.3] font-medium">{memo.title}</h2>
+          <div className="mt-2 flex flex-wrap gap-x-3 text-[12px] text-[var(--color-gray-500)]">
+            {memo.createdAt && (
+              <time dateTime={memo.createdAt}>생성 {formatMemoDate(memo.createdAt)}</time>
+            )}
+            {memo.updatedAt && (
+              <time dateTime={memo.updatedAt}>{formatMemoDate(memo.updatedAt)}</time>
+            )}
+            {!memo.createdAt && !memo.updatedAt && <span>날짜 정보 없음</span>}
+          </div>
           <p className="mt-5 text-[16px] leading-[1.6] tracking-[-0.16px] whitespace-pre-wrap">
             {memo.content || '작성된 내용이 없습니다.'}
           </p>

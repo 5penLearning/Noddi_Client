@@ -1499,49 +1499,12 @@ function QAPage() {
   const conversationRef =
     useRef(null);
 
-  const preferredTeamRef =
-    useRef(targetTeamId);
+  const targetProjectId =
+    location.state?.projectId ?? null;
 
-  const pendingFocusRef =
-    useRef(targetQuestionId);
-
-  const focusSearchCountRef =
-    useRef(0);
-
-  const loadingMoreRef =
-    useRef(false);
-
-  const restoreScrollRef =
-    useRef(null);
-
-  const shouldScrollBottomRef =
-    useRef(false);
-
-  const isNearBottomRef =
-    useRef(true);
-
-  const flashTimeoutRef =
-    useRef(null);
-
-  const [
-    profile,
-    setProfile,
-  ] = useState(null);
-
-  const [
-    projects,
-    setProjects,
-  ] = useState([]);
-
-  const [
-    myTeams,
-    setMyTeams,
-  ] = useState([]);
-
-  const [
-    teams,
-    setTeams,
-  ] = useState([]);
+  const [profile, setProfile] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [teams, setTeams] = useState([]);
 
   const [
     selectedProjectId,
@@ -1552,6 +1515,8 @@ function QAPage() {
     selectedTeamId,
     setSelectedTeamId,
   ] = useState(null);
+
+  const pendingTargetTeamIdRef = useRef(targetTeamId);
 
   const [
     myQuestions,
@@ -2107,14 +2072,12 @@ function QAPage() {
               ),
           );
 
-        const preferredProjectId =
-          targetMyTeam
-            ?.projectId &&
-            memberProjects.some(
-              (project) =>
-                Number(
-                  project.projectId,
-                ) ===
+        const pendingTargetTeamId = pendingTargetTeamIdRef.current;
+        const preferredTeam =
+          pendingTargetTeamId &&
+            nextTeams.some(
+              (team) =>
+                Number(team.id) ===
                 Number(
                   targetMyTeam.projectId,
                 ),
@@ -2127,9 +2090,11 @@ function QAPage() {
         setSelectedProjectId(
           preferredProjectId,
         );
-      } catch (
-      requestError
-      ) {
+
+        pendingTargetTeamIdRef.current = null;
+
+        return nextTeams;
+      } catch (requestError) {
         console.error(
           'Failed to load Q&A:',
           requestError,
@@ -2144,18 +2109,9 @@ function QAPage() {
       } finally {
         setIsLoading(false);
       }
-    }, [targetTeamId]);
-
-  const loadProjectTeamList =
-    useCallback(
-      async (
-        projectId,
-      ) => {
-        if (!projectId) {
-          setTeams([]);
-          setSelectedTeamId(
-            null,
-          );
+    },
+    [],
+  );
 
           return;
         }
@@ -2428,35 +2384,23 @@ function QAPage() {
       loadingMoreRef.current =
         true;
 
-      setIsLoadingMore(
-        true,
-      );
-
-      if (container) {
-        restoreScrollRef.current =
-        {
-          previousHeight:
-            container.scrollHeight,
-
-          previousTop:
-            container.scrollTop,
-        };
-      }
-
-      try {
-        const feed =
-          await getTeamQaFeed(
-            selectedTeamId,
-            {
-              cursor:
-                feedCursor,
-              size: 20,
-            },
-          );
-
-        const questions =
-          Array.isArray(
-            feed?.items,
+      const preferredProjectId =
+        targetProjectId &&
+          memberProjects.some(
+            (project) =>
+              Number(project.projectId) ===
+              Number(targetProjectId),
+          )
+          ? targetProjectId
+          : targetMyTeam?.projectId &&
+          memberProjects.some(
+            (project) =>
+              Number(
+                project.projectId,
+              ) ===
+              Number(
+                targetMyTeam.projectId,
+              ),
           )
             ? feed.items.map(
               (item) =>
@@ -2496,25 +2440,15 @@ function QAPage() {
           requestError,
         );
 
-        setError(
-          requestError
-            ?.response?.data
-            ?.message ??
-          '이전 대화를 불러오지 못했습니다.',
-        );
-      } finally {
-        loadingMoreRef.current =
-          false;
-
-        setIsLoadingMore(
-          false,
-        );
-      }
-    }, [
-      selectedTeamId,
-      feedCursor,
-      feedHasNext,
-    ]);
+      setError(
+        requestError?.response?.data
+          ?.message ??
+        'Q&A 정보를 불러오지 못했습니다.',
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [targetProjectId, targetTeamId]);
 
   useEffect(() => {
     loadInitialData();
@@ -3027,13 +2961,16 @@ function QAPage() {
 
       event.preventDefault();
 
-      if (
-        !questionInput.trim() ||
-        !selectedTeamId ||
-        isCreating
-      ) {
-        return;
-      }
+    pendingTargetTeamIdRef.current = null;
+    setSelectedProjectId(projectId);
+    setSelectedTeamId(null);
+    setSelectedQuestion(null);
+    setQuestionDetail(null);
+    setQuestionInput('');
+    setIsEditorOpen(false);
+    setError('');
+    setSuccessMessage('');
+  };
 
       event.currentTarget
         .form?.requestSubmit();
@@ -3284,17 +3221,7 @@ function QAPage() {
   return (
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
       <header className="shrink-0">
-        <div className="flex items-center justify-between gap-4 pb-5">
-          <div>
-            <h1 className="text-[30px] font-semibold tracking-[-0.03em] text-[#101211]">
-              AI Q&A
-            </h1>
-
-            <p className="mt-1.5 text-[14px] leading-5 text-[#60766C]">
-              팀의 회의록과 공유 정보를 기반으로 필요한 내용을 질문해보세요.
-            </p>
-          </div>
-
+        <div className="flex items-center justify-end gap-4 pb-5">
           <button
             type="button"
             onClick={() =>
@@ -3311,7 +3238,8 @@ function QAPage() {
           </button>
         </div>
 
-        <div className="relative z-20 flex min-h-[56px] items-end gap-2 overflow-x-auto">
+        {/* 프로젝트 탭 */}
+        <div className="relative z-20 flex min-h-[56px] items-end gap-2 overflow-x-auto overflow-y-hidden">
           {projects.map(
             (project) => {
               const selected =

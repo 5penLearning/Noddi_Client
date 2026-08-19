@@ -43,3 +43,21 @@
     max-width: 100%;
   }
 }
+
+@layer utilities {
+  button:not(:disabled)[class~='bg-white']:hover,
+  button:not(:disabled)[class*='bg-[var(--color-white)]']:hover,
+  [role='button'][class~='bg-white']:hover,
+  [role='button'][class*='bg-[var(--color-white)]']:hover {
+    background-color: #effff7;
+  }
+
+  .green-border-theme
+    :where(button, section, article, div, label, input, textarea, select)[class*='border']:not(
+      [class*='border-transparent']
+    ):not([class*='border-white']):not([class*='border-[#FF']):not(
+      [class*='border-[var(--color-red)]']
+    ) {
+    border-color: #d8f2e5;
+  }
+}

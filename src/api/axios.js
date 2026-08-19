@@ -6,6 +6,7 @@ const API_BASE_URL =
 
 const ACCESS_TOKEN_KEY = 'noddi_access_token';
 const USER_ID_KEY = 'noddi_user_id';
+let isRedirectingToLogin = false;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -101,7 +102,24 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => Promise.reject(error),
+  (error) => {
+    const isUnauthorized = error?.response?.status === 401;
+    const isPublicRequest = Boolean(error?.config?.skipAuth);
+    const isLoginPage = window.location.pathname === '/login';
+
+    if (
+      isUnauthorized &&
+      !isPublicRequest &&
+      !isLoginPage &&
+      !isRedirectingToLogin
+    ) {
+      isRedirectingToLogin = true;
+      clearAuthSession();
+      window.location.replace('/login');
+    }
+
+    return Promise.reject(error);
+  },
 );
 
 export default api;

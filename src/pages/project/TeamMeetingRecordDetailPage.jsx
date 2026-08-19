@@ -160,7 +160,7 @@ function TeamMeetingRecordDetailPage() {
   };
 
   return (
-    <main className="mx-auto flex h-full w-full max-w-[1388px] flex-col overflow-hidden rounded-[10px] bg-white">
+    <main className="green-border-theme mx-auto flex h-full w-full max-w-[1388px] flex-col overflow-hidden rounded-[10px] bg-white">
       {isLoading && (
         <p className="p-8 text-[16px] text-[var(--color-gray-500)]">회의록을 불러오는 중입니다.</p>
       )}

@@ -43,7 +43,7 @@ function MyTeamCard({
 
   return (
     <section
-      className={`flex h-[440px] w-[453px] flex-col justify-between overflow-hidden rounded-[10px] bg-[var(--color-gray-50)] px-5 py-6 ${className}`}
+      className={`flex h-[440px] w-[453px] flex-col justify-between overflow-hidden rounded-[10px] border border-[#D8F2E5] bg-[var(--color-gray-50)] px-5 py-6 ${className}`}
     >
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-2">
