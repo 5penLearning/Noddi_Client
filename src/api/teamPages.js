@@ -1,5 +1,13 @@
 import api from './axios';
 
+const normalizeTeamPage = (teamPage) => ({
+  ...teamPage,
+  createdAt:
+    teamPage.createdAt ?? teamPage.createdDate ?? teamPage.createdTime ?? teamPage.created_at,
+  updatedAt:
+    teamPage.updatedAt ?? teamPage.updatedDate ?? teamPage.modifiedAt ?? teamPage.updated_at,
+});
+
 export const getTeamPages = async (teamId, { page = 0, size = 20, sort } = {}) => {
   const { data } = await api.get(`/api/v1/teams/${teamId}/pages`, {
     params: {
@@ -9,7 +17,12 @@ export const getTeamPages = async (teamId, { page = 0, size = 20, sort } = {}) =
     },
   });
 
-  return data.result ?? { content: [] };
+  const result = data.result ?? { content: [] };
+
+  return {
+    ...result,
+    content: (result.content ?? result.items ?? []).map(normalizeTeamPage),
+  };
 };
 
 export const createTeamPage = async (teamId, { title, content }) => {
@@ -18,13 +31,13 @@ export const createTeamPage = async (teamId, { title, content }) => {
     content,
   });
 
-  return data.result;
+  return data.result ? normalizeTeamPage(data.result) : data.result;
 };
 
 export const getTeamPage = async (teamId, pageId) => {
   const { data } = await api.get(`/api/v1/teams/${teamId}/pages/${pageId}`);
 
-  return data.result;
+  return data.result ? normalizeTeamPage(data.result) : data.result;
 };
 
 export const updateTeamPage = async (teamId, pageId, { title, content }) => {

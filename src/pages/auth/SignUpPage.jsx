@@ -9,12 +9,16 @@ import { useNavigate } from 'react-router-dom';
 
 import {
   getSignupProfileOptions,
+  login,
   sendEmailCode,
   signup,
   verifyEmailCode,
 } from '../../api/auth';
 
-import { getApiErrorMessage } from '../../api/axios';
+import {
+  getApiErrorMessage,
+  saveAuthSession,
+} from '../../api/axios';
 
 import meetingSymbolIcon from '../../assets/icons/home-meeting/meeting-symbol.svg';
 import meetingSymbolSecondaryIcon from '../../assets/icons/home-meeting/meeting-symbol-secondary.svg';
@@ -345,9 +349,7 @@ function ProfileOptionField({
                     type="button"
                     onClick={() => {
                       onChange(option);
-                      setIsOpen(
-                        false,
-                      );
+                      setIsOpen(false);
                     }}
                     className={`w-full px-4 py-2.5 text-left text-[13px] transition ${value === option
                       ? 'bg-[#EFFFF7] font-medium text-[#157C53]'
@@ -480,12 +482,16 @@ function SignUpPage() {
 
   useEffect(() => {
     const frame =
-      requestAnimationFrame(() => {
-        setIsVisible(true);
-      });
+      requestAnimationFrame(
+        () => {
+          setIsVisible(true);
+        },
+      );
 
     return () => {
-      cancelAnimationFrame(frame);
+      cancelAnimationFrame(
+        frame,
+      );
     };
   }, []);
 
@@ -617,6 +623,7 @@ function SignUpPage() {
         await sendEmailCode({
           email:
             email.trim(),
+
           organizationId:
             selectedCompany.organizationId,
         });
@@ -677,8 +684,10 @@ function SignUpPage() {
         await verifyEmailCode({
           email:
             email.trim(),
+
           organizationId:
             selectedCompany.organizationId,
+
           code:
             verificationCode.trim(),
         });
@@ -712,6 +721,18 @@ function SignUpPage() {
     async (event) => {
       event.preventDefault();
 
+      const trimmedName =
+        name.trim();
+
+      const trimmedEmail =
+        email.trim();
+
+      const trimmedDepartment =
+        department.trim();
+
+      const trimmedPosition =
+        position.trim();
+
       if (!selectedCompany) {
         setErrorMessage(
           '회사를 먼저 선택해주세요.',
@@ -722,9 +743,7 @@ function SignUpPage() {
         return;
       }
 
-      if (
-        !department.trim()
-      ) {
+      if (!trimmedDepartment) {
         setErrorMessage(
           '부서를 입력해주세요.',
         );
@@ -734,7 +753,7 @@ function SignUpPage() {
         return;
       }
 
-      if (!position.trim()) {
+      if (!trimmedPosition) {
         setErrorMessage(
           '직함을 입력해주세요.',
         );
@@ -744,7 +763,7 @@ function SignUpPage() {
         return;
       }
 
-      if (!name.trim()) {
+      if (!trimmedName) {
         setErrorMessage(
           '이름을 입력해주세요.',
         );
@@ -754,7 +773,7 @@ function SignUpPage() {
         return;
       }
 
-      if (!email.trim()) {
+      if (!trimmedEmail) {
         setErrorMessage(
           '회사 이메일을 입력해주세요.',
         );
@@ -809,25 +828,81 @@ function SignUpPage() {
         await signup({
           organizationId:
             selectedCompany.organizationId,
+
           name:
-            name.trim(),
+            trimmedName,
+
           department:
-            department.trim(),
+            trimmedDepartment,
+
           position:
-            position.trim(),
+            trimmedPosition,
+
           email:
-            email.trim(),
+            trimmedEmail,
+
           password,
         });
 
-        navigate('/login', {
-          replace: true,
-          state: {
-            signupSuccess:
-              true,
-          },
-        });
+        try {
+          const loginResponse =
+            await login({
+              email:
+                trimmedEmail,
+
+              password,
+            });
+
+          const userId =
+            loginResponse
+              ?.result
+              ?.userId;
+
+          const accessToken =
+            loginResponse
+              ?.result
+              ?.accessToken;
+
+          if (!accessToken) {
+            throw new Error(
+              'Access Token이 없습니다.',
+            );
+          }
+
+          saveAuthSession({
+            userId,
+            accessToken,
+          });
+
+          navigate('/home', {
+            replace: true,
+          });
+        } catch (
+        loginError
+        ) {
+          console.error(
+            'Signup completed but automatic login failed:',
+            loginError,
+          );
+
+          navigate('/login', {
+            replace: true,
+
+            state: {
+              signupSuccess:
+                true,
+
+              autoLoginFailed:
+                true,
+            },
+          });
+        }
       } catch (error) {
+        console.error(
+          'Failed to signup:',
+          error,
+        );
+
         setErrorMessage(
           getApiErrorMessage(
             error,
@@ -949,6 +1024,16 @@ function SignUpPage() {
               Ready to join
             </span>
           </div>
+
+          <div
+            className="pointer-events-none absolute -bottom-[120px] -right-[120px] size-[310px] rounded-full border border-[#101211]/10"
+            aria-hidden="true"
+          />
+
+          <div
+            className="pointer-events-none absolute -bottom-[72px] -right-[72px] size-[210px] rounded-full border border-[#101211]/10"
+            aria-hidden="true"
+          />
         </div>
 
         <div className="flex h-full justify-center px-6 py-7 sm:px-10 lg:items-center lg:px-10 lg:py-5 xl:px-14">

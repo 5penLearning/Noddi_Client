@@ -11,7 +11,13 @@ import {
 
 import { getApiErrorMessage, getUserId } from '../../api/axios';
 import { getMeetings } from '../../api/meetingApi';
-import { createTeamPage, getTeamPage, getTeamPages, updateTeamPage } from '../../api/teamPages';
+import {
+  createTeamPage,
+  deleteTeamPage,
+  getTeamPage,
+  getTeamPages,
+  updateTeamPage,
+} from '../../api/teamPages';
 import {
   deleteTeam,
   getMyTeams,
@@ -37,6 +43,7 @@ function TeamMeetingRecordsPage() {
   const [isSharedMemoDetailLoading, setIsSharedMemoDetailLoading] = useState(false);
   const [isSharedMemoCreating, setIsSharedMemoCreating] = useState(false);
   const [isSharedMemoUpdating, setIsSharedMemoUpdating] = useState(false);
+  const [deletingMemoId, setDeletingMemoId] = useState(null);
   const [sharedMemosErrorMessage, setSharedMemosErrorMessage] = useState('');
   const [sharedMemoDetailErrorMessage, setSharedMemoDetailErrorMessage] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
@@ -443,6 +450,27 @@ function TeamMeetingRecordsPage() {
     }
   };
 
+  const handleDeleteSharedMemo = async (memoId) => {
+    if (!window.confirm('이 공유 메모를 삭제할까요?')) return;
+
+    try {
+      setDeletingMemoId(memoId);
+      setSharedMemosErrorMessage('');
+
+      await deleteTeamPage(teamId, memoId);
+
+      setSharedMemos((currentMemos) => currentMemos.filter((memo) => memo.pageId !== memoId));
+
+      if (selectedMemoId === memoId) {
+        setSelectedMemoId(null);
+      }
+    } catch (error) {
+      setSharedMemosErrorMessage(getApiErrorMessage(error, '공유 메모를 삭제하지 못했습니다.'));
+    } finally {
+      setDeletingMemoId(null);
+    }
+  };
+
   const meetingDates = serverMeetings
     .map((meeting) =>
       formatMeetingDate(meeting.scheduledStartAt ?? meeting.startedAt ?? meeting.createdAt),
@@ -486,7 +514,7 @@ function TeamMeetingRecordsPage() {
   };
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-[1347px] flex-col">
+    <div className="green-border-theme mx-auto flex h-full w-full max-w-[1347px] flex-col">
       <MeetingRecordsTabs activeTab={activeTab} onChange={setActiveTab} />
 
       {activeTab === 'records' ? (
@@ -539,13 +567,14 @@ function TeamMeetingRecordsPage() {
           isDetailLoading={isSharedMemoDetailLoading}
           isCreating={isSharedMemoCreating}
           isUpdating={isSharedMemoUpdating}
+          deletingMemoId={deletingMemoId}
           listErrorMessage={sharedMemosErrorMessage}
           detailErrorMessage={sharedMemoDetailErrorMessage}
           onKeywordChange={setMemoSearchKeyword}
           onSelect={setSelectedMemoId}
           onCreate={handleCreateSharedMemo}
-          onBack={() => setSelectedMemoId(null)}
           onUpdate={handleUpdateSharedMemo}
+          onDelete={handleDeleteSharedMemo}
         />
       )}
     </div>

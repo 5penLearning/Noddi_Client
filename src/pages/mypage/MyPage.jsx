@@ -815,19 +815,8 @@ function MyPage() {
 
   return (
     <>
-      <div className="h-full w-full overflow-y-auto bg-[#FAFFFC] pb-16">
+      <div className="green-border-theme h-full w-full overflow-y-auto bg-[#FAFFFC] pb-16">
         <div className="mx-auto w-full max-w-[1180px] px-4 pt-1 sm:px-6 lg:px-8 xl:px-0">
-          {/* Header */}
-          <header className="mb-6 sm:mb-8">
-            <h1 className="text-[26px] font-semibold tracking-[-0.03em] text-[#101211] sm:text-[30px]">
-              my
-            </h1>
-
-            <p className="mt-1.5 text-[13px] font-medium text-[#688077] sm:text-[14px]">
-              내 정보와 참여 중인 프로젝트를 관리할 수 있습니다.
-            </p>
-          </header>
-
           {pageError && (
             <div className="mb-5 rounded-[14px] border border-[#FFD7D2] bg-[#FFF6F5] px-4 py-3 text-[13px] text-[#D84A40]">
               {pageError}

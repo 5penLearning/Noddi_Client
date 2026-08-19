@@ -10,6 +10,9 @@ import DailyIframe from '@daily-co/daily-js';
 const CHAT_MESSAGE_TYPE =
   'meeting-chat';
 
+const AUTO_RECORDING_DELAY =
+  700;
+
 function getErrorMessage(
   error,
   fallbackMessage,
@@ -62,6 +65,9 @@ function useDailyCall(roomUrl) {
   const callObjectRef =
     useRef(null);
 
+  const autoRecordingAttemptedRef =
+    useRef(false);
+
   const [
     participants,
     setParticipants,
@@ -77,11 +83,15 @@ function useDailyCall(roomUrl) {
     setIsJoining,
   ] = useState(false);
 
-  const [isJoined, setIsJoined] =
-    useState(false);
+  const [
+    isJoined,
+    setIsJoined,
+  ] = useState(false);
 
-  const [isMicOn, setIsMicOn] =
-    useState(false);
+  const [
+    isMicOn,
+    setIsMicOn,
+  ] = useState(false);
 
   const [
     isCameraOn,
@@ -113,8 +123,10 @@ function useDailyCall(roomUrl) {
     setRecordingError,
   ] = useState(null);
 
-  const [error, setError] =
-    useState(null);
+  const [
+    error,
+    setError,
+  ] = useState(null);
 
   const syncParticipants =
     useCallback(
@@ -134,20 +146,33 @@ function useDailyCall(roomUrl) {
               participant.local,
           );
 
-        if (!localParticipant) {
-          setIsMicOn(false);
-          setIsCameraOn(false);
-          setIsSharing(false);
+        if (
+          !localParticipant
+        ) {
+          setIsMicOn(
+            false,
+          );
+
+          setIsCameraOn(
+            false,
+          );
+
+          setIsSharing(
+            false,
+          );
+
           return;
         }
 
         const audioTrack =
           localParticipant
-            ?.tracks?.audio;
+            ?.tracks
+            ?.audio;
 
         const videoTrack =
           localParticipant
-            ?.tracks?.video;
+            ?.tracks
+            ?.video;
 
         const screenTrack =
           localParticipant
@@ -183,7 +208,11 @@ function useDailyCall(roomUrl) {
       return undefined;
     }
 
-    let cancelled = false;
+    let cancelled =
+      false;
+
+    let autoRecordingTimeoutId =
+      null;
 
     const callObject =
       DailyIframe.createCallObject();
@@ -191,10 +220,140 @@ function useDailyCall(roomUrl) {
     callObjectRef.current =
       callObject;
 
+    autoRecordingAttemptedRef.current =
+      false;
+
     setChatMessages([]);
+
     setError(null);
-    setRecordingError(null);
-    setIsJoining(true);
+
+    setRecordingError(
+      null,
+    );
+
+    setIsJoining(
+      true,
+    );
+
+    /*
+     * 첫 참가자가 Daily 입장에 성공하면 자동 녹음을 시작한다.
+     *
+     * 여러 참가자가 동시에 startRecording을 호출하지 않도록
+     * joined-meeting 시점에 현재 참가자가 자기 자신 하나뿐일 때만
+     * 자동 시작한다.
+     *
+     * 이후 참가자는 이미 시작된 회의에 들어오는 것이므로
+     * 자동 startRecording을 호출하지 않는다.
+     */
+    const startRecordingAutomatically =
+      () => {
+        if (
+          cancelled ||
+          autoRecordingAttemptedRef.current
+        ) {
+          return;
+        }
+
+        const currentParticipants =
+          getParticipants(
+            callObject,
+          );
+
+        const localParticipant =
+          currentParticipants.find(
+            (participant) =>
+              participant.local,
+          );
+
+        if (
+          !localParticipant
+        ) {
+          return;
+        }
+
+        /*
+         * 첫 참가자만 자동 녹음 시작.
+         */
+        if (
+          currentParticipants.length >
+          1
+        ) {
+          return;
+        }
+
+        autoRecordingAttemptedRef.current =
+          true;
+
+        setRecordingError(
+          null,
+        );
+
+        setIsRecordingStarting(
+          true,
+        );
+
+        try {
+          const recordingResult =
+            callObject.startRecording({
+              type:
+                'cloud-audio-only',
+            });
+
+          Promise.resolve(
+            recordingResult,
+          ).catch(
+            (
+              startError,
+            ) => {
+              if (
+                cancelled
+              ) {
+                return;
+              }
+
+              console.error(
+                'Failed to auto start recording:',
+                startError,
+              );
+
+              autoRecordingAttemptedRef.current =
+                false;
+
+              setIsRecordingStarting(
+                false,
+              );
+
+              setRecordingError(
+                getErrorMessage(
+                  startError,
+                  '자동 녹음을 시작하지 못했습니다.',
+                ),
+              );
+            },
+          );
+        } catch (
+          startError
+        ) {
+          console.error(
+            'Failed to auto start recording:',
+            startError,
+          );
+
+          autoRecordingAttemptedRef.current =
+            false;
+
+          setIsRecordingStarting(
+            false,
+          );
+
+          setRecordingError(
+            getErrorMessage(
+              startError,
+              '자동 녹음을 시작하지 못했습니다.',
+            ),
+          );
+        }
+      };
 
     const handleJoinedMeeting =
       () => {
@@ -202,12 +361,29 @@ function useDailyCall(roomUrl) {
           return;
         }
 
-        setIsJoining(false);
-        setIsJoined(true);
+        setIsJoining(
+          false,
+        );
+
+        setIsJoined(
+          true,
+        );
 
         syncParticipants(
           callObject,
         );
+
+        /*
+         * joined-meeting 직후 Daily 내부 상태가
+         * 완전히 반영될 시간을 아주 짧게 준 뒤 녹음을 시작한다.
+         */
+        autoRecordingTimeoutId =
+          window.setTimeout(
+            () => {
+              startRecordingAutomatically();
+            },
+            AUTO_RECORDING_DELAY,
+          );
       };
 
     const handleLeftMeeting =
@@ -216,18 +392,38 @@ function useDailyCall(roomUrl) {
           return;
         }
 
-        setIsJoined(false);
+        if (
+          autoRecordingTimeoutId
+        ) {
+          window.clearTimeout(
+            autoRecordingTimeoutId,
+          );
+
+          autoRecordingTimeoutId =
+            null;
+        }
+
+        autoRecordingAttemptedRef.current =
+          false;
+
+        setIsJoined(
+          false,
+        );
 
         setParticipants([]);
 
         setIsMicOn(false);
+
         setIsCameraOn(false);
+
         setIsSharing(false);
 
         setIsRecording(false);
+
         setIsRecordingStarting(
           false,
         );
+
         setIsRecordingStopping(
           false,
         );
@@ -250,7 +446,9 @@ function useDailyCall(roomUrl) {
           return;
         }
 
-        setIsRecording(true);
+        setIsRecording(
+          true,
+        );
 
         setIsRecordingStarting(
           false,
@@ -260,7 +458,9 @@ function useDailyCall(roomUrl) {
           false,
         );
 
-        setRecordingError(null);
+        setRecordingError(
+          null,
+        );
       };
 
     const handleRecordingStopped =
@@ -269,7 +469,9 @@ function useDailyCall(roomUrl) {
           return;
         }
 
-        setIsRecording(false);
+        setIsRecording(
+          false,
+        );
 
         setIsRecordingStarting(
           false,
@@ -310,70 +512,77 @@ function useDailyCall(roomUrl) {
         );
       };
 
-    const handleAppMessage = ({
-      data,
-      fromId,
-    }) => {
-      if (
-        cancelled ||
-        data?.type !==
-          CHAT_MESSAGE_TYPE ||
-        !data?.message
-      ) {
-        return;
-      }
+    const handleAppMessage =
+      ({
+        data,
+        fromId,
+      }) => {
+        if (
+          cancelled ||
+          data?.type !==
+            CHAT_MESSAGE_TYPE ||
+          !data?.message
+        ) {
+          return;
+        }
 
-      const participant =
-        callObject
-          .participants?.()?.[
-          fromId
-        ];
+        const participant =
+          callObject
+            .participants?.()?.[
+              fromId
+            ];
 
-      const senderName =
-        data.senderName ||
-        participant?.user_name ||
-        '참여자';
+        const senderName =
+          data.senderName ||
+          participant?.user_name ||
+          '참여자';
 
-      const nextMessage = {
-        id:
-          data.id ??
-          createMessageId(),
+        const nextMessage = {
+          id:
+            data.id ??
+            createMessageId(),
 
-        senderSessionId:
-          fromId,
+          senderSessionId:
+            fromId,
 
-        name: senderName,
+          name:
+            senderName,
 
-        message:
-          data.message,
+          message:
+            data.message,
 
-        sentAt:
-          data.sentAt ??
-          new Date().toISOString(),
+          sentAt:
+            data.sentAt ??
+            new Date().toISOString(),
 
-        isMine: false,
+          isMine:
+            false,
+        };
+
+        setChatMessages(
+          (
+            previousMessages,
+          ) => {
+            const alreadyExists =
+              previousMessages.some(
+                (message) =>
+                  message.id ===
+                  nextMessage.id,
+              );
+
+            if (
+              alreadyExists
+            ) {
+              return previousMessages;
+            }
+
+            return [
+              ...previousMessages,
+              nextMessage,
+            ];
+          },
+        );
       };
-
-      setChatMessages(
-        (previousMessages) => {
-          const alreadyExists =
-            previousMessages.some(
-              (message) =>
-                message.id ===
-                nextMessage.id,
-            );
-
-          if (alreadyExists) {
-            return previousMessages;
-          }
-
-          return [
-            ...previousMessages,
-            nextMessage,
-          ];
-        },
-      );
-    };
 
     const handleDailyError =
       (event) => {
@@ -448,10 +657,15 @@ function useDailyCall(roomUrl) {
       async () => {
         try {
           await callObject.join({
-            url: roomUrl,
+            url:
+              roomUrl,
           });
-        } catch (joinError) {
-          if (cancelled) {
+        } catch (
+          joinError
+        ) {
+          if (
+            cancelled
+          ) {
             return;
           }
 
@@ -460,7 +674,9 @@ function useDailyCall(roomUrl) {
             joinError,
           );
 
-          setIsJoining(false);
+          setIsJoining(
+            false,
+          );
 
           setError(
             getErrorMessage(
@@ -474,7 +690,16 @@ function useDailyCall(roomUrl) {
     joinMeeting();
 
     return () => {
-      cancelled = true;
+      cancelled =
+        true;
+
+      if (
+        autoRecordingTimeoutId
+      ) {
+        window.clearTimeout(
+          autoRecordingTimeoutId,
+        );
+      }
 
       callObject.off(
         'joined-meeting',
@@ -540,7 +765,9 @@ function useDailyCall(roomUrl) {
         ) {
           callObject.destroy();
         }
-      } catch (destroyError) {
+      } catch (
+        destroyError
+      ) {
         console.error(
           'Failed to destroy Daily call:',
           destroyError,
@@ -574,7 +801,9 @@ function useDailyCall(roomUrl) {
         syncParticipants(
           callObject,
         );
-      } catch (toggleError) {
+      } catch (
+        toggleError
+      ) {
         console.error(
           'Failed to toggle microphone:',
           toggleError,
@@ -615,7 +844,9 @@ function useDailyCall(roomUrl) {
         syncParticipants(
           callObject,
         );
-      } catch (toggleError) {
+      } catch (
+        toggleError
+      ) {
         console.error(
           'Failed to toggle camera:',
           toggleError,
@@ -649,7 +880,9 @@ function useDailyCall(roomUrl) {
       try {
         setError(null);
 
-        if (isSharing) {
+        if (
+          isSharing
+        ) {
           await callObject.stopScreenShare();
         } else {
           await callObject.startScreenShare();
@@ -658,7 +891,9 @@ function useDailyCall(roomUrl) {
         syncParticipants(
           callObject,
         );
-      } catch (shareError) {
+      } catch (
+        shareError
+      ) {
         console.error(
           'Failed to toggle screen share:',
           shareError,
@@ -679,7 +914,9 @@ function useDailyCall(roomUrl) {
 
   const sendChatMessage =
     useCallback(
-      async (message) => {
+      async (
+        message,
+      ) => {
         const callObject =
           callObjectRef.current;
 
@@ -731,7 +968,9 @@ function useDailyCall(roomUrl) {
           );
 
           setChatMessages(
-            (previousMessages) => [
+            (
+              previousMessages,
+            ) => [
               ...previousMessages,
               {
                 id,
@@ -741,18 +980,22 @@ function useDailyCall(roomUrl) {
                     ?.session_id ??
                   'local',
 
-                name: '나',
+                name:
+                  '나',
 
                 message:
                   trimmedMessage,
 
                 sentAt,
 
-                isMine: true,
+                isMine:
+                  true,
               },
             ],
           );
-        } catch (sendError) {
+        } catch (
+          sendError
+        ) {
           console.error(
             'Failed to send chat message:',
             sendError,
@@ -766,7 +1009,9 @@ function useDailyCall(roomUrl) {
           );
         }
       },
-      [isJoined],
+      [
+        isJoined,
+      ],
     );
 
   const startRecording =
@@ -783,35 +1028,42 @@ function useDailyCall(roomUrl) {
         return Promise.resolve();
       }
 
-      setRecordingError(null);
+      setRecordingError(
+        null,
+      );
 
       setIsRecordingStarting(
         true,
       );
 
       return new Promise(
-        (resolve, reject) => {
+        (
+          resolve,
+          reject,
+        ) => {
           let timeoutId;
 
-          const cleanup = () => {
-            callObject.off(
-              'recording-started',
-              handleStarted,
-            );
+          const cleanup =
+            () => {
+              callObject.off(
+                'recording-started',
+                handleStarted,
+              );
 
-            callObject.off(
-              'recording-error',
-              handleError,
-            );
+              callObject.off(
+                'recording-error',
+                handleError,
+              );
 
-            window.clearTimeout(
-              timeoutId,
-            );
-          };
+              window.clearTimeout(
+                timeoutId,
+              );
+            };
 
           const handleStarted =
             (event) => {
               cleanup();
+
               resolve(event);
             };
 
@@ -871,7 +1123,9 @@ function useDailyCall(roomUrl) {
               false,
             );
 
-            reject(startError);
+            reject(
+              startError,
+            );
           }
         },
       );
@@ -894,35 +1148,42 @@ function useDailyCall(roomUrl) {
         return Promise.resolve();
       }
 
-      setRecordingError(null);
+      setRecordingError(
+        null,
+      );
 
       setIsRecordingStopping(
         true,
       );
 
       return new Promise(
-        (resolve, reject) => {
+        (
+          resolve,
+          reject,
+        ) => {
           let timeoutId;
 
-          const cleanup = () => {
-            callObject.off(
-              'recording-stopped',
-              handleStopped,
-            );
+          const cleanup =
+            () => {
+              callObject.off(
+                'recording-stopped',
+                handleStopped,
+              );
 
-            callObject.off(
-              'recording-error',
-              handleError,
-            );
+              callObject.off(
+                'recording-error',
+                handleError,
+              );
 
-            window.clearTimeout(
-              timeoutId,
-            );
-          };
+              window.clearTimeout(
+                timeoutId,
+              );
+            };
 
           const handleStopped =
             (event) => {
               cleanup();
+
               resolve(event);
             };
 
@@ -979,7 +1240,9 @@ function useDailyCall(roomUrl) {
               false,
             );
 
-            reject(stopError);
+            reject(
+              stopError,
+            );
           }
         },
       );
@@ -999,7 +1262,9 @@ function useDailyCall(roomUrl) {
 
       try {
         await callObject.leave();
-      } catch (leaveError) {
+      } catch (
+        leaveError
+      ) {
         console.error(
           'Failed to leave Daily call:',
           leaveError,
@@ -1015,26 +1280,35 @@ function useDailyCall(roomUrl) {
     chatMessages,
 
     isJoining,
+
     isJoined,
 
     isMicOn,
+
     isCameraOn,
+
     isSharing,
 
     isRecording,
+
     isRecordingStarting,
+
     isRecordingStopping,
+
     recordingError,
 
     error,
 
     toggleMic,
+
     toggleCamera,
+
     toggleScreenShare,
 
     sendChatMessage,
 
     startRecording,
+
     stopRecording,
 
     leaveCall,

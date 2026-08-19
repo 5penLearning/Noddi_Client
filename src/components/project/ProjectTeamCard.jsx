@@ -36,13 +36,6 @@ function ProjectTeamCard({ team, onAsk, className = '' }) {
   const members = team.members ?? [];
   const visibleMembers = members.slice(0, MAX_VISIBLE_MEMBERS);
   const remainingMemberCount = Math.max(members.length - visibleMembers.length, 0);
-  const updatedAt = team.updatedAt
-    ? new Intl.DateTimeFormat('ko-KR', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }).format(new Date(team.updatedAt))
-    : null;
 
   return (
     <section
@@ -78,9 +71,6 @@ function ProjectTeamCard({ team, onAsk, className = '' }) {
             {team.description || team.status || '팀 소개가 아직 없습니다.'}
           </p>
         </div>
-        <p className="text-[14px] leading-[1.4] tracking-[-0.21px] text-[var(--color-gray-600)]">
-          마지막 업데이트 · {updatedAt ? `오늘 ${updatedAt}` : '업데이트 정보 없음'}
-        </p>
       </div>
 
       <button
