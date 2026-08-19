@@ -16,22 +16,55 @@ function parseDateTime(value) {
     return null;
   }
 
-  const date = new Date(value);
+  const date =
+    new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
     return null;
   }
 
   return date;
 }
 
+function getLocalDateKey(date) {
+  const year =
+    date.getFullYear();
+
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, '0');
+
+  const day = String(
+    date.getDate(),
+  ).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function isSameLocalDate(
+  firstDate,
+  secondDate,
+) {
+  return (
+    getLocalDateKey(firstDate) ===
+    getLocalDateKey(secondDate)
+  );
+}
+
 function formatSelectedDate(date) {
-  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, '0');
 
-  const day = String(date.getDate()).padStart(2, '0');
+  const day = String(
+    date.getDate(),
+  ).padStart(2, '0');
 
-  return `${month}월 ${day}일(${KOREAN_WEEK_DAYS[date.getDay()]
-    })`;
+  return `${month}월 ${day}일(${KOREAN_WEEK_DAYS[date.getDay()]})`;
 }
 
 function MeetingSymbol({
@@ -55,12 +88,18 @@ function MeetingSymbol({
         style={{
           WebkitMaskImage: `url(${meetingSymbolSecondary})`,
           maskImage: `url(${meetingSymbolSecondary})`,
-          WebkitMaskRepeat: 'no-repeat',
-          maskRepeat: 'no-repeat',
-          WebkitMaskPosition: 'center',
-          maskPosition: 'center',
-          WebkitMaskSize: 'contain',
-          maskSize: 'contain',
+          WebkitMaskRepeat:
+            'no-repeat',
+          maskRepeat:
+            'no-repeat',
+          WebkitMaskPosition:
+            'center',
+          maskPosition:
+            'center',
+          WebkitMaskSize:
+            'contain',
+          maskSize:
+            'contain',
         }}
         aria-hidden="true"
       />
@@ -69,7 +108,9 @@ function MeetingSymbol({
 
   return (
     <img
-      src={meetingSymbolSecondary}
+      src={
+        meetingSymbolSecondary
+      }
       alt=""
       className="h-[22px] w-[22px] object-contain"
     />
@@ -86,76 +127,207 @@ function MeetingScheduleList({
   startingMeetingId,
   hasActiveMeeting,
 }) {
-  const getMeetingState = (meeting) => {
-    if (meeting.status === 'IN_PROGRESS') {
+  const getMeetingState =
+    (meeting) => {
+      const scheduledStart =
+        parseDateTime(
+          meeting.scheduledStartAt,
+        );
+
+      const scheduledEnd =
+        parseDateTime(
+          meeting.scheduledEndAt,
+        );
+
+      const isPastEnd =
+        scheduledEnd
+          ? now.getTime() >
+          scheduledEnd.getTime()
+          : scheduledStart
+            ? now.getTime() >
+            scheduledStart.getTime() &&
+            !isSameLocalDate(
+              now,
+              scheduledStart,
+            )
+            : false;
+
+      /*
+       * IN_PROGRESS인데 종료 시간이 이미 지난 경우
+       * 서버 정리가 실패하더라도 프론트에서는
+       * 진행중 회의처럼 표시하지 않는다.
+       */
+      if (
+        meeting.status ===
+        'IN_PROGRESS'
+      ) {
+        if (isPastEnd) {
+          return {
+            type: 'EXPIRED',
+
+            statusLabel:
+              '종료 시간이 지났어요',
+
+            buttonLabel:
+              '종료됨',
+
+            disabled: true,
+
+            active: false,
+          };
+        }
+
+        return {
+          type:
+            'IN_PROGRESS',
+
+          statusLabel:
+            '현재 진행중이에요',
+
+          buttonLabel:
+            '참여하기',
+
+          disabled: false,
+
+          active: true,
+        };
+      }
+
+      if (
+        meeting.status ===
+        'ENDED'
+      ) {
+        return {
+          type: 'ENDED',
+
+          statusLabel:
+            '종료된 회의',
+
+          buttonLabel:
+            '회의록',
+
+          disabled: false,
+
+          active: false,
+        };
+      }
+
+      if (!scheduledStart) {
+        return {
+          type:
+            'SCHEDULED',
+
+          statusLabel: '',
+
+          buttonLabel:
+            '참여하기',
+
+          disabled: true,
+
+          active: false,
+        };
+      }
+
+      if (isPastEnd) {
+        return {
+          type: 'EXPIRED',
+
+          statusLabel:
+            '종료 시간이 지났어요',
+
+          buttonLabel:
+            '종료됨',
+
+          disabled: true,
+
+          active: false,
+        };
+      }
+
+      const isAfterStart =
+        now.getTime() >=
+        scheduledStart.getTime();
+
+      const isBeforeEnd =
+        scheduledEnd
+          ? now.getTime() <=
+          scheduledEnd.getTime()
+          : isSameLocalDate(
+            now,
+            scheduledStart,
+          );
+
+      const isStartable =
+        isAfterStart &&
+        isBeforeEnd &&
+        !hasActiveMeeting;
+
       return {
-        type: 'IN_PROGRESS',
-        statusLabel: '현재 진행중이에요',
-        buttonLabel: '참여하기',
-        disabled: false,
-        active: true,
+        type:
+          'SCHEDULED',
+
+        statusLabel: '',
+
+        buttonLabel:
+          isStartable
+            ? '시작하기'
+            : '참여하기',
+
+        disabled:
+          !isStartable,
+
+        active:
+          Boolean(
+            isStartable,
+          ),
       };
-    }
-
-    if (meeting.status === 'ENDED') {
-      return {
-        type: 'ENDED',
-        statusLabel: '종료된 회의',
-        buttonLabel: '회의록',
-        disabled: false,
-        active: false,
-      };
-    }
-
-    const scheduledStart = parseDateTime(
-      meeting.scheduledStartAt,
-    );
-
-    const isStartable =
-      scheduledStart &&
-      now.getTime() >= scheduledStart.getTime() &&
-      !hasActiveMeeting;
-
-    return {
-      type: 'SCHEDULED',
-
-      statusLabel: '',
-
-      buttonLabel: isStartable
-        ? '시작하기'
-        : '참여하기',
-
-      disabled: !isStartable,
-
-      active: Boolean(isStartable),
     };
-  };
 
-  const handleAction = (meeting, state) => {
-    if (state.disabled) {
+  const handleAction = (
+    meeting,
+    state,
+  ) => {
+    if (
+      state.disabled
+    ) {
       return;
     }
 
-    if (state.type === 'IN_PROGRESS') {
+    if (
+      state.type ===
+      'IN_PROGRESS'
+    ) {
       onJoin(meeting);
 
       return;
     }
 
-    if (state.type === 'ENDED') {
-      onOpenSummary(meeting);
+    if (
+      state.type ===
+      'ENDED'
+    ) {
+      onOpenSummary(
+        meeting,
+      );
 
       return;
     }
 
-    onStart(meeting);
+    if (
+      state.type ===
+      'SCHEDULED'
+    ) {
+      onStart(meeting);
+    }
   };
 
   return (
     <div className="mt-4 border-t border-[#E8ECEA] pt-4">
       <div className="flex items-center gap-2.5">
         <strong className="text-[13px] font-semibold text-[#59625F]">
-          {formatSelectedDate(selectedDate)}
+          {formatSelectedDate(
+            selectedDate,
+          )}
         </strong>
 
         <span className="text-[12px] text-[#A7B0AC]">
@@ -171,86 +343,112 @@ function MeetingScheduleList({
         </div>
       ) : (
         <div className="mt-4 max-h-[190px] space-y-4 overflow-y-auto pr-1">
-          {meetings.map((meeting) => {
-            const state = getMeetingState(meeting);
+          {meetings.map(
+            (meeting) => {
+              const state =
+                getMeetingState(
+                  meeting,
+                );
 
-            const isCurrent =
-              state.type === 'IN_PROGRESS';
+              const isCurrent =
+                state.type ===
+                'IN_PROGRESS';
 
-            const isStarting =
-              startingMeetingId === meeting.meetingId;
+              const isStarting =
+                startingMeetingId ===
+                meeting.meetingId;
 
-            return (
-              <div
-                key={meeting.meetingId}
-                className="grid grid-cols-[25px_minmax(0,1fr)_88px] items-center gap-3"
-              >
-                <div className="flex justify-center self-start pt-2">
-                  <MeetingSymbol
-                    current={isCurrent}
-                    active={state.active}
-                  />
-                </div>
-
-                <div className="min-w-0">
-                  {state.statusLabel && (
-                    <p
-                      className={`mb-1 text-[10px] font-medium ${isCurrent
-                        ? 'text-[#31D99A]'
-                        : 'text-[#9AA4A0]'
-                        }`}
-                    >
-                      {state.statusLabel}
-                    </p>
-                  )}
-
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    <strong className="shrink-0 text-[13px] font-semibold text-[#101211]">
-                      {meeting.startTime}
-                    </strong>
-
-                    <p className="truncate text-[13px] font-semibold text-[#101211]">
-                      {meeting.title}
-                    </p>
+              return (
+                <div
+                  key={
+                    meeting.meetingId
+                  }
+                  className="grid grid-cols-[25px_minmax(0,1fr)_88px] items-center gap-3"
+                >
+                  <div className="flex justify-center self-start pt-2">
+                    <MeetingSymbol
+                      current={
+                        isCurrent
+                      }
+                      active={
+                        state.active
+                      }
+                    />
                   </div>
 
-                  <p className="mt-1 truncate text-[11px] text-[#8E9894]">
-                    {meeting.team}
-                  </p>
+                  <div className="min-w-0">
+                    {state.statusLabel && (
+                      <p
+                        className={`mb-1 text-[10px] font-medium ${isCurrent
+                          ? 'text-[#31D99A]'
+                          : state.type ===
+                            'EXPIRED'
+                            ? 'text-[#F64E42]'
+                            : 'text-[#9AA4A0]'
+                          }`}
+                      >
+                        {
+                          state.statusLabel
+                        }
+                      </p>
+                    )}
 
-                  {meeting.description && (
-                    <p className="mt-1.5 max-w-[220px] truncate text-[10px] text-[#B0B8B5]">
-                      {meeting.description}
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <strong className="shrink-0 text-[13px] font-semibold text-[#101211]">
+                        {
+                          meeting.startTime
+                        }
+                      </strong>
+
+                      <p className="truncate text-[13px] font-semibold text-[#101211]">
+                        {
+                          meeting.title
+                        }
+                      </p>
+                    </div>
+
+                    <p className="mt-1 truncate text-[11px] text-[#8E9894]">
+                      {
+                        meeting.team
+                      }
                     </p>
-                  )}
-                </div>
 
-                <button
-                  type="button"
-                  disabled={
-                    state.disabled ||
-                    isStarting
-                  }
-                  onClick={() =>
-                    handleAction(
-                      meeting,
-                      state,
-                    )
-                  }
-                  className={`h-[38px] rounded-[8px] text-[11px] font-semibold transition ${state.disabled
-                    ? 'cursor-not-allowed bg-[#E8ECEA] text-[#C3CAC7]'
-                    : state.active
-                      ? 'bg-[#31F5A0] text-[#101211] hover:brightness-[0.97]'
-                      : 'bg-[#EFF3F1] text-[#59625F] hover:bg-[#E5EBE8]'
-                    }`}
-                >
-                  {isStarting
-                    ? '시작 중'
-                    : state.buttonLabel}
-                </button>
-              </div>
-            );
-          })}
+                    {meeting.description && (
+                      <p className="mt-1.5 max-w-[220px] truncate text-[10px] text-[#B0B8B5]">
+                        {
+                          meeting.description
+                        }
+                      </p>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={
+                      state.disabled ||
+                      isStarting
+                    }
+                    onClick={() =>
+                      handleAction(
+                        meeting,
+                        state,
+                      )
+                    }
+                    className={`h-[38px] rounded-[8px] text-[11px] font-semibold transition ${state.disabled
+                      ? 'cursor-not-allowed bg-[#E8ECEA] text-[#C3CAC7]'
+                      : state.active
+                        ? 'bg-[#31F5A0] text-[#101211] hover:brightness-[0.97]'
+                        : 'bg-[#EFF3F1] text-[#59625F] hover:bg-[#E5EBE8]'
+                      }`}
+                  >
+                    {isStarting
+                      ? '시작 중'
+                      : state.buttonLabel}
+                  </button>
+                </div>
+              );
+            },
+          )}
         </div>
       )}
     </div>
