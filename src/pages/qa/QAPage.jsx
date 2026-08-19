@@ -1736,17 +1736,7 @@ function QAPage() {
   return (
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
       <header className="shrink-0">
-        <div className="flex items-center justify-between gap-4 pb-5">
-          <div>
-            <h1 className="text-[30px] font-semibold tracking-[-0.03em] text-[#101211]">
-              AI Q&A
-            </h1>
-
-            <p className="mt-1.5 text-[14px] leading-5 text-[#60766C]">
-              프로젝트의 회의록과 팀 정보를 기반으로 필요한 내용을 질문해보세요.
-            </p>
-          </div>
-
+        <div className="flex items-center justify-end gap-4 pb-5">
           <button
             type="button"
             onClick={() =>
@@ -1762,7 +1752,7 @@ function QAPage() {
         </div>
 
         {/* 프로젝트 탭 */}
-        <div className="relative z-20 flex min-h-[56px] items-end gap-2 overflow-x-auto">
+        <div className="relative z-20 flex min-h-[56px] items-end gap-2 overflow-x-auto overflow-y-hidden">
           {projects.map(
             (project) => {
               const selected =

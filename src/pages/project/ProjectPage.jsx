@@ -661,7 +661,7 @@ function ProjectPage() {
 
   return (
     <div className="green-border-theme h-full [scrollbar-width:none] overflow-y-auto [&::-webkit-scrollbar]:hidden">
-      <div className="mx-auto w-full max-w-[1350px]">
+      <div className="mx-auto w-full ">
         <ProjectNavigation
           projects={projects}
           currentProjectId={projectId}
