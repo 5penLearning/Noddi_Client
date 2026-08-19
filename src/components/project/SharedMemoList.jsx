@@ -1,6 +1,7 @@
 import folderIcon from '../../assets/icons/meeting-records/shared-memo-folder.svg';
 import folderLineIcon from '../../assets/icons/meeting-records/shared-memo-folder-line.svg';
 import searchIcon from '../../assets/icons/meeting-records/shared-memo-search.svg';
+import { TrashIcon } from '../feature/meeting/ActionItemPanel';
 
 function SharedMemoFolderIcon() {
   return (
@@ -34,10 +35,12 @@ function SharedMemoList({
   selectedMemoId,
   isLoading,
   isCreating,
+  deletingMemoId,
   errorMessage,
   onKeywordChange,
   onSelect,
   onCreate,
+  onDelete,
 }) {
   const normalizedKeyword = keyword.trim().toLowerCase();
   const visibleMemos = memos.filter((memo) =>
@@ -79,45 +82,58 @@ function SharedMemoList({
         {!isLoading &&
           !errorMessage &&
           visibleMemos.map((memo) => (
-            <button
+            <div
               key={memo.pageId}
-              type="button"
-              onClick={() => onSelect(memo.pageId)}
-              className={`flex w-full items-start gap-3 border-b border-[var(--color-gray-200)] px-5 py-[18px] text-left ${
+              className={`flex w-full items-start gap-3 border-b border-[var(--color-gray-200)] px-5 py-[18px] ${
                 selectedMemoId === memo.pageId ? 'bg-[#EFFFF7]' : 'bg-white hover:bg-[#EFFFF7]'
               }`}
             >
-              <SharedMemoFolderIcon />
-              <span className="min-w-0 flex-1">
-                <strong className="block truncate text-[16px] leading-[1.3] font-medium text-black">
-                  {memo.title || '제목 없음'}
-                </strong>
-                <span className="mt-2 flex min-w-0 items-center gap-2 text-[12px] text-[var(--color-gray-500)]">
-                  <span className="max-w-[120px] truncate">
-                    {memo.authorName ??
-                      memo.creatorName ??
-                      memo.createdByName ??
-                      memo.author?.name ??
-                      memo.createdBy?.name ??
-                      '작성자 정보 없음'}
-                  </span>
-                  <span aria-hidden="true">·</span>
-                  <span className="flex min-w-0 gap-2">
-                    {memo.createdAt && (
-                      <time className="truncate" dateTime={memo.createdAt}>
-                        생성 {formatCreatedAt(memo.createdAt)}
-                      </time>
-                    )}
-                    {memo.updatedAt && (
-                      <time className="truncate" dateTime={memo.updatedAt}>
-                        {memo.createdAt ? '· ' : ''}{formatCreatedAt(memo.updatedAt)}
-                      </time>
-                    )}
-                    {!memo.createdAt && !memo.updatedAt && <span>날짜 정보 없음</span>}
+              <button
+                type="button"
+                onClick={() => onSelect(memo.pageId)}
+                className="flex min-w-0 flex-1 items-start gap-3 text-left"
+              >
+                <SharedMemoFolderIcon />
+                <span className="min-w-0 flex-1">
+                  <strong className="block truncate text-[16px] leading-[1.3] font-medium text-black">
+                    {memo.title || '제목 없음'}
+                  </strong>
+                  <span className="mt-2 flex min-w-0 items-center gap-2 text-[12px] text-[var(--color-gray-500)]">
+                    <span className="max-w-[120px] truncate">
+                      {memo.authorName ??
+                        memo.creatorName ??
+                        memo.createdByName ??
+                        memo.author?.name ??
+                        memo.createdBy?.name ??
+                        '작성자 정보 없음'}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span className="flex min-w-0 gap-2">
+                      {memo.createdAt && (
+                        <time className="truncate" dateTime={memo.createdAt}>
+                          생성 {formatCreatedAt(memo.createdAt)}
+                        </time>
+                      )}
+                      {memo.updatedAt && (
+                        <time className="truncate" dateTime={memo.updatedAt}>
+                          {memo.createdAt ? '· ' : ''}{formatCreatedAt(memo.updatedAt)}
+                        </time>
+                      )}
+                      {!memo.createdAt && !memo.updatedAt && <span>날짜 정보 없음</span>}
+                    </span>
                   </span>
                 </span>
-              </span>
-            </button>
+              </button>
+              <button
+                type="button"
+                disabled={deletingMemoId === memo.pageId}
+                onClick={() => onDelete?.(memo.pageId)}
+                className="mt-1 flex size-5 shrink-0 items-center justify-center text-[var(--color-gray-500)] disabled:opacity-40"
+                aria-label={`${memo.title || '제목 없음'} 삭제`}
+              >
+                <TrashIcon />
+              </button>
+            </div>
           ))}
 
         {!isLoading && !errorMessage && visibleMemos.length === 0 && (

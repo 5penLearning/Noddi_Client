@@ -38,11 +38,6 @@ import {
   inviteTeamMember,
 } from '../../api/teams';
 import { projectPageMockData } from '../../mocks/projectPageData';
-import {
-  getStoredCompletedActionItems,
-  removeStoredCompletedActionItem,
-  syncStoredCompletedActionItem,
-} from '../../utils/completedActionItems';
 
 function ProjectPage() {
   const navigate = useNavigate();
@@ -268,20 +263,6 @@ function ProjectPage() {
         const todoGroupByTeamId = new Map(
           todoGroups.map((group) => [String(group.teamId), group]),
         );
-        getStoredCompletedActionItems().forEach((item) => {
-          const todoGroup = todoGroupByTeamId.get(String(item.teamId));
-
-          if (!todoGroup || String(todoGroup.projectId) !== String(projectId)) return;
-          if (
-            (todoGroup.actionItems ?? []).some(
-              (todo) => todo.actionItemId === item.actionItemId,
-            )
-          ) {
-            return;
-          }
-
-          todoGroup.actionItems = [...(todoGroup.actionItems ?? []), item];
-        });
         const currentProjectTeamIds = new Set(teamsWithMembers.map((team) => String(team.id)));
         const currentProjectMyTeams = myTeamList
           .filter((team) => currentProjectTeamIds.has(String(team.id)))
@@ -472,7 +453,6 @@ function ProjectPage() {
         dueDate: actionItem.dueDate,
         status: nextStatus,
       });
-      syncStoredCompletedActionItem({ ...actionItem, status: nextStatus });
       setMyTeams((currentTeams) =>
         currentTeams.map((team) => ({
           ...team,
@@ -498,8 +478,6 @@ function ProjectPage() {
     try {
       setTeamsErrorMessage('');
       await updateActionItem(actionItemId, changes);
-      const updatedActionItem = { ...actionItem, ...changes };
-      syncStoredCompletedActionItem(updatedActionItem);
       setMyTeams((currentTeams) =>
         currentTeams.map((team) => ({
           ...team,
@@ -527,7 +505,6 @@ function ProjectPage() {
     try {
       setTeamsErrorMessage('');
       await deleteActionItem(actionItemId);
-      removeStoredCompletedActionItem(actionItemId);
       setMyTeams((currentTeams) =>
         currentTeams.map((team) => {
           const nextTodos = (team.todos ?? []).filter(

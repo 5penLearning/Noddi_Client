@@ -43,7 +43,10 @@ function MeetingRecordsTab({
           </p>
         </header>
 
-        <div className="mt-5 flex items-center justify-between">
+        <form
+          onSubmit={(event) => event.preventDefault()}
+          className="mt-5 flex items-center justify-between"
+        >
           <div className="flex items-center gap-2">
             <label className="flex h-11 w-[600px] shrink-0 items-center rounded-[10px] border border-[var(--color-gray-200)] bg-white px-3">
               <input
@@ -51,16 +54,26 @@ function MeetingRecordsTab({
                 value={searchKeyword}
                 onChange={(event) => onSearchKeywordChange(event.target.value)}
                 placeholder="회의록 내용을 검색해보세요"
-                className="min-w-0 flex-1 bg-transparent text-[16px] leading-[1.4] tracking-[-0.16px] outline-none placeholder:text-[var(--color-gray-500)]"
+                className="min-w-0 flex-1 bg-transparent text-[16px] leading-[1.4] tracking-[-0.16px] outline-none placeholder:text-[var(--color-gray-500)] [&::-webkit-search-cancel-button]:hidden"
               />
-              <img src={searchIcon} alt="" className="size-6 shrink-0 opacity-45" />
+              {searchKeyword && (
+                <button
+                  type="button"
+                  onClick={() => onSearchKeywordChange('')}
+                  className="mr-1 flex size-5 shrink-0 items-center justify-center text-[18px] leading-none text-[#A9B0AD]"
+                  aria-label="검색어 지우기"
+                >
+                  ×
+                </button>
+              )}
+              <button
+                type="submit"
+                className="flex size-6 shrink-0 items-center justify-center"
+                aria-label="검색하기"
+              >
+                <img src={searchIcon} alt="" className="size-6 shrink-0 opacity-45" />
+              </button>
             </label>
-            <button
-              type="button"
-              className="flex h-11 w-[110px] items-center justify-center rounded-[10px] bg-[var(--color-primary)] text-[16px] leading-[1.3] font-semibold text-[var(--color-black)]"
-            >
-              검색하기
-            </button>
             <button
               type="button"
               onClick={onToggleCalendar}
@@ -75,8 +88,7 @@ function MeetingRecordsTab({
               />
             </button>
           </div>
-
-        </div>
+        </form>
 
         <div className="mt-4 min-h-0 flex-1 [scrollbar-width:thin] [scrollbar-color:#d9d9d9_transparent] overflow-x-hidden overflow-y-auto pb-[43px]">
           <div className="flex min-h-full flex-col">
