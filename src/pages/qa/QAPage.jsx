@@ -18,7 +18,12 @@ import {
 } from '../../api/qaApi';
 
 import { getMyProfile } from '../../api/mypageApi';
-import { getMemberProjects } from '../../api/projects';
+
+import {
+  getQaProjects,
+  subscribeQaAnswerStream,
+} from '../../api/qaRealtimeApi';
+
 import {
   getMyTeams,
   getProjectTeams,
@@ -26,11 +31,9 @@ import {
 
 import ProfileAvatar from '../../components/common/ProfileAvatar';
 
-const POLLING_STATUSES = [
+const STREAMING_STATUSES = [
   'PENDING',
   'PROCESSING',
-  'MANUAL_REQUIRED',
-  'TEAM_ANSWER_PENDING',
 ];
 
 const STATUS_MAP = {
@@ -38,22 +41,27 @@ const STATUS_MAP = {
     label: '답변 대기 중',
     className: 'text-[#74877D]',
   },
+
   PROCESSING: {
     label: 'AI가 답변 중...',
     className: 'text-[#16885B]',
   },
+
   ANSWERED: {
     label: '답변 완료',
     className: 'text-[#16885B]',
   },
+
   FAILED: {
     label: '답변 실패',
     className: 'text-[#F64E42]',
   },
+
   MANUAL_REQUIRED: {
     label: '팀 답변 필요',
     className: 'text-[#A96627]',
   },
+
   TEAM_ANSWER_PENDING: {
     label: '팀 답변 대기',
     className: 'text-[#39738F]',
@@ -278,9 +286,7 @@ function getStatus(status) {
   );
 }
 
-function getPageContent(
-  response,
-) {
+function getPageContent(response) {
   const result =
     response?.result;
 
@@ -293,6 +299,38 @@ function getPageContent(
   }
 
   return [];
+}
+
+function getTeamId(team) {
+  return (
+    team?.teamId ??
+    team?.id ??
+    null
+  );
+}
+
+function extractStreamText(data) {
+  if (
+    typeof data === 'string'
+  ) {
+    return data;
+  }
+
+  if (
+    !data ||
+    typeof data !== 'object'
+  ) {
+    return '';
+  }
+
+  return (
+    data.content ??
+    data.chunk ??
+    data.text ??
+    data.answer ??
+    data.data ??
+    ''
+  );
 }
 
 function formatTime(value) {
@@ -344,9 +382,7 @@ function getDateKey(value) {
   ].join('-');
 }
 
-function formatChatDate(
-  value,
-) {
+function formatChatDate(value) {
   if (!value) {
     return '';
   }
@@ -397,9 +433,7 @@ function formatChatDate(
   );
 }
 
-function getAnswerLabel(
-  answerType,
-) {
+function getAnswerLabel(answerType) {
   if (
     answerType === 'TEAM'
   ) {
@@ -623,15 +657,15 @@ function RoomItem({
       type="button"
       onClick={onClick}
       className={`w-full rounded-[11px] px-3 py-3 text-left transition ${selected
-          ? 'bg-[#E8FFF3]'
-          : 'hover:bg-[#F5FAF7]'
+        ? 'bg-[#E8FFF3]'
+        : 'hover:bg-[#F5FAF7]'
         }`}
     >
       <div className="flex items-start gap-3">
         <div
           className={`flex size-9 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${selected
-              ? 'bg-[#31F5A0] text-[#101211]'
-              : 'bg-[#EFFFF7] text-[#177551]'
+            ? 'bg-[#31F5A0] text-[#101211]'
+            : 'bg-[#EFFFF7] text-[#177551]'
             }`}
         >
           Q&A
@@ -686,8 +720,8 @@ function RecentQuestionItem({
       type="button"
       onClick={onClick}
       className={`w-full rounded-[11px] px-3 py-3 text-left transition ${selected
-          ? 'bg-[#F0FFF7]'
-          : 'hover:bg-[#F7FBF9]'
+        ? 'bg-[#F0FFF7]'
+        : 'hover:bg-[#F7FBF9]'
         }`}
     >
       <div className="flex items-start gap-3">
@@ -744,7 +778,9 @@ function ConversationSidebar({
       return teams.filter(
         (team) =>
           myTeamIds.has(
-            Number(team.id),
+            Number(
+              getTeamId(team),
+            ),
           ),
       );
     }, [
@@ -786,24 +822,27 @@ function ConversationSidebar({
           ) : (
             teams.map(
               (team) => {
+                const teamId =
+                  getTeamId(team);
+
                 const selected =
                   Number(
                     selectedTeamId,
                   ) ===
-                  Number(team.id);
+                  Number(teamId);
 
                 return (
                   <button
-                    key={team.id}
+                    key={teamId}
                     type="button"
                     onClick={() =>
                       onSelectTeam(
-                        team.id,
+                        teamId,
                       )
                     }
                     className={`flex h-11 w-full items-center rounded-[11px] px-4 text-left text-[14px] font-semibold transition ${selected
-                        ? 'bg-white text-[#101211] shadow-[0_3px_10px_rgba(16,18,17,0.08)]'
-                        : 'bg-white/35 text-[#254537] hover:bg-white/60'
+                      ? 'bg-white text-[#101211] shadow-[0_3px_10px_rgba(16,18,17,0.08)]'
+                      : 'bg-white/35 text-[#254537] hover:bg-white/60'
                       }`}
                   >
                     <span className="truncate">
@@ -860,30 +899,33 @@ function ConversationSidebar({
         ) : (
           <div className="space-y-1">
             {myProjectTeams.map(
-              (team) => (
-                <RoomItem
-                  key={team.id}
-                  team={team}
-                  selected={
-                    Number(
-                      selectedTeamId,
-                    ) ===
-                    Number(
-                      team.id,
-                    )
-                  }
-                  latestQuestion={
-                    getLatestMyQuestion(
-                      team.id,
-                    )
-                  }
-                  onClick={() =>
-                    onSelectTeam(
-                      team.id,
-                    )
-                  }
-                />
-              ),
+              (team) => {
+                const teamId =
+                  getTeamId(team);
+
+                return (
+                  <RoomItem
+                    key={teamId}
+                    team={team}
+                    selected={
+                      Number(
+                        selectedTeamId,
+                      ) ===
+                      Number(teamId)
+                    }
+                    latestQuestion={
+                      getLatestMyQuestion(
+                        teamId,
+                      )
+                    }
+                    onClick={() =>
+                      onSelectTeam(
+                        teamId,
+                      )
+                    }
+                  />
+                );
+              },
             )}
           </div>
         )}
@@ -1199,8 +1241,8 @@ function AnswerMessage({
     <div className="flex items-start gap-3">
       <div
         className={`flex size-9 shrink-0 items-center justify-center rounded-full ${isTeamAnswer
-            ? 'bg-[#E4EBE7] text-[#476057]'
-            : 'bg-[#31F5A0] text-[#101211]'
+          ? 'bg-[#E4EBE7] text-[#476057]'
+          : 'bg-[#31F5A0] text-[#101211]'
           }`}
       >
         {isTeamAnswer ? (
@@ -1227,8 +1269,8 @@ function AnswerMessage({
 
         <div
           className={`mt-2 rounded-[5px_17px_17px_17px] px-4 py-3.5 ${isTeamAnswer
-              ? 'border border-[#DCE6E1] bg-white'
-              : 'bg-[#EEF2F0]'
+            ? 'border border-[#DCE6E1] bg-white'
+            : 'bg-[#EEF2F0]'
             }`}
         >
           <p className="whitespace-pre-wrap break-words text-[14px] leading-6 text-[#263A31]">
@@ -1306,8 +1348,8 @@ function ConversationItem({
     <div
       id={`qa-question-${question.questionId}`}
       className={`scroll-mt-24 rounded-[15px] px-2 py-3 transition-all duration-500 ${focused
-          ? 'bg-[#F0FFF7] shadow-[0_0_0_1px_rgba(49,245,160,0.55)]'
-          : 'bg-transparent'
+        ? 'bg-[#F0FFF7] shadow-[0_0_0_1px_rgba(49,245,160,0.55)]'
+        : 'bg-transparent'
         }`}
     >
       <div className="space-y-3">
@@ -1496,15 +1538,59 @@ function QAPage() {
     location.state
       ?.teamId ?? null;
 
+  const targetProjectId =
+    location.state
+      ?.projectId ?? null;
+
   const conversationRef =
     useRef(null);
 
-  const targetProjectId =
-    location.state?.projectId ?? null;
+  const preferredTeamRef =
+    useRef(targetTeamId);
 
-  const [profile, setProfile] = useState(null);
-  const [projects, setProjects] = useState([]);
-  const [teams, setTeams] = useState([]);
+  const pendingFocusRef =
+    useRef(targetQuestionId);
+
+  const focusSearchCountRef =
+    useRef(0);
+
+  const loadingMoreRef =
+    useRef(false);
+
+  const restoreScrollRef =
+    useRef(null);
+
+  const shouldScrollBottomRef =
+    useRef(false);
+
+  const isNearBottomRef =
+    useRef(true);
+
+  const flashTimeoutRef =
+    useRef(null);
+
+  const streamControllersRef =
+    useRef(new Map());
+
+  const [
+    profile,
+    setProfile,
+  ] = useState(null);
+
+  const [
+    projects,
+    setProjects,
+  ] = useState([]);
+
+  const [
+    myTeams,
+    setMyTeams,
+  ] = useState([]);
+
+  const [
+    teams,
+    setTeams,
+  ] = useState([]);
 
   const [
     selectedProjectId,
@@ -1515,8 +1601,6 @@ function QAPage() {
     selectedTeamId,
     setSelectedTeamId,
   ] = useState(null);
-
-  const pendingTargetTeamIdRef = useRef(targetTeamId);
 
   const [
     myQuestions,
@@ -1652,7 +1736,7 @@ function QAPage() {
         teams.find(
           (team) =>
             Number(
-              team.id,
+              getTeamId(team),
             ) ===
             Number(
               selectedTeamId,
@@ -1670,8 +1754,7 @@ function QAPage() {
         myTeams.map(
           (team) =>
             Number(
-              team.teamId ??
-              team.id,
+              getTeamId(team),
             ),
         ),
       );
@@ -1694,6 +1777,7 @@ function QAPage() {
 
           return {
             ...question,
+
             answer:
               feedQuestion?.answer ??
               null,
@@ -1705,15 +1789,17 @@ function QAPage() {
       feedQuestions,
     ]);
 
-  const hasPollingQuestion =
+  const hasStreamingQuestion =
     useMemo(() => {
       return feedQuestions.some(
         (question) =>
-          POLLING_STATUSES.includes(
+          STREAMING_STATUSES.includes(
             question.status,
           ),
       );
-    }, [feedQuestions]);
+    }, [
+      feedQuestions,
+    ]);
 
   const scrollToBottom =
     useCallback(
@@ -1799,6 +1885,14 @@ function QAPage() {
           flashTimeoutRef.current,
         );
       }
+
+      streamControllersRef.current.forEach(
+        (controller) => {
+          controller.abort();
+        },
+      );
+
+      streamControllersRef.current.clear();
     };
   }, []);
 
@@ -1949,7 +2043,9 @@ function QAPage() {
         ] =
           await Promise.all([
             getMyProfile(),
+
             getMyTeams(),
+
             getMyQuestions({
               page: 0,
               size: 30,
@@ -1984,117 +2080,105 @@ function QAPage() {
         let memberProjects =
           [];
 
-        if (
-          profileData?.userId
-        ) {
-          try {
-            const response =
-              await getMemberProjects(
-                profileData.userId,
-              );
-
-            memberProjects =
-              Array.isArray(
-                response,
-              )
-                ? response
-                : [];
-          } catch (
-          projectError
-          ) {
-            console.error(
-              'Failed to load member projects:',
-              projectError,
-            );
-          }
-        }
-
-        if (
-          memberProjects.length ===
-          0
-        ) {
-          const projectMap =
-            new Map();
-
-          nextMyTeams.forEach(
-            (team) => {
-              if (
-                !team.projectId
-              ) {
-                return;
-              }
-
-              const projectId =
-                Number(
-                  team.projectId,
-                );
-
-              if (
-                projectMap.has(
-                  projectId,
-                )
-              ) {
-                return;
-              }
-
-              projectMap.set(
-                projectId,
-                {
-                  projectId:
-                    team.projectId,
-                  name:
-                    team.projectName ??
-                    '프로젝트',
-                },
-              );
-            },
-          );
-
+        try {
           memberProjects =
-            Array.from(
-              projectMap.values(),
-            );
+            await getQaProjects();
+        } catch (
+        projectError
+        ) {
+          console.error(
+            'Failed to load projects:',
+            projectError,
+          );
         }
 
         setProjects(
           memberProjects,
         );
 
-        const targetMyTeam =
-          nextMyTeams.find(
-            (team) =>
+        let preferredProjectId =
+          null;
+
+        if (
+          targetProjectId &&
+          memberProjects.some(
+            (project) =>
               Number(
-                team.teamId ??
-                team.id,
+                project.projectId,
               ) ===
               Number(
-                targetTeamId,
+                targetProjectId,
               ),
-          );
+          )
+        ) {
+          preferredProjectId =
+            targetProjectId;
+        }
 
-        const pendingTargetTeamId = pendingTargetTeamIdRef.current;
-        const preferredTeam =
-          pendingTargetTeamId &&
-            nextTeams.some(
-              (team) =>
-                Number(team.id) ===
-                Number(
-                  targetMyTeam.projectId,
-                ),
-            )
-            ? targetMyTeam.projectId
-            : memberProjects[0]
+        if (
+          !preferredProjectId &&
+          targetTeamId
+        ) {
+          for (
+            const project of
+            memberProjects
+          ) {
+            try {
+              const projectTeams =
+                await getProjectTeams(
+                  project.projectId,
+                );
+
+              const hasTargetTeam =
+                Array.isArray(
+                  projectTeams,
+                ) &&
+                projectTeams.some(
+                  (team) =>
+                    Number(
+                      getTeamId(
+                        team,
+                      ),
+                    ) ===
+                    Number(
+                      targetTeamId,
+                    ),
+                );
+
+              if (
+                hasTargetTeam
+              ) {
+                preferredProjectId =
+                  project.projectId;
+
+                break;
+              }
+            } catch (
+            requestError
+            ) {
+              console.error(
+                'Failed to match target team project:',
+                requestError,
+              );
+            }
+          }
+        }
+
+        if (
+          !preferredProjectId
+        ) {
+          preferredProjectId =
+            memberProjects[0]
               ?.projectId ??
             null;
+        }
 
         setSelectedProjectId(
           preferredProjectId,
         );
-
-        pendingTargetTeamIdRef.current = null;
-
-        return nextTeams;
-      } catch (requestError) {
+      } catch (
+      requestError
+      ) {
         console.error(
           'Failed to load Q&A:',
           requestError,
@@ -2104,14 +2188,29 @@ function QAPage() {
           requestError
             ?.response?.data
             ?.message ??
+          requestError
+            ?.message ??
           'Q&A 정보를 불러오지 못했습니다.',
         );
       } finally {
         setIsLoading(false);
       }
-    },
-    [],
-  );
+    }, [
+      targetProjectId,
+      targetTeamId,
+    ]);
+
+  const loadProjectTeamList =
+    useCallback(
+      async (
+        projectId,
+      ) => {
+        if (!projectId) {
+          setTeams([]);
+
+          setSelectedTeamId(
+            null,
+          );
 
           return;
         }
@@ -2145,15 +2244,18 @@ function QAPage() {
               nextTeams.some(
                 (team) =>
                   Number(
-                    team.id,
+                    getTeamId(
+                      team,
+                    ),
                   ) ===
                   Number(
                     preferredTeamId,
                   ),
               )
               ? preferredTeamId
-              : nextTeams[0]
-                ?.id ??
+              : getTeamId(
+                nextTeams[0],
+              ) ??
               null;
 
           preferredTeamRef.current =
@@ -2171,6 +2273,7 @@ function QAPage() {
           );
 
           setTeams([]);
+
           setSelectedTeamId(
             null,
           );
@@ -2178,6 +2281,8 @@ function QAPage() {
           setError(
             requestError
               ?.response?.data
+              ?.message ??
+            requestError
               ?.message ??
             '프로젝트 팀을 불러오지 못했습니다.',
           );
@@ -2192,7 +2297,9 @@ function QAPage() {
 
   const loadInitialFeed =
     useCallback(
-      async (teamId) => {
+      async (
+        teamId,
+      ) => {
         if (!teamId) {
           setFeedQuestions(
             [],
@@ -2287,6 +2394,8 @@ function QAPage() {
             requestError
               ?.response?.data
               ?.message ??
+            requestError
+              ?.message ??
             '팀 Q&A를 불러오지 못했습니다.',
           );
         } finally {
@@ -2359,12 +2468,253 @@ function QAPage() {
               requestError
                 ?.response?.data
                 ?.message ??
+              requestError
+                ?.message ??
               'Q&A를 새로고침하지 못했습니다.',
             );
           }
         }
       },
       [],
+    );
+
+  const startAnswerStream =
+    useCallback(
+      (
+        questionId,
+        teamId,
+      ) => {
+        if (
+          !questionId ||
+          !teamId ||
+          streamControllersRef.current.has(
+            Number(
+              questionId,
+            ),
+          )
+        ) {
+          return;
+        }
+
+        const controller =
+          new AbortController();
+
+        streamControllersRef.current.set(
+          Number(
+            questionId,
+          ),
+          controller,
+        );
+
+        subscribeQaAnswerStream(
+          questionId,
+          {
+            signal:
+              controller.signal,
+
+            onEvent: (
+              event,
+              data,
+            ) => {
+              if (
+                event ===
+                'snapshot'
+              ) {
+                const content =
+                  extractStreamText(
+                    data,
+                  );
+
+                if (!content) {
+                  return;
+                }
+
+                shouldScrollBottomRef.current =
+                  isNearBottomRef.current;
+
+                setFeedQuestions(
+                  (previous) =>
+                    previous.map(
+                      (
+                        question,
+                      ) => {
+                        if (
+                          Number(
+                            question.questionId,
+                          ) !==
+                          Number(
+                            questionId,
+                          )
+                        ) {
+                          return question;
+                        }
+
+                        return {
+                          ...question,
+
+                          status:
+                            'PROCESSING',
+
+                          answer: {
+                            ...(
+                              question.answer ??
+                              {}
+                            ),
+
+                            content,
+
+                            answerType:
+                              question
+                                .answer
+                                ?.answerType ??
+                              'AI',
+                          },
+                        };
+                      },
+                    ),
+                );
+
+                return;
+              }
+
+              if (
+                event ===
+                'chunk'
+              ) {
+                const chunk =
+                  extractStreamText(
+                    data,
+                  );
+
+                if (!chunk) {
+                  return;
+                }
+
+                shouldScrollBottomRef.current =
+                  isNearBottomRef.current;
+
+                setFeedQuestions(
+                  (previous) =>
+                    previous.map(
+                      (
+                        question,
+                      ) => {
+                        if (
+                          Number(
+                            question.questionId,
+                          ) !==
+                          Number(
+                            questionId,
+                          )
+                        ) {
+                          return question;
+                        }
+
+                        return {
+                          ...question,
+
+                          status:
+                            'PROCESSING',
+
+                          answer: {
+                            ...(
+                              question.answer ??
+                              {}
+                            ),
+
+                            content:
+                              `${question
+                                .answer
+                                ?.content ??
+                              ''
+                              }${chunk}`,
+
+                            answerType:
+                              question
+                                .answer
+                                ?.answerType ??
+                              'AI',
+                          },
+                        };
+                      },
+                    ),
+                );
+
+                return;
+              }
+
+              if (
+                event !==
+                'completed' &&
+                event !==
+                'failed'
+              ) {
+                return;
+              }
+
+              controller.abort();
+
+              streamControllersRef.current.delete(
+                Number(
+                  questionId,
+                ),
+              );
+
+              Promise.all([
+                refreshLatestFeed(
+                  teamId,
+                ),
+
+                loadTeamQuestionList(
+                  teamId,
+                ),
+
+                loadMyQuestionList(),
+              ]).catch(
+                (
+                  requestError,
+                ) => {
+                  console.error(
+                    'Failed to sync Q&A after SSE completion:',
+                    requestError,
+                  );
+                },
+              );
+            },
+          },
+        ).catch(
+          (
+            streamError,
+          ) => {
+            streamControllersRef.current.delete(
+              Number(
+                questionId,
+              ),
+            );
+
+            if (
+              streamError?.name ===
+              'AbortError'
+            ) {
+              return;
+            }
+
+            console.error(
+              'Failed to subscribe Q&A stream:',
+              streamError,
+            );
+
+            refreshLatestFeed(
+              teamId,
+            );
+          },
+        );
+      },
+      [
+        loadMyQuestionList,
+        loadTeamQuestionList,
+        refreshLatestFeed,
+      ],
     );
 
   const loadOlderMessages =
@@ -2384,23 +2734,36 @@ function QAPage() {
       loadingMoreRef.current =
         true;
 
-      const preferredProjectId =
-        targetProjectId &&
-          memberProjects.some(
-            (project) =>
-              Number(project.projectId) ===
-              Number(targetProjectId),
-          )
-          ? targetProjectId
-          : targetMyTeam?.projectId &&
-          memberProjects.some(
-            (project) =>
-              Number(
-                project.projectId,
-              ) ===
-              Number(
-                targetMyTeam.projectId,
-              ),
+      setIsLoadingMore(
+        true,
+      );
+
+      if (container) {
+        restoreScrollRef.current =
+        {
+          previousHeight:
+            container.scrollHeight,
+
+          previousTop:
+            container.scrollTop,
+        };
+      }
+
+      try {
+        const feed =
+          await getTeamQaFeed(
+            selectedTeamId,
+            {
+              cursor:
+                feedCursor,
+
+              size: 20,
+            },
+          );
+
+        const questions =
+          Array.isArray(
+            feed?.items,
           )
             ? feed.items.map(
               (item) =>
@@ -2440,19 +2803,33 @@ function QAPage() {
           requestError,
         );
 
-      setError(
-        requestError?.response?.data
-          ?.message ??
-        'Q&A 정보를 불러오지 못했습니다.',
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, [targetProjectId, targetTeamId]);
+        setError(
+          requestError
+            ?.response?.data
+            ?.message ??
+          requestError
+            ?.message ??
+          '이전 대화를 불러오지 못했습니다.',
+        );
+      } finally {
+        loadingMoreRef.current =
+          false;
+
+        setIsLoadingMore(
+          false,
+        );
+      }
+    }, [
+      selectedTeamId,
+      feedCursor,
+      feedHasNext,
+    ]);
 
   useEffect(() => {
     loadInitialData();
-  }, [loadInitialData]);
+  }, [
+    loadInitialData,
+  ]);
 
   useEffect(() => {
     if (
@@ -2470,7 +2847,17 @@ function QAPage() {
   ]);
 
   useEffect(() => {
-    if (!selectedTeamId) {
+    streamControllersRef.current.forEach(
+      (controller) => {
+        controller.abort();
+      },
+    );
+
+    streamControllersRef.current.clear();
+
+    if (
+      !selectedTeamId
+    ) {
       setFeedQuestions(
         [],
       );
@@ -2483,6 +2870,7 @@ function QAPage() {
     }
 
     setQuestionInput('');
+
     setFocusedQuestionId(
       null,
     );
@@ -2518,8 +2906,37 @@ function QAPage() {
 
   useEffect(() => {
     if (
+      !selectedTeamId
+    ) {
+      return;
+    }
+
+    feedQuestions.forEach(
+      (question) => {
+        if (
+          !STREAMING_STATUSES.includes(
+            question.status,
+          )
+        ) {
+          return;
+        }
+
+        startAnswerStream(
+          question.questionId,
+          selectedTeamId,
+        );
+      },
+    );
+  }, [
+    selectedTeamId,
+    feedQuestions,
+    startAnswerStream,
+  ]);
+
+  useEffect(() => {
+    if (
       !selectedTeamId ||
-      !hasPollingQuestion
+      !hasStreamingQuestion
     ) {
       return undefined;
     }
@@ -2531,7 +2948,7 @@ function QAPage() {
             selectedTeamId,
           );
         },
-        3000,
+        10000,
       );
 
     return () => {
@@ -2541,7 +2958,7 @@ function QAPage() {
     };
   }, [
     selectedTeamId,
-    hasPollingQuestion,
+    hasStreamingQuestion,
     refreshLatestFeed,
   ]);
 
@@ -2630,7 +3047,9 @@ function QAPage() {
   const handleSelectProject =
     (projectId) => {
       if (
-        Number(projectId) ===
+        Number(
+          projectId,
+        ) ===
         Number(
           selectedProjectId,
         )
@@ -2658,13 +3077,9 @@ function QAPage() {
 
       setTeams([]);
 
-      setFeedQuestions(
-        [],
-      );
+      setFeedQuestions([]);
 
-      setTeamQuestions(
-        [],
-      );
+      setTeamQuestions([]);
 
       setFeedCursor(
         null,
@@ -2691,7 +3106,9 @@ function QAPage() {
       );
 
       if (
-        Number(teamId) ===
+        Number(
+          teamId,
+        ) ===
         Number(
           selectedTeamId,
         )
@@ -2718,33 +3135,42 @@ function QAPage() {
       setError('');
     };
 
-  const handleNewChat = () => {
-    pendingFocusRef.current =
-      null;
+  /**
+   * 현재 백엔드에는 별도 Q&A room 생성 API가 없다.
+   *
+   * 따라서 지금 "새 채팅"은 같은 팀 Q&A feed의
+   * 가장 아래 입력창으로 이동한다.
+   *
+   * 실제 여러 채팅방을 만들려면 백엔드 roomId가 필요하다.
+   */
+  const handleNewChat =
+    () => {
+      pendingFocusRef.current =
+        null;
 
-    setFocusedQuestionId(
-      null,
-    );
+      setFocusedQuestionId(
+        null,
+      );
 
-    setIsSidebarOpen(
-      false,
-    );
+      setIsSidebarOpen(
+        false,
+      );
 
-    scrollToBottom(
-      'smooth',
-    );
+      scrollToBottom(
+        'smooth',
+      );
 
-    window.setTimeout(
-      () => {
-        document
-          .getElementById(
-            'qa-question-input',
-          )
-          ?.focus();
-      },
-      250,
-    );
-  };
+      window.setTimeout(
+        () => {
+          document
+            .getElementById(
+              'qa-question-input',
+            )
+            ?.focus();
+        },
+        250,
+      );
+    };
 
   const handleFocusQuestion =
     (question) => {
@@ -2811,7 +3237,9 @@ function QAPage() {
     };
 
   const handleSubmitQuestion =
-    async (event) => {
+    async (
+      event,
+    ) => {
       event.preventDefault();
 
       const content =
@@ -2843,6 +3271,7 @@ function QAPage() {
           await createQuestion({
             targetTeamId:
               selectedTeamId,
+
             content,
           });
 
@@ -2896,8 +3325,7 @@ function QAPage() {
 
             sources: [],
 
-            canAnswer:
-              false,
+            canAnswer: false,
           };
 
           shouldScrollBottomRef.current =
@@ -2911,6 +3339,11 @@ function QAPage() {
                   optimisticQuestion,
                 ],
               ),
+          );
+
+          startAnswerStream(
+            created.questionId,
+            selectedTeamId,
           );
         }
 
@@ -2940,6 +3373,8 @@ function QAPage() {
           requestError
             ?.response?.data
             ?.message ??
+          requestError
+            ?.message ??
           '질문을 등록하지 못했습니다.',
         );
       } finally {
@@ -2961,23 +3396,23 @@ function QAPage() {
 
       event.preventDefault();
 
-    pendingTargetTeamIdRef.current = null;
-    setSelectedProjectId(projectId);
-    setSelectedTeamId(null);
-    setSelectedQuestion(null);
-    setQuestionDetail(null);
-    setQuestionInput('');
-    setIsEditorOpen(false);
-    setError('');
-    setSuccessMessage('');
-  };
+      if (
+        !questionInput.trim() ||
+        !selectedTeamId ||
+        isCreating
+      ) {
+        return;
+      }
 
       event.currentTarget
-        .form?.requestSubmit();
+        .form
+        ?.requestSubmit();
     };
 
   const handleOpenEditor =
-    async (question) => {
+    async (
+      question,
+    ) => {
       if (
         !question?.questionId ||
         !question?.answer
@@ -3006,7 +3441,8 @@ function QAPage() {
 
         setAnswerDraft(
           question.answer
-            ?.content ?? '',
+            ?.content ??
+          '',
         );
 
         setError('');
@@ -3057,6 +3493,8 @@ function QAPage() {
           requestError
             ?.response?.data
             ?.message ??
+          requestError
+            ?.message ??
           '답변 정보를 불러오지 못했습니다.',
         );
       } finally {
@@ -3068,7 +3506,9 @@ function QAPage() {
 
   const handleCloseEditor =
     () => {
-      if (isRevising) {
+      if (
+        isRevising
+      ) {
         return;
       }
 
@@ -3090,7 +3530,8 @@ function QAPage() {
   const handleReviseAnswer =
     async () => {
       const answerId =
-        questionDetail?.answer
+        questionDetail
+          ?.answer
           ?.answerId;
 
       const content =
@@ -3134,7 +3575,9 @@ function QAPage() {
             setFeedQuestions(
               (previous) =>
                 previous.map(
-                  (question) => {
+                  (
+                    question,
+                  ) => {
                     if (
                       Number(
                         question.questionId,
@@ -3209,6 +3652,8 @@ function QAPage() {
           requestError
             ?.response?.data
             ?.message ??
+          requestError
+            ?.message ??
           '답변을 저장하지 못했습니다.',
         );
       } finally {
@@ -3238,7 +3683,6 @@ function QAPage() {
           </button>
         </div>
 
-        {/* 프로젝트 탭 */}
         <div className="relative z-20 flex min-h-[56px] items-end gap-2 overflow-x-auto overflow-y-hidden">
           {projects.map(
             (project) => {
@@ -3262,11 +3706,13 @@ function QAPage() {
                     )
                   }
                   className={`relative shrink-0 text-[14px] font-semibold transition ${selected
-                      ? 'z-20 h-[56px] min-w-[190px] rounded-t-[14px] border border-b-0 border-[#31F5A0] bg-[#31F5A0] px-7 text-[#101211]'
-                      : 'mb-[8px] h-11 min-w-[165px] rounded-[11px] border border-[#D6E9DF] bg-white px-5 text-[#50675D] hover:bg-[#F2FFF8]'
+                    ? 'z-20 h-[56px] min-w-[190px] rounded-t-[14px] border border-b-0 border-[#31F5A0] bg-[#31F5A0] px-7 text-[#101211]'
+                    : 'mb-[8px] h-11 min-w-[165px] rounded-[11px] border border-[#D6E9DF] bg-white px-5 text-[#50675D] hover:bg-[#F2FFF8]'
                     }`}
                 >
-                  {project.name}
+                  {
+                    project.name
+                  }
 
                   {selected && (
                     <span className="absolute -bottom-[12px] left-0 right-0 h-[14px] bg-[#31F5A0]" />
@@ -3347,7 +3793,8 @@ function QAPage() {
                     <p className="mt-1 truncate text-[12px] text-[#83938B]">
                       {selectedTeam
                         ? '질문과 답변이 이 채팅방에 계속 이어집니다.'
-                        : selectedProject?.name ??
+                        : selectedProject
+                          ?.name ??
                         ''}
                     </p>
                   </div>
@@ -3406,7 +3853,10 @@ function QAPage() {
                         </div>
 
                         <h2 className="mt-4 text-[17px] font-semibold text-[#101211]">
-                          {selectedTeam?.name}
+                          {
+                            selectedTeam
+                              ?.name
+                          }
                           에 첫 질문을 남겨보세요
                         </h2>
 
@@ -3421,8 +3871,11 @@ function QAPage() {
                         {isLoadingMore ? (
                           <div className="flex items-center gap-2 text-[11px] text-[#7F9088]">
                             <LoadingSpinner
-                              size={14}
+                              size={
+                                14
+                              }
                             />
+
                             이전 대화를 불러오는 중...
                           </div>
                         ) : feedHasNext ? (
@@ -3450,7 +3903,8 @@ function QAPage() {
                           ) => {
                             const previous =
                               feedQuestions[
-                              index - 1
+                              index -
+                              1
                               ];
 
                             const showDate =
@@ -3486,7 +3940,8 @@ function QAPage() {
                                     profile
                                   }
                                   teamName={
-                                    selectedTeam?.name
+                                    selectedTeam
+                                      ?.name
                                   }
                                   focused={
                                     String(
@@ -3524,7 +3979,9 @@ function QAPage() {
                       value={
                         questionInput
                       }
-                      maxLength={500}
+                      maxLength={
+                        500
+                      }
                       disabled={
                         !selectedTeamId ||
                         isCreating
@@ -3541,7 +3998,9 @@ function QAPage() {
                       onKeyDown={
                         handleQuestionKeyDown
                       }
-                      rows={1}
+                      rows={
+                        1
+                      }
                       placeholder={
                         selectedTeam
                           ? `${selectedTeam.name}에 질문을 입력하세요.`
@@ -3562,7 +4021,9 @@ function QAPage() {
                     >
                       {isCreating ? (
                         <LoadingSpinner
-                          size={15}
+                          size={
+                            15
+                          }
                         />
                       ) : (
                         <SendIcon />
@@ -3649,7 +4110,9 @@ function QAPage() {
 
             <div className="h-[calc(100%-64px)]">
               <ConversationSidebar
-                teams={teams}
+                teams={
+                  teams
+                }
                 myTeamIds={
                   myTeamIds
                 }
@@ -3718,7 +4181,8 @@ function QAPage() {
                 event,
               ) =>
                 setAnswerDraft(
-                  event.target
+                  event
+                    .target
                     .value,
                 )
               }

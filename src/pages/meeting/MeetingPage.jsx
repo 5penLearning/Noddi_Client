@@ -1,8 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
+
 import { useNavigate } from 'react-router-dom';
 
 import {
   createMeeting,
+  endMeeting,
   getMeetings,
   startMeeting,
 } from '../../api/meetingApi';
@@ -15,6 +21,7 @@ import MeetingScheduleList from '../../components/feature/meeting/MeetingSchedul
 import MeetingStatusBanner from '../../components/feature/meeting/MeetingStatusBanner';
 
 import useCurrentDateTime from '../../hooks/useCurrentDateTime';
+
 import { formatDateKey } from '../../utils/date';
 
 function VideoIcon() {
@@ -119,7 +126,8 @@ const WEEK_DAYS = [
 ];
 
 function getLocalDateKey(date) {
-  const year = date.getFullYear();
+  const year =
+    date.getFullYear();
 
   const month = String(
     date.getMonth() + 1,
@@ -149,16 +157,98 @@ function parseMeetingDateTime(value) {
     return null;
   }
 
-  const date = new Date(value);
+  const date =
+    new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime(),
+    )
+  ) {
     return null;
   }
 
   return date;
 }
 
-function formatServerMeeting(meeting, team) {
+function isSameLocalDate(
+  firstDate,
+  secondDate,
+) {
+  return (
+    getLocalDateKey(firstDate) ===
+    getLocalDateKey(secondDate)
+  );
+}
+
+function isPastScheduledEnd(
+  meeting,
+  compareDate = new Date(),
+) {
+  const scheduledEnd =
+    parseMeetingDateTime(
+      meeting?.scheduledEndAt,
+    );
+
+  if (!scheduledEnd) {
+    return false;
+  }
+
+  return (
+    compareDate.getTime() >
+    scheduledEnd.getTime()
+  );
+}
+
+function isMeetingStartable(
+  meeting,
+  compareDate,
+) {
+  if (
+    meeting?.status !==
+    'SCHEDULED'
+  ) {
+    return false;
+  }
+
+  const scheduledStart =
+    parseMeetingDateTime(
+      meeting.scheduledStartAt,
+    );
+
+  const scheduledEnd =
+    parseMeetingDateTime(
+      meeting.scheduledEndAt,
+    );
+
+  if (!scheduledStart) {
+    return false;
+  }
+
+  if (
+    compareDate.getTime() <
+    scheduledStart.getTime()
+  ) {
+    return false;
+  }
+
+  if (scheduledEnd) {
+    return (
+      compareDate.getTime() <=
+      scheduledEnd.getTime()
+    );
+  }
+
+  return isSameLocalDate(
+    compareDate,
+    scheduledStart,
+  );
+}
+
+function formatServerMeeting(
+  meeting,
+  team,
+) {
   const scheduledStart =
     parseMeetingDateTime(
       meeting.scheduledStartAt,
@@ -217,15 +307,21 @@ function toScheduledDateTime(
 }
 
 function MeetingPage() {
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
 
-  const now = useCurrentDateTime();
+  const now =
+    useCurrentDateTime();
 
-  const [teams, setTeams] =
-    useState([]);
+  const [
+    teams,
+    setTeams,
+  ] = useState([]);
 
-  const [meetings, setMeetings] =
-    useState([]);
+  const [
+    meetings,
+    setMeetings,
+  ] = useState([]);
 
   const [
     isLoadingMeetings,
@@ -320,7 +416,7 @@ function MeetingPage() {
             ),
           );
 
-        const nextMeetings =
+        let nextMeetings =
           meetingResponses.flatMap(
             (
               teamMeetings,
@@ -338,6 +434,105 @@ function MeetingPage() {
               );
             },
           );
+
+        /*
+         * 사용자가 "나가기"만 하고 회의 전체 종료를 누르지 않은 경우
+         * 서버에 IN_PROGRESS가 남을 수 있다.
+         *
+         * 프론트에서 별도 백엔드 수정 없이 처리하기 위해
+         * 예약 종료 시간이 지난 IN_PROGRESS 회의는
+         * 기존 endMeeting API를 호출해 정리한다.
+         */
+        const cleanupTargetMeetings =
+          nextMeetings.filter(
+            (meeting) =>
+              meeting.status ===
+              'IN_PROGRESS' &&
+              isPastScheduledEnd(
+                meeting,
+              ),
+          );
+
+        if (
+          cleanupTargetMeetings.length >
+          0
+        ) {
+          const cleanupResults =
+            await Promise.allSettled(
+              cleanupTargetMeetings.map(
+                (meeting) =>
+                  endMeeting(
+                    meeting.meetingId,
+                  ),
+              ),
+            );
+
+          const successfullyEndedIds =
+            new Set();
+
+          cleanupResults.forEach(
+            (
+              result,
+              index,
+            ) => {
+              const targetMeeting =
+                cleanupTargetMeetings[
+                index
+                ];
+
+              if (
+                result.status ===
+                'fulfilled'
+              ) {
+                successfullyEndedIds.add(
+                  Number(
+                    targetMeeting.meetingId,
+                  ),
+                );
+
+                return;
+              }
+
+              console.error(
+                'Failed to cleanup expired meeting:',
+                targetMeeting.meetingId,
+                result.reason,
+              );
+            },
+          );
+
+          if (
+            successfullyEndedIds.size >
+            0
+          ) {
+            const endedAt =
+              new Date().toISOString();
+
+            nextMeetings =
+              nextMeetings.map(
+                (meeting) => {
+                  if (
+                    !successfullyEndedIds.has(
+                      Number(
+                        meeting.meetingId,
+                      ),
+                    )
+                  ) {
+                    return meeting;
+                  }
+
+                  return {
+                    ...meeting,
+                    status:
+                      'ENDED',
+                    endedAt:
+                      meeting.endedAt ??
+                      endedAt,
+                  };
+                },
+              );
+          }
+        }
 
         nextMeetings.sort(
           (
@@ -401,42 +596,36 @@ function MeetingPage() {
     loadMeetings();
   }, [loadMeetings]);
 
+  /*
+   * 서버 상태가 IN_PROGRESS여도
+   * 예약 종료 시간이 이미 지났다면
+   * 상단 진행중 배너에서는 제외한다.
+   */
   const currentMeeting =
     meetings.find(
       (meeting) =>
         meeting.status ===
-        'IN_PROGRESS',
+        'IN_PROGRESS' &&
+        !isPastScheduledEnd(
+          meeting,
+          now,
+        ),
     );
 
   const hasActiveMeeting =
-    Boolean(currentMeeting);
+    Boolean(
+      currentMeeting,
+    );
 
   const startableMeeting =
     hasActiveMeeting
       ? null
       : meetings.find(
-        (meeting) => {
-          if (
-            meeting.status !==
-            'SCHEDULED'
-          ) {
-            return false;
-          }
-
-          const scheduledStart =
-            parseMeetingDateTime(
-              meeting.scheduledStartAt,
-            );
-
-          if (!scheduledStart) {
-            return false;
-          }
-
-          return (
-            now.getTime() >=
-            scheduledStart.getTime()
-          );
-        },
+        (meeting) =>
+          isMeetingStartable(
+            meeting,
+            now,
+          ),
       );
 
   const latestEndedMeeting =
@@ -480,12 +669,19 @@ function MeetingPage() {
     ...teams.map(
       (team) => ({
         id: `TEAM-${team.teamId}`,
-        label: team.name,
+
+        label:
+          team.name,
+
         teamId:
           team.teamId,
-        team: team.name,
+
+        team:
+          team.name,
+
         project:
-          team.projectName ?? '',
+          team.projectName ??
+          '',
       }),
     ),
   ];
@@ -519,7 +715,9 @@ function MeetingPage() {
   ).padStart(2, '0');
 
   const period =
-    hours >= 12 ? 'pm' : 'am';
+    hours >= 12
+      ? 'pm'
+      : 'am';
 
   const displayHour =
     hours % 12 || 12;
@@ -533,24 +731,38 @@ function MeetingPage() {
   ).padStart(2, '0');
 
   const day =
-    WEEK_DAYS[now.getDay()];
+    WEEK_DAYS[
+    now.getDay()
+    ];
 
-  const handleJoinMeeting = (
-    meeting,
-  ) => {
-    if (!meeting) {
-      return;
-    }
+  const handleJoinMeeting =
+    (meeting) => {
+      if (!meeting) {
+        return;
+      }
 
-    navigate(
-      `/meetings/${meeting.meetingId}/room`,
-      {
-        state: {
+      if (
+        isPastScheduledEnd(
           meeting,
+          now,
+        )
+      ) {
+        setStartMeetingError(
+          '이미 종료 시간이 지난 회의입니다.',
+        );
+
+        return;
+      }
+
+      navigate(
+        `/meetings/${meeting.meetingId}/room`,
+        {
+          state: {
+            meeting,
+          },
         },
-      },
-    );
-  };
+      );
+    };
 
   const handleStartMeeting =
     async (meeting) => {
@@ -561,7 +773,9 @@ function MeetingPage() {
         return;
       }
 
-      if (hasActiveMeeting) {
+      if (
+        hasActiveMeeting
+      ) {
         setStartMeetingError(
           '진행 중인 회의를 먼저 종료해주세요.',
         );
@@ -574,13 +788,53 @@ function MeetingPage() {
           meeting.scheduledStartAt,
         );
 
+      const scheduledEnd =
+        parseMeetingDateTime(
+          meeting.scheduledEndAt,
+        );
+
       if (
-        !scheduledStart ||
+        !scheduledStart
+      ) {
+        setStartMeetingError(
+          '회의 시작 시간을 확인할 수 없습니다.',
+        );
+
+        return;
+      }
+
+      if (
         now.getTime() <
         scheduledStart.getTime()
       ) {
         setStartMeetingError(
           '아직 회의 시작 시간이 되지 않았습니다.',
+        );
+
+        return;
+      }
+
+      if (
+        scheduledEnd &&
+        now.getTime() >
+        scheduledEnd.getTime()
+      ) {
+        setStartMeetingError(
+          '회의 예약 종료 시간이 지났습니다.',
+        );
+
+        return;
+      }
+
+      if (
+        !scheduledEnd &&
+        !isSameLocalDate(
+          now,
+          scheduledStart,
+        )
+      ) {
+        setStartMeetingError(
+          '이미 종료된 예약 회의입니다.',
         );
 
         return;
@@ -646,17 +900,16 @@ function MeetingPage() {
       }
     };
 
-  const handleOpenSummary = (
-    meeting,
-  ) => {
-    if (!meeting) {
-      return;
-    }
+  const handleOpenSummary =
+    (meeting) => {
+      if (!meeting) {
+        return;
+      }
 
-    navigate(
-      `/meetings/${meeting.meetingId}/summary`,
-    );
-  };
+      navigate(
+        `/meetings/${meeting.meetingId}/summary`,
+      );
+    };
 
   const handleMeetingQuickAction =
     () => {
@@ -675,43 +928,47 @@ function MeetingPage() {
       }
     };
 
-  const handleQuickAction = (
-    actionId,
-  ) => {
-    if (
-      actionId === 'meeting'
-    ) {
-      handleMeetingQuickAction();
+  const handleQuickAction =
+    (actionId) => {
+      if (
+        actionId ===
+        'meeting'
+      ) {
+        handleMeetingQuickAction();
 
-      return;
-    }
+        return;
+      }
 
-    if (
-      actionId === 'reserve'
-    ) {
-      setReservationError(
-        '',
-      );
+      if (
+        actionId ===
+        'reserve'
+      ) {
+        setReservationError(
+          '',
+        );
 
-      setIsReservationModalOpen(
-        true,
-      );
+        setIsReservationModalOpen(
+          true,
+        );
 
-      return;
-    }
+        return;
+      }
 
-    if (
-      actionId === 'records' &&
-      latestEndedMeeting
-    ) {
-      handleOpenSummary(
-        latestEndedMeeting,
-      );
-    }
-  };
+      if (
+        actionId ===
+        'records' &&
+        latestEndedMeeting
+      ) {
+        handleOpenSummary(
+          latestEndedMeeting,
+        );
+      }
+    };
 
   const handleReserveMeeting =
-    async (reservation) => {
+    async (
+      reservation,
+    ) => {
       try {
         setIsCreatingMeeting(
           true,
@@ -801,11 +1058,15 @@ function MeetingPage() {
 
   const handleCloseReservationModal =
     () => {
-      if (isCreatingMeeting) {
+      if (
+        isCreatingMeeting
+      ) {
         return;
       }
 
-      setReservationError('');
+      setReservationError(
+        '',
+      );
 
       setIsReservationModalOpen(
         false,
@@ -826,7 +1087,8 @@ function MeetingPage() {
     );
 
   const isStartingAnyMeeting =
-    startingMeetingId !== null;
+    startingMeetingId !==
+    null;
 
   return (
     <>
@@ -907,9 +1169,13 @@ function MeetingPage() {
 
                     return (
                       <button
-                        key={action.id}
+                        key={
+                          action.id
+                        }
                         type="button"
-                        disabled={isDisabled}
+                        disabled={
+                          isDisabled
+                        }
                         onClick={() =>
                           handleQuickAction(
                             action.id,
@@ -928,7 +1194,9 @@ function MeetingPage() {
                               : 'bg-[#101211] text-white hover:bg-[#252A28]'
                             }`}
                         >
-                          {action.icon}
+                          {
+                            action.icon
+                          }
                         </span>
 
                         <span
@@ -937,7 +1205,9 @@ function MeetingPage() {
                             : 'text-[#303633]'
                             }`}
                         >
-                          {actionLabel}
+                          {
+                            actionLabel
+                          }
                         </span>
                       </button>
                     );
