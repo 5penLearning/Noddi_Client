@@ -68,6 +68,8 @@ function MeetingAudioPlayer({ recordingUrl, onRequestRecording }) {
         src={recordingUrl}
         onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
         onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
         onEnded={() => setIsPlaying(false)}
       />
       <div className="h-[7px] bg-[#baffe1]">
@@ -96,8 +98,20 @@ function MeetingAudioPlayer({ recordingUrl, onRequestRecording }) {
           >
             <img src={rewindFiveIcon} className="size-[26px]" />
           </button>
-          <button type="button" onClick={togglePlay} className="flex size-6 items-center">
-            <img src={playControlIcon} className={`size-6 ${isPlaying ? 'opacity-50' : ''}`} />
+          <button
+            type="button"
+            onClick={togglePlay}
+            className="flex size-6 items-center justify-center"
+            aria-label={isPlaying ? '일시정지' : '재생'}
+          >
+            {isPlaying ? (
+              <span className="flex h-[18px] w-[15px] items-center justify-between" aria-hidden="true">
+                <span className="h-full w-[5px] rounded-[1px] bg-black" />
+                <span className="h-full w-[5px] rounded-[1px] bg-black" />
+              </span>
+            ) : (
+              <img src={playControlIcon} alt="" className="size-6" />
+            )}
           </button>
           <button type="button" onClick={() => seekBy(5)} className="flex size-[26px] items-center">
             <img src={forwardFiveIcon} className="size-[26px] -scale-x-100" />

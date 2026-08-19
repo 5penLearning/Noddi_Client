@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
@@ -722,6 +723,9 @@ function QAPage() {
   const targetTeamId =
     location.state?.teamId ?? null;
 
+  const targetProjectId =
+    location.state?.projectId ?? null;
+
   const [profile, setProfile] = useState(null);
   const [projects, setProjects] = useState([]);
   const [teams, setTeams] = useState([]);
@@ -736,10 +740,7 @@ function QAPage() {
     setSelectedTeamId,
   ] = useState(null);
 
-  const [
-    pendingTargetTeamId,
-    setPendingTargetTeamId,
-  ] = useState(targetTeamId);
+  const pendingTargetTeamIdRef = useRef(targetTeamId);
 
   const [
     myQuestions,
@@ -1160,6 +1161,7 @@ function QAPage() {
 
         setTeams(nextTeams);
 
+        const pendingTargetTeamId = pendingTargetTeamIdRef.current;
         const preferredTeam =
           pendingTargetTeamId &&
             nextTeams.some(
@@ -1177,7 +1179,7 @@ function QAPage() {
           preferredTeam,
         );
 
-        setPendingTargetTeamId(null);
+        pendingTargetTeamIdRef.current = null;
 
         return nextTeams;
       } catch (requestError) {
@@ -1200,7 +1202,7 @@ function QAPage() {
         setIsLoadingTeams(false);
       }
     },
-    [pendingTargetTeamId],
+    [],
   );
 
   const loadInitialData = useCallback(async () => {
@@ -1296,7 +1298,14 @@ function QAPage() {
         );
 
       const preferredProjectId =
-        targetMyTeam?.projectId &&
+        targetProjectId &&
+          memberProjects.some(
+            (project) =>
+              Number(project.projectId) ===
+              Number(targetProjectId),
+          )
+          ? targetProjectId
+          : targetMyTeam?.projectId &&
           memberProjects.some(
             (project) =>
               Number(
@@ -1328,7 +1337,7 @@ function QAPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [targetTeamId]);
+  }, [targetProjectId, targetTeamId]);
 
   useEffect(() => {
     loadInitialData();
@@ -1433,7 +1442,7 @@ function QAPage() {
       return;
     }
 
-    setPendingTargetTeamId(null);
+    pendingTargetTeamIdRef.current = null;
     setSelectedProjectId(projectId);
     setSelectedTeamId(null);
     setSelectedQuestion(null);

@@ -6,7 +6,6 @@ import TeamMemberInviteModal from '../TeamMemberInviteModal';
 
 import aiIcon from '../../../assets/icons/meeting-records/ai.svg';
 import calendarIcon from '../../../assets/icons/meeting-records/calendar.svg';
-import filterArrowIcon from '../../../assets/icons/meeting-records/filter-arrow.svg';
 import searchIcon from '../../../assets/icons/search/search.svg';
 
 function MeetingRecordsTab({
@@ -23,7 +22,6 @@ function MeetingRecordsTab({
   memberInviteProps,
   teamEditProps,
   onSearchKeywordChange,
-  onToggleSort,
   onToggleCalendar,
   onSelectDate,
   onOpenRecord,
@@ -63,24 +61,10 @@ function MeetingRecordsTab({
             >
               검색하기
             </button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onToggleSort}
-              className="flex items-center gap-2 bg-white px-2 py-[10px] text-[16px] leading-[1.3] font-medium text-[var(--color-gray-900)]"
-            >
-              참여 팀별
-              <span className="flex size-6 shrink-0 items-center justify-center">
-                <img src={filterArrowIcon} alt="" className="size-6" />
-              </span>
-            </button>
-
             <button
               type="button"
               onClick={onToggleCalendar}
-              className={`flex size-11 shrink-0 items-center justify-center rounded-full ${
+              className={`ml-1 flex size-11 shrink-0 items-center justify-center rounded-full ${
                 isCalendarOpen ? 'bg-white' : 'bg-[var(--color-gray-50)]'
               }`}
             >
@@ -91,11 +75,12 @@ function MeetingRecordsTab({
               />
             </button>
           </div>
+
         </div>
 
-        <div className="mt-4 min-h-0 flex-1 [scrollbar-width:thin] [scrollbar-color:#d9d9d9_transparent] overflow-y-auto pb-[43px]">
+        <div className="mt-4 min-h-0 flex-1 [scrollbar-width:thin] [scrollbar-color:#d9d9d9_transparent] overflow-x-hidden overflow-y-auto pb-[43px]">
           <div className="flex min-h-full flex-col">
-            <div className="w-[904px] space-y-2">
+            <div className="w-full min-w-0 space-y-2 pr-3">
               <MeetingListState
                 isLoading={isLoading}
                 errorMessage={errorMessage}
@@ -132,7 +117,7 @@ function MeetingRecordsTab({
           selectedDate={selectedDate}
           meetingDates={meetingDates}
           onSelect={onSelectDate}
-          className="absolute top-[92px] right-5"
+          className="absolute top-[92px] right-[140px]"
         />
       )}
 

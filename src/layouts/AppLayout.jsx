@@ -213,7 +213,6 @@ function AppLayout() {
   );
 
   const isTeamPage = Boolean(teamPageMatch);
-  const currentProjectId = teamPageMatch?.[1];
 
   const teamPageTitle = `${location.state?.projectName ?? '프로젝트'
     } / ${location.state?.teamName ?? '팀'
@@ -232,8 +231,9 @@ function AppLayout() {
             {isTeamPage && (
               <button
                 type="button"
-                onClick={() => navigate(`/projects/${currentProjectId}`)}
+                onClick={() => navigate(-1)}
                 className="mr-[10px] flex size-6 items-center justify-center text-[26px] leading-none text-[#2B3F6C]"
+                aria-label="이전 페이지로 이동"
               >
                 ‹
               </button>

@@ -683,7 +683,7 @@ function ProjectPage() {
   }
 
   return (
-    <div className="h-full [scrollbar-width:none] overflow-y-auto [&::-webkit-scrollbar]:hidden">
+    <div className="green-border-theme h-full [scrollbar-width:none] overflow-y-auto [&::-webkit-scrollbar]:hidden">
       <div className="mx-auto w-full max-w-[1350px]">
         <ProjectNavigation
           projects={projects}
@@ -738,7 +738,14 @@ function ProjectPage() {
             setTeamCreateErrorMessage('');
             setIsTeamCreateModalOpen(true);
           }}
-          onAskTeam={(nextTeamId) => navigate('/qa', { state: { teamId: nextTeamId } })}
+          onAskTeam={(nextTeamId) =>
+            navigate('/qa', {
+              state: {
+                projectId: currentProject.projectId,
+                teamId: nextTeamId,
+              },
+            })
+          }
         />
       </div>
 

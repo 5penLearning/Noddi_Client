@@ -809,7 +809,7 @@ function ProfileSettingsPage() {
 
   return (
     <>
-      <div className="h-full w-full overflow-y-auto bg-[#FAFFFC] pb-16">
+      <div className="green-border-theme h-full w-full overflow-y-auto bg-[#FAFFFC] pb-16">
         <div className="mx-auto w-full max-w-[1080px] px-4 pt-1 sm:px-6 lg:px-8 xl:px-0">
           {/* Header */}
           <header className="mb-6 sm:mb-8">

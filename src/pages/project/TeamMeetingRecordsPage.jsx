@@ -486,7 +486,7 @@ function TeamMeetingRecordsPage() {
   };
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-[1347px] flex-col">
+    <div className="green-border-theme mx-auto flex h-full w-full max-w-[1347px] flex-col">
       <MeetingRecordsTabs activeTab={activeTab} onChange={setActiveTab} />
 
       {activeTab === 'records' ? (
@@ -544,7 +544,6 @@ function TeamMeetingRecordsPage() {
           onKeywordChange={setMemoSearchKeyword}
           onSelect={setSelectedMemoId}
           onCreate={handleCreateSharedMemo}
-          onBack={() => setSelectedMemoId(null)}
           onUpdate={handleUpdateSharedMemo}
         />
       )}

@@ -84,7 +84,7 @@ function SharedMemoList({
               type="button"
               onClick={() => onSelect(memo.pageId)}
               className={`flex w-full items-start gap-3 border-b border-[var(--color-gray-200)] px-5 py-[18px] text-left ${
-                selectedMemoId === memo.pageId ? 'bg-[var(--color-gray-50)]' : 'bg-white'
+                selectedMemoId === memo.pageId ? 'bg-[#EFFFF7]' : 'bg-white hover:bg-[#EFFFF7]'
               }`}
             >
               <SharedMemoFolderIcon />
@@ -102,9 +102,19 @@ function SharedMemoList({
                       '작성자 정보 없음'}
                   </span>
                   <span aria-hidden="true">·</span>
-                  <time className="truncate" dateTime={memo.createdAt}>
-                    {formatCreatedAt(memo.createdAt)}
-                  </time>
+                  <span className="flex min-w-0 gap-2">
+                    {memo.createdAt && (
+                      <time className="truncate" dateTime={memo.createdAt}>
+                        생성 {formatCreatedAt(memo.createdAt)}
+                      </time>
+                    )}
+                    {memo.updatedAt && (
+                      <time className="truncate" dateTime={memo.updatedAt}>
+                        {memo.createdAt ? '· ' : ''}{formatCreatedAt(memo.updatedAt)}
+                      </time>
+                    )}
+                    {!memo.createdAt && !memo.updatedAt && <span>날짜 정보 없음</span>}
+                  </span>
                 </span>
               </span>
             </button>

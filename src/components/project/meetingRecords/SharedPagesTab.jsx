@@ -17,7 +17,6 @@ function SharedPagesTab({
   onKeywordChange,
   onSelect,
   onCreate,
-  onBack,
   onUpdate,
 }) {
   return (
@@ -40,7 +39,6 @@ function SharedPagesTab({
         isLoading={isDetailLoading}
         isUpdating={isUpdating}
         errorMessage={detailErrorMessage}
-        onBack={onBack}
         onUpdate={onUpdate}
       />
     </main>
