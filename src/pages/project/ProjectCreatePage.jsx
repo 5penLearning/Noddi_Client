@@ -3,13 +3,9 @@ import { useNavigate } from 'react-router-dom';
 
 import OutlineButton from '../../components/common/OutlineButton';
 import ProjectMemberModal from '../../components/project/ProjectMemberModal';
-import ProjectTeamSetupCard from '../../components/project/ProjectTeamSetupCard';
 import { getApiErrorMessage } from '../../api/axios';
 import { createProject } from '../../api/projects';
-import {
-  projectCreateTeamsMockData,
-  projectMemberModalMockData,
-} from '../../mocks/projectPageData';
+import { projectMemberModalMockData } from '../../mocks/projectPageData';
 
 import chevronIcon from '../../assets/icons/profile/chevron.svg';
 import clearXIcon from '../../assets/icons/project-create/clear-x.svg';
@@ -28,7 +24,6 @@ function ProjectCreatePage() {
   const [startDate] = useState(() => new Date());
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
-  const [teams, setTeams] = useState(projectCreateTeamsMockData);
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [endYear, setEndYear] = useState('');
   const [endMonth, setEndMonth] = useState('');
@@ -63,10 +58,6 @@ function ProjectCreatePage() {
   const handleEndMonthChange = (event) => {
     setEndMonth(event.target.value);
     setEndDay('');
-  };
-
-  const handleRemoveTeam = (teamId) => {
-    setTeams((currentTeams) => currentTeams.filter((team) => team.id !== teamId));
   };
 
   const handleSubmit = async (event) => {
@@ -233,15 +224,12 @@ function ProjectCreatePage() {
             <span className="body-4 ml-auto">{totalDays ? `총 ${totalDays}일` : '총 0일'}</span>
           </div>
 
-          <h2 className="body-4 mt-[47px] tracking-[-0.16px]">팀/팀장 설정</h2>
-          <div className="mt-[12px] flex flex-wrap items-center gap-3">
-            {teams.map((team) => (
-              <ProjectTeamSetupCard key={team.id} team={team} onRemove={handleRemoveTeam} />
-            ))}
+          <div className="mt-[47px] flex items-center">
             <button
               type="button"
               onClick={() => setIsMemberModalOpen(true)}
-              className="relative ml-[-1px] flex size-9 items-center justify-center rounded-full bg-[var(--color-gray-200)]"
+              aria-label="프로젝트 인원 추가"
+              className="relative flex size-9 items-center justify-center rounded-full bg-[var(--color-gray-200)]"
             >
               <span className="relative size-6">
                 <img
@@ -273,7 +261,10 @@ function ProjectCreatePage() {
       </form>
       {isMemberModalOpen && (
         <ProjectMemberModal
-          data={projectMemberModalMockData}
+          data={{
+            ...projectMemberModalMockData,
+            projectName: projectName.trim() || '새 프로젝트',
+          }}
           onClose={() => setIsMemberModalOpen(false)}
         />
       )}

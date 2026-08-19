@@ -27,7 +27,7 @@ function ProjectOverview({
   onAskTeam,
 }) {
   return (
-    <main className="relative z-10 min-h-[1032px] overflow-hidden rounded-[10px] bg-[var(--color-white)]">
+    <main className="relative z-10 min-h-[1032px] overflow-hidden rounded-b-[10px] bg-[var(--color-white)]">
       {isBannerVisible ? (
         <section className="flex h-16 items-center bg-[var(--color-action-primary)] px-[21px]">
           <span className="body-3 flex h-9 w-[75px] shrink-0 items-center justify-center rounded-[300px] bg-[var(--color-white)] text-[var(--color-gray-900)]">
