@@ -526,13 +526,24 @@ function getQuestionTime(
 function sortQuestions(
   questions,
 ) {
-  return [...questions].sort(
-    (first, second) => {
+  return [
+    ...questions,
+  ].sort(
+    (
+      first,
+      second,
+    ) => {
       const difference =
-        getQuestionTime(first) -
-        getQuestionTime(second);
+        getQuestionTime(
+          first,
+        ) -
+        getQuestionTime(
+          second,
+        );
 
-      if (difference !== 0) {
+      if (
+        difference !== 0
+      ) {
         return difference;
       }
 
@@ -611,18 +622,18 @@ function SourceCard({
   source,
 }) {
   return (
-    <div className="rounded-[11px] border border-[#D8E8E0] bg-white px-3.5 py-3">
-      <div className="flex items-center gap-2.5">
+    <div className="rounded-[10px] border border-[#D8E8E0] bg-white px-3 py-2.5 sm:rounded-[11px] sm:px-3.5 sm:py-3">
+      <div className="flex items-center gap-2 sm:gap-2.5">
         <span className="shrink-0 text-[#527064]">
           <SourceIcon />
         </span>
 
-        <p className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[#29483B]">
+        <p className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[#29483B] sm:text-[12px]">
           {source.sourceTitle ??
             '참고 자료'}
         </p>
 
-        <span className="shrink-0 rounded-full bg-[#EFFFF7] px-2.5 py-1 text-[10px] font-medium text-[#39735A]">
+        <span className="max-w-[92px] shrink-0 truncate rounded-full bg-[#EFFFF7] px-2 py-1 text-[9px] font-medium text-[#39735A] sm:max-w-none sm:px-2.5 sm:text-[10px]">
           {source.sourceType ===
             'TRANSCRIPT'
             ? '회의 기록'
@@ -631,7 +642,7 @@ function SourceCard({
       </div>
 
       {source.excerpt && (
-        <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-[12px] leading-5 text-[#687F75]">
+        <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-[11px] leading-[18px] text-[#687F75] sm:text-[12px] sm:leading-5">
           {source.excerpt}
         </p>
       )}
@@ -661,7 +672,7 @@ function RoomItem({
         : 'hover:bg-[#F5FAF7]'
         }`}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2 sm:gap-3">
         <div
           className={`flex size-9 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${selected
             ? 'bg-[#31F5A0] text-[#101211]'
@@ -724,14 +735,14 @@ function RecentQuestionItem({
         : 'hover:bg-[#F7FBF9]'
         }`}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2 sm:gap-3">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#EFFFF7] text-[11px] font-semibold text-[#177551]">
           Q&A
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[#101211]">
+            <p className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[#101211] sm:text-[13px]">
               {question.targetTeamName ??
                 '팀'}{' '}
               Q&A
@@ -779,7 +790,9 @@ function ConversationSidebar({
         (team) =>
           myTeamIds.has(
             Number(
-              getTeamId(team),
+              getTeamId(
+                team,
+              ),
             ),
           ),
       );
@@ -796,7 +809,9 @@ function ConversationSidebar({
             Number(
               question.targetTeamId,
             ) ===
-            Number(teamId),
+            Number(
+              teamId,
+            ),
         ) ?? null
       );
     };
@@ -815,7 +830,8 @@ function ConversationSidebar({
                 size={20}
               />
             </div>
-          ) : teams.length === 0 ? (
+          ) : teams.length ===
+            0 ? (
             <p className="rounded-[10px] bg-white/45 px-3 py-3 text-[12px] text-[#355447]">
               프로젝트에 팀이 없습니다.
             </p>
@@ -823,17 +839,23 @@ function ConversationSidebar({
             teams.map(
               (team) => {
                 const teamId =
-                  getTeamId(team);
+                  getTeamId(
+                    team,
+                  );
 
                 const selected =
                   Number(
                     selectedTeamId,
                   ) ===
-                  Number(teamId);
+                  Number(
+                    teamId,
+                  );
 
                 return (
                   <button
-                    key={teamId}
+                    key={
+                      teamId
+                    }
                     type="button"
                     onClick={() =>
                       onSelectTeam(
@@ -864,7 +886,7 @@ function ConversationSidebar({
               !selectedTeamId
             }
             onClick={onNewChat}
-            className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-[11px] bg-[#31F5A0] text-[13px] font-semibold text-[#101211] transition hover:brightness-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-[11px] bg-[#31F5A0] text-[12px] font-semibold text-[#101211] transition hover:brightness-[0.98] disabled:cursor-not-allowed disabled:opacity-40 sm:text-[13px]"
           >
             <PlusIcon />
             새 채팅
@@ -901,17 +923,23 @@ function ConversationSidebar({
             {myProjectTeams.map(
               (team) => {
                 const teamId =
-                  getTeamId(team);
+                  getTeamId(
+                    team,
+                  );
 
                 return (
                   <RoomItem
-                    key={teamId}
+                    key={
+                      teamId
+                    }
                     team={team}
                     selected={
                       Number(
                         selectedTeamId,
                       ) ===
-                      Number(teamId)
+                      Number(
+                        teamId,
+                      )
                     }
                     latestQuestion={
                       getLatestMyQuestion(
@@ -986,10 +1014,10 @@ function DateDivider({
   value,
 }) {
   return (
-    <div className="flex items-center gap-4 py-3">
+    <div className="flex items-center gap-2 py-2 sm:gap-4 sm:py-3">
       <div className="h-px flex-1 bg-[#E5EEE9]" />
 
-      <span className="shrink-0 rounded-full bg-[#F3F8F5] px-3 py-1.5 text-[11px] font-medium text-[#7D8F86]">
+      <span className="shrink-0 rounded-full bg-[#F3F8F5] px-2.5 py-1 text-[10px] font-medium text-[#7D8F86] sm:px-3 sm:py-1.5 sm:text-[11px]">
         {formatChatDate(
           value,
         )}
@@ -1051,14 +1079,14 @@ function QuestionMessage({
   if (isMine) {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[86%] sm:max-w-[72%]">
-          <div className="rounded-[17px_17px_5px_17px] border border-[#9FEBC4] bg-[#CFFFF0] px-4 py-3">
-            <p className="whitespace-pre-wrap break-words text-[14px] leading-6 text-[#173329]">
+        <div className="max-w-[92%] sm:max-w-[80%] md:max-w-[72%]">
+          <div className="rounded-[15px_15px_5px_15px] border border-[#9FEBC4] bg-[#CFFFF0] px-3.5 py-2.5 sm:rounded-[17px_17px_5px_17px] sm:px-4 sm:py-3">
+            <p className="whitespace-pre-wrap break-words text-[13px] leading-[21px] text-[#173329] sm:text-[14px] sm:leading-6">
               {question.content}
             </p>
           </div>
 
-          <p className="mt-1 text-right text-[11px] text-[#899890]">
+          <p className="mt-1 text-right text-[10px] text-[#899890] sm:text-[11px]">
             {formatTime(
               question.createdAt,
             )}
@@ -1069,7 +1097,7 @@ function QuestionMessage({
   }
 
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex items-start gap-2 sm:gap-3">
       <ProfileAvatar
         userId={
           question.questionerId
@@ -1078,29 +1106,29 @@ function QuestionMessage({
           imageUrl
         }
         name={name}
-        className="size-9 shrink-0 text-[12px]"
+        className="size-8 shrink-0 text-[11px] sm:size-9 sm:text-[12px]"
       />
 
-      <div className="max-w-[86%] sm:max-w-[72%]">
+      <div className="max-w-[92%] sm:max-w-[80%] md:max-w-[72%]">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="text-[13px] font-semibold text-[#101211]">
+          <p className="text-[12px] font-semibold text-[#101211] sm:text-[13px]">
             {name}
           </p>
 
           {meta && (
-            <span className="text-[11px] text-[#889890]">
+            <span className="text-[10px] text-[#889890] sm:text-[11px]">
               {meta}
             </span>
           )}
         </div>
 
-        <div className="mt-2 rounded-[5px_17px_17px_17px] bg-[#EEF2F0] px-4 py-3">
-          <p className="whitespace-pre-wrap break-words text-[14px] leading-6 text-[#263A31]">
+        <div className="mt-2 rounded-[5px_15px_15px_15px] bg-[#EEF2F0] px-3.5 py-2.5 sm:rounded-[5px_17px_17px_17px] sm:px-4 sm:py-3">
+          <p className="whitespace-pre-wrap break-words text-[13px] leading-[21px] text-[#263A31] sm:text-[14px] sm:leading-6">
             {question.content}
           </p>
         </div>
 
-        <p className="mt-1 text-[11px] text-[#899890]">
+        <p className="mt-1 text-[10px] text-[#899890] sm:text-[11px]">
           {formatTime(
             question.createdAt,
           )}
@@ -1134,18 +1162,18 @@ function AnswerMessage({
       'FAILED';
 
     return (
-      <div className="flex items-start gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#31F5A0] text-[#101211]">
+      <div className="flex items-start gap-2 sm:gap-3">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#31F5A0] text-[#101211] sm:size-9">
           <SparkleIcon />
         </div>
 
-        <div className="max-w-[88%] sm:max-w-[76%]">
-          <p className="text-[13px] font-semibold text-[#101211]">
+        <div className="max-w-[92%] sm:max-w-[82%] md:max-w-[76%]">
+          <p className="text-[12px] font-semibold text-[#101211] sm:text-[13px]">
             Noddi AI
           </p>
 
           {isFailed ? (
-            <div className="mt-2 rounded-[5px_17px_17px_17px] border border-[#FFD6D1] bg-[#FFF6F5] px-4 py-3">
+            <div className="mt-2 rounded-[5px_15px_15px_15px] border border-[#FFD6D1] bg-[#FFF6F5] px-3.5 py-2.5 sm:rounded-[5px_17px_17px_17px] sm:px-4 sm:py-3">
               <p className="text-[13px] font-medium text-[#D84A40]">
                 답변을 생성하지 못했습니다.
               </p>
@@ -1166,7 +1194,7 @@ function AnswerMessage({
               )}
             </div>
           ) : isManual ? (
-            <div className="mt-2 rounded-[5px_17px_17px_17px] border border-[#FFE0C3] bg-[#FFF8F0] px-4 py-3">
+            <div className="mt-2 rounded-[5px_15px_15px_15px] border border-[#FFE0C3] bg-[#FFF8F0] px-3.5 py-2.5 sm:rounded-[5px_17px_17px_17px] sm:px-4 sm:py-3">
               <p className="text-[13px] font-medium text-[#9B5C24]">
                 팀원의 확인이 필요한 질문입니다.
               </p>
@@ -1191,7 +1219,7 @@ function AnswerMessage({
               )}
             </div>
           ) : (
-            <div className="mt-2 rounded-[5px_17px_17px_17px] bg-[#EEF2F0] px-4 py-3">
+            <div className="mt-2 rounded-[5px_15px_15px_15px] bg-[#EEF2F0] px-3.5 py-2.5 sm:rounded-[5px_17px_17px_17px] sm:px-4 sm:py-3">
               <div className="flex items-center gap-3">
                 <LoadingSpinner
                   size={16}
@@ -1238,9 +1266,9 @@ function AnswerMessage({
       );
 
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex items-start gap-2 sm:gap-3">
       <div
-        className={`flex size-9 shrink-0 items-center justify-center rounded-full ${isTeamAnswer
+        className={`flex size-8 shrink-0 items-center justify-center rounded-full sm:size-9 ${isTeamAnswer
           ? 'bg-[#E4EBE7] text-[#476057]'
           : 'bg-[#31F5A0] text-[#101211]'
           }`}
@@ -1254,9 +1282,9 @@ function AnswerMessage({
         )}
       </div>
 
-      <div className="min-w-0 max-w-[88%] sm:max-w-[77%]">
+      <div className="min-w-0 max-w-[92%] sm:max-w-[84%] md:max-w-[77%]">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-[13px] font-semibold text-[#101211]">
+          <p className="text-[12px] font-semibold text-[#101211] sm:text-[13px]">
             {answerName}
           </p>
 
@@ -1268,12 +1296,12 @@ function AnswerMessage({
         </div>
 
         <div
-          className={`mt-2 rounded-[5px_17px_17px_17px] px-4 py-3.5 ${isTeamAnswer
+          className={`mt-2 rounded-[5px_15px_15px_15px] px-3.5 py-2.5 sm:rounded-[5px_17px_17px_17px] sm:px-4 sm:py-3.5 ${isTeamAnswer
             ? 'border border-[#DCE6E1] bg-white'
             : 'bg-[#EEF2F0]'
             }`}
         >
-          <p className="whitespace-pre-wrap break-words text-[14px] leading-6 text-[#263A31]">
+          <p className="whitespace-pre-wrap break-words text-[13px] leading-[21px] text-[#263A31] sm:text-[14px] sm:leading-6">
             {answer.content}
           </p>
 
@@ -1347,7 +1375,7 @@ function ConversationItem({
   return (
     <div
       id={`qa-question-${question.questionId}`}
-      className={`scroll-mt-24 rounded-[15px] px-2 py-3 transition-all duration-500 ${focused
+      className={`scroll-mt-24 rounded-[13px] px-0 py-2 transition-all duration-500 sm:rounded-[15px] sm:px-2 sm:py-3 ${focused
         ? 'bg-[#F0FFF7] shadow-[0_0_0_1px_rgba(49,245,160,0.55)]'
         : 'bg-transparent'
         }`}
@@ -1403,21 +1431,21 @@ function AnswerEditorPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#FAFFFC]">
-      <div className="flex shrink-0 items-start justify-between border-b border-[#DCEDE5] px-5 py-5">
+      <div className="flex shrink-0 items-start justify-between border-b border-[#DCEDE5] px-4 py-4 sm:px-5 sm:py-5">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[#147950]">
               <EditIcon />
             </span>
 
-            <h2 className="text-[17px] font-semibold text-[#101211]">
+            <h2 className="text-[16px] font-semibold text-[#101211] sm:text-[17px]">
               {isNewAnswer
                 ? '답변 작성'
                 : '답변 수정'}
             </h2>
           </div>
 
-          <p className="mt-2 text-[13px] leading-5 text-[#687F75]">
+          <p className="mt-2 text-[12px] leading-5 text-[#687F75] sm:text-[13px]">
             {isNewAnswer
               ? '팀을 대신해 직접 답변을 작성할 수 있습니다.'
               : '팀 상황에 맞게 답변을 보완할 수 있습니다.'}
@@ -1443,7 +1471,7 @@ function AnswerEditorPanel({
         </div>
       ) : (
         <>
-          <div className="min-h-0 flex-1 overflow-y-auto p-5">
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
             <div className="flex items-center justify-between">
               <label
                 htmlFor="qa-answer-editor"
@@ -1471,7 +1499,7 @@ function AnswerEditorPanel({
                 onChange
               }
               placeholder="답변을 입력해주세요."
-              className="mt-3 h-[320px] w-full resize-none rounded-[13px] border border-[#CCE7D9] bg-white p-4 text-[14px] leading-6 text-[#20342C] outline-none transition placeholder:text-[#9AA9A2] focus:border-[#31F5A0]"
+              className="mt-3 h-[260px] w-full resize-none rounded-[13px] border border-[#CCE7D9] bg-white p-4 text-[14px] leading-6 text-[#20342C] outline-none transition placeholder:text-[#9AA9A2] focus:border-[#31F5A0] sm:h-[320px]"
             />
 
             {sources.length >
@@ -1500,7 +1528,7 @@ function AnswerEditorPanel({
               )}
           </div>
 
-          <div className="shrink-0 border-t border-[#DCEDE5] bg-white p-5">
+          <div className="shrink-0 border-t border-[#DCEDE5] bg-white p-4 sm:p-5">
             <button
               type="button"
               disabled={
@@ -1549,7 +1577,9 @@ function QAPage() {
     useRef(targetTeamId);
 
   const pendingFocusRef =
-    useRef(targetQuestionId);
+    useRef(
+      targetQuestionId,
+    );
 
   const focusSearchCountRef =
     useRef(0);
@@ -1570,7 +1600,9 @@ function QAPage() {
     useRef(null);
 
   const streamControllersRef =
-    useRef(new Map());
+    useRef(
+      new Map(),
+    );
 
   const [
     profile,
@@ -1736,7 +1768,9 @@ function QAPage() {
         teams.find(
           (team) =>
             Number(
-              getTeamId(team),
+              getTeamId(
+                team,
+              ),
             ) ===
             Number(
               selectedTeamId,
@@ -1754,11 +1788,15 @@ function QAPage() {
         myTeams.map(
           (team) =>
             Number(
-              getTeamId(team),
+              getTeamId(
+                team,
+              ),
             ),
         ),
       );
-    }, [myTeams]);
+    }, [
+      myTeams,
+    ]);
 
   const recentQuestions =
     useMemo(() => {
@@ -1766,7 +1804,9 @@ function QAPage() {
         (question) => {
           const feedQuestion =
             feedQuestions.find(
-              (feedItem) =>
+              (
+                feedItem,
+              ) =>
                 Number(
                   feedItem.questionId,
                 ) ===
@@ -1816,6 +1856,7 @@ function QAPage() {
         container.scrollTo({
           top:
             container.scrollHeight,
+
           behavior,
         });
 
@@ -1918,8 +1959,10 @@ function QAPage() {
 
       container.scrollTop =
         previousTop +
-        (nextHeight -
-          previousHeight);
+        (
+          nextHeight -
+          previousHeight
+        );
 
       restoreScrollRef.current =
         null;
@@ -1954,28 +1997,33 @@ function QAPage() {
   ]);
 
   const loadMyQuestionList =
-    useCallback(async () => {
-      const response =
-        await getMyQuestions({
-          page: 0,
-          size: 30,
-        });
+    useCallback(
+      async () => {
+        const response =
+          await getMyQuestions({
+            page: 0,
+            size: 30,
+          });
 
-      const questions =
-        getPageContent(
-          response,
+        const questions =
+          getPageContent(
+            response,
+          );
+
+        setMyQuestions(
+          questions,
         );
 
-      setMyQuestions(
-        questions,
-      );
-
-      return questions;
-    }, []);
+        return questions;
+      },
+      [],
+    );
 
   const loadTeamQuestionList =
     useCallback(
-      async (teamId) => {
+      async (
+        teamId,
+      ) => {
         if (!teamId) {
           setTeamQuestions(
             [],
@@ -2031,174 +2079,144 @@ function QAPage() {
     );
 
   const loadInitialData =
-    useCallback(async () => {
-      try {
-        setIsLoading(true);
-        setError('');
-
-        const [
-          profileResponse,
-          myTeamResponse,
-          myQuestionResponse,
-        ] =
-          await Promise.all([
-            getMyProfile(),
-
-            getMyTeams(),
-
-            getMyQuestions({
-              page: 0,
-              size: 30,
-            }),
-          ]);
-
-        const profileData =
-          profileResponse
-            ?.result ?? null;
-
-        const nextMyTeams =
-          Array.isArray(
-            myTeamResponse,
-          )
-            ? myTeamResponse
-            : [];
-
-        setProfile(
-          profileData,
-        );
-
-        setMyTeams(
-          nextMyTeams,
-        );
-
-        setMyQuestions(
-          getPageContent(
-            myQuestionResponse,
-          ),
-        );
-
-        let memberProjects =
-          [];
-
+    useCallback(
+      async () => {
         try {
-          memberProjects =
-            await getQaProjects();
-        } catch (
-        projectError
-        ) {
-          console.error(
-            'Failed to load projects:',
-            projectError,
+          setIsLoading(
+            true,
           );
-        }
 
-        setProjects(
-          memberProjects,
-        );
+          setError('');
 
-        let preferredProjectId =
-          null;
+          const [
+            profileResponse,
+            myTeamResponse,
+            myQuestionResponse,
+          ] =
+            await Promise.all([
+              getMyProfile(),
 
-        if (
-          targetProjectId &&
-          memberProjects.some(
-            (project) =>
-              Number(
-                project.projectId,
-              ) ===
-              Number(
-                targetProjectId,
-              ),
-          )
-        ) {
-          preferredProjectId =
-            targetProjectId;
-        }
+              getMyTeams(),
 
-        if (
-          !preferredProjectId &&
-          targetTeamId
-        ) {
-          for (
-            const project of
-            memberProjects
+              getMyQuestions({
+                page: 0,
+                size: 30,
+              }),
+            ]);
+
+          const profileData =
+            profileResponse
+              ?.result ?? null;
+
+          const nextMyTeams =
+            Array.isArray(
+              myTeamResponse,
+            )
+              ? myTeamResponse
+              : [];
+
+          setProfile(
+            profileData,
+          );
+
+          setMyTeams(
+            nextMyTeams,
+          );
+
+          setMyQuestions(
+            getPageContent(
+              myQuestionResponse,
+            ),
+          );
+
+          let memberProjects =
+            [];
+
+          try {
+            memberProjects =
+              await getQaProjects();
+          } catch (
+          projectError
           ) {
-            try {
-              const projectTeams =
-                await getProjectTeams(
-                  project.projectId,
-                );
+            console.error(
+              'Failed to load projects:',
+              projectError,
+            );
+          }
 
-              const hasTargetTeam =
-                Array.isArray(
-                  projectTeams,
-                ) &&
-                projectTeams.some(
-                  (team) =>
+          setProjects(
+            memberProjects,
+          );
+
+          const targetMyTeam =
+            nextMyTeams.find(
+              (team) =>
+                Number(
+                  getTeamId(
+                    team,
+                  ),
+                ) ===
+                Number(
+                  targetTeamId,
+                ),
+            );
+
+          const preferredProjectId =
+            targetProjectId &&
+              memberProjects.some(
+                (project) =>
+                  Number(
+                    project.projectId,
+                  ) ===
+                  Number(
+                    targetProjectId,
+                  ),
+              )
+              ? targetProjectId
+              : targetMyTeam
+                ?.projectId &&
+                memberProjects.some(
+                  (project) =>
                     Number(
-                      getTeamId(
-                        team,
-                      ),
+                      project.projectId,
                     ) ===
                     Number(
-                      targetTeamId,
+                      targetMyTeam.projectId,
                     ),
-                );
+                )
+                ? targetMyTeam.projectId
+                : memberProjects[0]
+                  ?.projectId ??
+                null;
 
-              if (
-                hasTargetTeam
-              ) {
-                preferredProjectId =
-                  project.projectId;
-
-                break;
-              }
-            } catch (
-            requestError
-            ) {
-              console.error(
-                'Failed to match target team project:',
-                requestError,
-              );
-            }
-          }
-        }
-
-        if (
-          !preferredProjectId
+          setSelectedProjectId(
+            preferredProjectId,
+          );
+        } catch (
+        requestError
         ) {
-          preferredProjectId =
-            memberProjects[0]
-              ?.projectId ??
-            null;
+          console.error(
+            'Failed to load Q&A:',
+            requestError,
+          );
+
+          setError(
+            requestError
+              ?.response?.data
+              ?.message ??
+            'Q&A 정보를 불러오지 못했습니다.',
+          );
+        } finally {
+          setIsLoading(
+            false,
+          );
         }
-
-        setSelectedProjectId(
-          preferredProjectId,
-        );
-      } catch (
-      requestError
-      ) {
-        console.error(
-          'Failed to load Q&A:',
-          requestError,
-        );
-
-        setError(
-          requestError
-            ?.response?.data
-            ?.message ??
-          requestError
-            ?.message ??
-          'Q&A 정보를 불러오지 못했습니다.',
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    }, [
-      targetProjectId,
-      targetTeamId,
-    ]);
+      },
+      [
+        targetProjectId,
+        targetTeamId,
+      ],
+    );
 
   const loadProjectTeamList =
     useCallback(
@@ -2281,8 +2299,6 @@ function QAPage() {
           setError(
             requestError
               ?.response?.data
-              ?.message ??
-            requestError
               ?.message ??
             '프로젝트 팀을 불러오지 못했습니다.',
           );
@@ -2394,8 +2410,6 @@ function QAPage() {
             requestError
               ?.response?.data
               ?.message ??
-            requestError
-              ?.message ??
             '팀 Q&A를 불러오지 못했습니다.',
           );
         } finally {
@@ -2463,12 +2477,12 @@ function QAPage() {
             requestError,
           );
 
-          if (showError) {
+          if (
+            showError
+          ) {
             setError(
               requestError
                 ?.response?.data
-                ?.message ??
-              requestError
                 ?.message ??
               'Q&A를 새로고침하지 못했습니다.',
             );
@@ -2718,112 +2732,113 @@ function QAPage() {
     );
 
   const loadOlderMessages =
-    useCallback(async () => {
-      if (
-        !selectedTeamId ||
-        !feedCursor ||
-        !feedHasNext ||
-        loadingMoreRef.current
-      ) {
-        return;
-      }
+    useCallback(
+      async () => {
+        if (
+          !selectedTeamId ||
+          !feedCursor ||
+          !feedHasNext ||
+          loadingMoreRef.current
+        ) {
+          return;
+        }
 
-      const container =
-        conversationRef.current;
+        const container =
+          conversationRef.current;
 
-      loadingMoreRef.current =
-        true;
-
-      setIsLoadingMore(
-        true,
-      );
-
-      if (container) {
-        restoreScrollRef.current =
-        {
-          previousHeight:
-            container.scrollHeight,
-
-          previousTop:
-            container.scrollTop,
-        };
-      }
-
-      try {
-        const feed =
-          await getTeamQaFeed(
-            selectedTeamId,
-            {
-              cursor:
-                feedCursor,
-
-              size: 20,
-            },
-          );
-
-        const questions =
-          Array.isArray(
-            feed?.items,
-          )
-            ? feed.items.map(
-              (item) =>
-                normalizeFeedItem(
-                  item,
-                  feed,
-                ),
-            )
-            : [];
-
-        setFeedQuestions(
-          (previous) =>
-            mergeQuestions(
-              questions,
-              previous,
-            ),
-        );
-
-        setFeedCursor(
-          feed?.nextCursor ??
-          null,
-        );
-
-        setFeedHasNext(
-          Boolean(
-            feed?.hasNext,
-          ),
-        );
-      } catch (
-      requestError
-      ) {
-        restoreScrollRef.current =
-          null;
-
-        console.error(
-          'Failed to load older Q&A:',
-          requestError,
-        );
-
-        setError(
-          requestError
-            ?.response?.data
-            ?.message ??
-          requestError
-            ?.message ??
-          '이전 대화를 불러오지 못했습니다.',
-        );
-      } finally {
         loadingMoreRef.current =
-          false;
+          true;
 
         setIsLoadingMore(
-          false,
+          true,
         );
-      }
-    }, [
-      selectedTeamId,
-      feedCursor,
-      feedHasNext,
-    ]);
+
+        if (container) {
+          restoreScrollRef.current =
+          {
+            previousHeight:
+              container.scrollHeight,
+
+            previousTop:
+              container.scrollTop,
+          };
+        }
+
+        try {
+          const feed =
+            await getTeamQaFeed(
+              selectedTeamId,
+              {
+                cursor:
+                  feedCursor,
+
+                size: 20,
+              },
+            );
+
+          const questions =
+            Array.isArray(
+              feed?.items,
+            )
+              ? feed.items.map(
+                (item) =>
+                  normalizeFeedItem(
+                    item,
+                    feed,
+                  ),
+              )
+              : [];
+
+          setFeedQuestions(
+            (previous) =>
+              mergeQuestions(
+                questions,
+                previous,
+              ),
+          );
+
+          setFeedCursor(
+            feed?.nextCursor ??
+            null,
+          );
+
+          setFeedHasNext(
+            Boolean(
+              feed?.hasNext,
+            ),
+          );
+        } catch (
+        requestError
+        ) {
+          restoreScrollRef.current =
+            null;
+
+          console.error(
+            'Failed to load older Q&A:',
+            requestError,
+          );
+
+          setError(
+            requestError
+              ?.response?.data
+              ?.message ??
+            '이전 대화를 불러오지 못했습니다.',
+          );
+        } finally {
+          loadingMoreRef.current =
+            false;
+
+          setIsLoadingMore(
+            false,
+          );
+        }
+      },
+      [
+        selectedTeamId,
+        feedCursor,
+        feedHasNext,
+      ],
+    );
 
   useEffect(() => {
     loadInitialData();
@@ -3135,14 +3150,6 @@ function QAPage() {
       setError('');
     };
 
-  /**
-   * 현재 백엔드에는 별도 Q&A room 생성 API가 없다.
-   *
-   * 따라서 지금 "새 채팅"은 같은 팀 Q&A feed의
-   * 가장 아래 입력창으로 이동한다.
-   *
-   * 실제 여러 채팅방을 만들려면 백엔드 roomId가 필요하다.
-   */
   const handleNewChat =
     () => {
       pendingFocusRef.current =
@@ -3321,11 +3328,14 @@ function QAPage() {
               created.status ??
               'PENDING',
 
-            answer: null,
+            answer:
+              null,
 
-            sources: [],
+            sources:
+              [],
 
-            canAnswer: false,
+            canAnswer:
+              false,
           };
 
           shouldScrollBottomRef.current =
@@ -3372,8 +3382,6 @@ function QAPage() {
         setError(
           requestError
             ?.response?.data
-            ?.message ??
-          requestError
             ?.message ??
           '질문을 등록하지 못했습니다.',
         );
@@ -3492,8 +3500,6 @@ function QAPage() {
         setError(
           requestError
             ?.response?.data
-            ?.message ??
-          requestError
             ?.message ??
           '답변 정보를 불러오지 못했습니다.',
         );
@@ -3652,8 +3658,6 @@ function QAPage() {
           requestError
             ?.response?.data
             ?.message ??
-          requestError
-            ?.message ??
           '답변을 저장하지 못했습니다.',
         );
       } finally {
@@ -3666,7 +3670,7 @@ function QAPage() {
   return (
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
       <header className="shrink-0">
-        <div className="flex items-center justify-end gap-4 pb-5">
+        <div className="flex items-center justify-start gap-2 pb-2 sm:pb-3 xl:justify-end xl:gap-4 xl:pb-5">
           <button
             type="button"
             onClick={() =>
@@ -3674,16 +3678,19 @@ function QAPage() {
                 true,
               )
             }
-            className="flex h-11 items-center gap-2 rounded-[11px] border border-[#D4E9DF] bg-white px-4 text-[13px] font-semibold text-[#355C4B] lg:hidden"
+            className="flex h-10 max-w-full items-center gap-2 rounded-[10px] border border-[#D4E9DF] bg-white px-3 text-[12px] font-semibold text-[#355C4B] sm:h-11 sm:rounded-[11px] sm:px-4 sm:text-[13px] xl:hidden"
           >
             <MenuIcon />
 
-            {selectedTeam?.name ??
-              'Q&A 목록'}
+            <span className="max-w-[180px] truncate sm:max-w-[260px]">
+              {selectedTeam?.name
+                ? `${selectedTeam.name} Q&A`
+                : 'Q&A 목록'}
+            </span>
           </button>
         </div>
 
-        <div className="relative z-20 flex min-h-[56px] items-end gap-2 overflow-x-auto overflow-y-hidden">
+        <div className="relative z-20 flex min-h-[48px] items-end gap-1.5 overflow-x-auto overflow-y-hidden sm:min-h-[56px] sm:gap-2">
           {projects.map(
             (project) => {
               const selected =
@@ -3705,17 +3712,17 @@ function QAPage() {
                       project.projectId,
                     )
                   }
-                  className={`relative shrink-0 text-[14px] font-semibold transition ${selected
-                    ? 'z-20 h-[56px] min-w-[190px] rounded-t-[14px] border border-b-0 border-[#31F5A0] bg-[#31F5A0] px-7 text-[#101211]'
-                    : 'mb-[8px] h-11 min-w-[165px] rounded-[11px] border border-[#D6E9DF] bg-white px-5 text-[#50675D] hover:bg-[#F2FFF8]'
+                  className={`relative shrink-0 font-semibold transition ${selected
+                    ? 'z-20 h-12 min-w-[132px] rounded-t-[12px] border border-b-0 border-[#31F5A0] bg-[#31F5A0] px-4 text-[12px] text-[#101211] sm:h-[56px] sm:min-w-[190px] sm:rounded-t-[14px] sm:px-7 sm:text-[14px]'
+                    : 'mb-[6px] h-10 min-w-[120px] rounded-[10px] border border-[#D6E9DF] bg-white px-3.5 text-[12px] text-[#50675D] hover:bg-[#F2FFF8] sm:mb-[8px] sm:h-11 sm:min-w-[165px] sm:rounded-[11px] sm:px-5 sm:text-[14px]'
                     }`}
                 >
-                  {
-                    project.name
-                  }
+                  <span className="block max-w-[160px] truncate sm:max-w-[230px]">
+                    {project.name}
+                  </span>
 
                   {selected && (
-                    <span className="absolute -bottom-[12px] left-0 right-0 h-[14px] bg-[#31F5A0]" />
+                    <span className="absolute -bottom-[8px] left-0 right-0 h-[10px] bg-[#31F5A0] sm:-bottom-[12px] sm:h-[14px]" />
                   )}
                 </button>
               );
@@ -3725,15 +3732,15 @@ function QAPage() {
           {projects.length ===
             0 &&
             !isLoading && (
-              <div className="mb-[8px] flex h-11 items-center rounded-[11px] border border-dashed border-[#D6E9DF] px-5 text-[13px] text-[#6F857B]">
+              <div className="mb-[6px] flex h-10 items-center rounded-[10px] border border-dashed border-[#D6E9DF] px-4 text-[12px] text-[#6F857B] sm:mb-[8px] sm:h-11 sm:rounded-[11px] sm:px-5 sm:text-[13px]">
                 참여 중인 프로젝트가 없습니다.
               </div>
             )}
         </div>
       </header>
 
-      <section className="relative z-10 -mt-px flex min-h-0 flex-1 flex-col overflow-hidden rounded-b-[18px] rounded-tr-[18px] border border-[#C9EADD] bg-white">
-        <div className="h-[8px] w-full shrink-0 bg-[#31F5A0]" />
+      <section className="relative z-10 -mt-px flex min-h-0 flex-1 flex-col overflow-hidden rounded-b-[14px] rounded-tr-[14px] border border-[#C9EADD] bg-white sm:rounded-b-[18px] sm:rounded-tr-[18px]">
+        <div className="h-[6px] w-full shrink-0 bg-[#31F5A0] sm:h-[8px]" />
 
         <div className="flex min-h-0 flex-1">
           {isLoading ? (
@@ -3742,7 +3749,7 @@ function QAPage() {
             </div>
           ) : (
             <>
-              <aside className="hidden w-[290px] shrink-0 border-r border-[#E0E9E4] lg:block">
+              <aside className="hidden w-[280px] shrink-0 border-r border-[#E0E9E4] xl:block 2xl:w-[290px]">
                 <ConversationSidebar
                   teams={teams}
                   myTeamIds={
@@ -3782,15 +3789,15 @@ function QAPage() {
               </aside>
 
               <main className="flex min-w-0 flex-1 flex-col bg-white">
-                <div className="flex min-h-[68px] shrink-0 items-center justify-between gap-4 border-b border-[#E2EAE6] px-5 sm:px-7">
+                <div className="flex min-h-[58px] shrink-0 items-center justify-between gap-3 border-b border-[#E2EAE6] px-3 sm:min-h-[68px] sm:gap-4 sm:px-5 md:px-7">
                   <div className="min-w-0">
-                    <p className="truncate text-[16px] font-semibold text-[#101211]">
+                    <p className="truncate text-[14px] font-semibold text-[#101211] sm:text-[16px]">
                       {selectedTeam
                         ? `${selectedTeam.name} Q&A`
                         : '팀을 선택해주세요'}
                     </p>
 
-                    <p className="mt-1 truncate text-[12px] text-[#83938B]">
+                    <p className="mt-1 truncate text-[11px] text-[#83938B] sm:text-[12px]">
                       {selectedTeam
                         ? '질문과 답변이 이 채팅방에 계속 이어집니다.'
                         : selectedProject
@@ -3805,7 +3812,7 @@ function QAPage() {
                       onClick={
                         handleRefresh
                       }
-                      className="flex size-9 items-center justify-center rounded-[9px] text-[#697D73] transition hover:bg-[#F1F8F4]"
+                      className="flex size-9 shrink-0 items-center justify-center rounded-[9px] text-[#697D73] transition hover:bg-[#F1F8F4]"
                       aria-label="대화 새로고침"
                     >
                       <RefreshIcon />
@@ -3814,7 +3821,7 @@ function QAPage() {
                 </div>
 
                 {error && (
-                  <div className="mx-5 mt-3 shrink-0 rounded-[10px] border border-[#FFD6D1] bg-[#FFF6F5] px-4 py-3 text-[12px] text-[#D84A40] sm:mx-7">
+                  <div className="mx-3 mt-2 shrink-0 rounded-[9px] border border-[#FFD6D1] bg-[#FFF6F5] px-3 py-2.5 text-[11px] text-[#D84A40] sm:mx-5 sm:mt-3 sm:rounded-[10px] sm:px-4 sm:py-3 sm:text-[12px] md:mx-7">
                     {error}
                   </div>
                 )}
@@ -3826,56 +3833,51 @@ function QAPage() {
                   onScroll={
                     handleConversationScroll
                   }
-                  className="min-h-0 flex-1 overflow-y-auto bg-white px-5 py-5 sm:px-7 lg:px-9"
+                  className="min-h-0 flex-1 overflow-y-auto bg-white px-3 py-3 sm:px-5 sm:py-5 md:px-7 xl:px-8 2xl:px-9"
                 >
                   {!selectedTeamId ? (
-                    <div className="flex h-full min-h-[350px] items-center justify-center">
+                    <div className="flex h-full min-h-[260px] items-center justify-center sm:min-h-[350px]">
                       <div className="text-center">
-                        <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-[#EFFFF7] text-[#16885B]">
+                        <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-[#EFFFF7] text-[#16885B] sm:size-14">
                           <SparkleIcon />
                         </div>
 
-                        <h2 className="mt-4 text-[17px] font-semibold text-[#101211]">
+                        <h2 className="mt-3 text-[15px] font-semibold text-[#101211] sm:mt-4 sm:text-[17px]">
                           질문할 팀을 선택해주세요
                         </h2>
                       </div>
                     </div>
                   ) : isLoadingFeed ? (
-                    <div className="flex h-full min-h-[350px] items-center justify-center">
+                    <div className="flex h-full min-h-[260px] items-center justify-center sm:min-h-[350px]">
                       <LoadingSpinner />
                     </div>
                   ) : feedQuestions.length ===
                     0 ? (
-                    <div className="flex h-full min-h-[350px] items-center justify-center">
-                      <div className="max-w-[360px] text-center">
-                        <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-[#31F5A0] text-[#101211]">
+                    <div className="flex h-full min-h-[260px] items-center justify-center sm:min-h-[350px]">
+                      <div className="max-w-[300px] px-3 text-center sm:max-w-[360px] sm:px-0">
+                        <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-[#31F5A0] text-[#101211] sm:size-14">
                           <SparkleIcon />
                         </div>
 
-                        <h2 className="mt-4 text-[17px] font-semibold text-[#101211]">
-                          {
-                            selectedTeam
-                              ?.name
-                          }
+                        <h2 className="mt-3 text-[15px] font-semibold text-[#101211] sm:mt-4 sm:text-[17px]">
+                          {selectedTeam
+                            ?.name}
                           에 첫 질문을 남겨보세요
                         </h2>
 
-                        <p className="mt-2 text-[13px] leading-5 text-[#788B82]">
+                        <p className="mt-2 text-[12px] leading-5 text-[#788B82] sm:text-[13px]">
                           다음 질문도 같은 채팅방에 계속 이어집니다.
                         </p>
                       </div>
                     </div>
                   ) : (
                     <div className="mx-auto w-full max-w-[860px]">
-                      <div className="mb-4 flex min-h-[28px] items-center justify-center">
+                      <div className="mb-3 flex min-h-[24px] items-center justify-center sm:mb-4 sm:min-h-[28px]">
                         {isLoadingMore ? (
                           <div className="flex items-center gap-2 text-[11px] text-[#7F9088]">
                             <LoadingSpinner
-                              size={
-                                14
-                              }
+                              size={14}
                             />
-
                             이전 대화를 불러오는 중...
                           </div>
                         ) : feedHasNext ? (
@@ -3903,8 +3905,7 @@ function QAPage() {
                           ) => {
                             const previous =
                               feedQuestions[
-                              index -
-                              1
+                              index - 1
                               ];
 
                             const showDate =
@@ -3967,21 +3968,19 @@ function QAPage() {
                   )}
                 </div>
 
-                <div className="shrink-0 border-t border-[#E1E9E5] bg-white px-4 py-3 sm:px-6">
+                <div className="shrink-0 border-t border-[#E1E9E5] bg-white px-2.5 py-2 sm:px-4 sm:py-3 md:px-6">
                   <form
                     onSubmit={
                       handleSubmitQuestion
                     }
-                    className="mx-auto flex max-w-[900px] items-end gap-2 rounded-[12px] bg-[#F2F7F4] px-3.5 py-2"
+                    className="mx-auto flex max-w-[900px] items-end gap-2 rounded-[10px] bg-[#F2F7F4] px-2.5 py-1.5 sm:rounded-[12px] sm:px-3.5 sm:py-2"
                   >
                     <textarea
                       id="qa-question-input"
                       value={
                         questionInput
                       }
-                      maxLength={
-                        500
-                      }
+                      maxLength={500}
                       disabled={
                         !selectedTeamId ||
                         isCreating
@@ -3998,15 +3997,13 @@ function QAPage() {
                       onKeyDown={
                         handleQuestionKeyDown
                       }
-                      rows={
-                        1
-                      }
+                      rows={1}
                       placeholder={
                         selectedTeam
                           ? `${selectedTeam.name}에 질문을 입력하세요.`
                           : '질문할 팀을 선택해주세요.'
                       }
-                      className="max-h-[105px] min-h-[40px] min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-[14px] leading-5 text-[#101211] outline-none placeholder:text-[#9AA8A1] disabled:cursor-not-allowed"
+                      className="max-h-[105px] min-h-[38px] min-w-0 flex-1 resize-none bg-transparent px-1 py-2 text-[13px] leading-5 text-[#101211] outline-none placeholder:text-[#9AA8A1] disabled:cursor-not-allowed sm:min-h-[40px] sm:text-[14px]"
                     />
 
                     <button
@@ -4021,9 +4018,7 @@ function QAPage() {
                     >
                       {isCreating ? (
                         <LoadingSpinner
-                          size={
-                            15
-                          }
+                          size={15}
                         />
                       ) : (
                         <SendIcon />
@@ -4038,7 +4033,7 @@ function QAPage() {
               </main>
 
               {isEditorOpen && (
-                <aside className="hidden w-[350px] shrink-0 border-l border-[#DCEDE5] xl:block">
+                <aside className="hidden w-[340px] shrink-0 border-l border-[#DCEDE5] 2xl:block 2xl:w-[350px]">
                   <AnswerEditorPanel
                     answerDraft={
                       answerDraft
@@ -4076,7 +4071,7 @@ function QAPage() {
       </section>
 
       {isSidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50 xl:hidden">
           <button
             type="button"
             className="absolute inset-0 bg-[#101211]/30"
@@ -4088,7 +4083,7 @@ function QAPage() {
             aria-label="Q&A 메뉴 닫기"
           />
 
-          <aside className="absolute bottom-0 left-0 top-0 w-[min(90vw,330px)] border-r border-[#DCEDE5] bg-white shadow-[12px_0_40px_rgba(16,18,17,0.12)]">
+          <aside className="absolute bottom-0 left-0 top-0 w-[min(88vw,320px)] border-r border-[#DCEDE5] bg-white shadow-[12px_0_40px_rgba(16,18,17,0.12)] sm:w-[min(90vw,330px)]">
             <div className="flex h-16 items-center justify-between border-b border-[#DFEEE7] px-4">
               <p className="text-[16px] font-semibold text-[#101211]">
                 AI Q&A
@@ -4110,9 +4105,7 @@ function QAPage() {
 
             <div className="h-[calc(100%-64px)]">
               <ConversationSidebar
-                teams={
-                  teams
-                }
+                teams={teams}
                 myTeamIds={
                   myTeamIds
                 }
@@ -4153,7 +4146,7 @@ function QAPage() {
       )}
 
       {isEditorOpen && (
-        <div className="fixed inset-0 z-50 xl:hidden">
+        <div className="fixed inset-0 z-50 2xl:hidden">
           <button
             type="button"
             className="absolute inset-0 bg-[#101211]/30"
@@ -4163,7 +4156,7 @@ function QAPage() {
             aria-label="답변 작성 닫기"
           />
 
-          <aside className="absolute bottom-0 right-0 top-0 w-[min(94vw,400px)] border-l border-[#DCEDE5] bg-white shadow-[-12px_0_40px_rgba(16,18,17,0.12)]">
+          <aside className="absolute bottom-0 right-0 top-0 w-full border-l border-[#DCEDE5] bg-white shadow-[-12px_0_40px_rgba(16,18,17,0.12)] sm:w-[min(94vw,400px)]">
             <AnswerEditorPanel
               answerDraft={
                 answerDraft
@@ -4181,8 +4174,7 @@ function QAPage() {
                 event,
               ) =>
                 setAnswerDraft(
-                  event
-                    .target
+                  event.target
                     .value,
                 )
               }
