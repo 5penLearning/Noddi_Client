@@ -9,7 +9,6 @@ import AppLayout from '../layouts/AppLayout';
 import Home from '../pages/home/Home';
 import MeetingPage from '../pages/meeting/MeetingPage';
 import MeetingRoomPage from '../pages/meeting/MeetingRoomPage';
-import MeetingSummaryPage from '../pages/meeting/MeetingSummaryPage';
 import MyPage from '../pages/mypage/MyPage';
 import ProfileSettingsPage from '../pages/mypage/ProfileSettingsPage';
 import ProjectCreatePage from '../pages/project/ProjectCreatePage';
@@ -68,8 +67,6 @@ function AppRouter() {
 
         <Route path="/meetings" element={<MeetingPage />} />
 
-        <Route path="/meetings/:meetingId/summary" element={<MeetingSummaryPage />} />
-
         <Route path="/meetings/:meetingId/record" element={<TeamMeetingRecordDetailPage />} />
 
         <Route path="/chat" element={<TemporaryPage title="채팅" />} />
@@ -79,8 +76,6 @@ function AppRouter() {
         <Route path="/mypage" element={<MyPage />} />
 
         <Route path="/mypage/profile" element={<ProfileSettingsPage />} />
-
-        <Route path="/settings" element={<TemporaryPage title="설정" />} />
 
         <Route path="*" element={<TemporaryPage title="페이지를 찾을 수 없습니다." />} />
       </Route>
