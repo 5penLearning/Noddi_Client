@@ -1,4 +1,5 @@
 import { getUserId } from '../../api/axios';
+import { stripCitationMarkers } from '../../utils/citation';
 
 export const formatDateKey = (year, month, day) =>
   `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -64,7 +65,7 @@ export const normalizeUnreadAnswerCards = (cards) =>
       teamId: item.teamId,
       teamName: item.teamName,
       question: item.questionContent,
-      answer: item.answerContent,
+      answer: stripCitationMarkers(item.answerContent),
       status: '답변이 완료되었어요.',
       referenceId: source?.referenceId,
       reference: source?.sourceTitle ?? '참고 회의록 없음',

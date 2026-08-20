@@ -33,6 +33,7 @@ import {
 } from '../../api/teams';
 
 import ProfileAvatar from '../../components/common/ProfileAvatar';
+import { stripCitationMarkers } from '../../utils/citation';
 
 const STREAMING_STATUSES = [
   'PENDING',
@@ -679,128 +680,6 @@ function SourceCard({
         </p>
       )}
     </div>
-  );
-}
-
-const CITATION_MARKER_PATTERN =
-  /\[근거\s*(\d+)\]/g;
-
-function stripCitationMarkers(
-  content,
-) {
-  return (content ?? '')
-    .replace(
-      /\s*\[근거\s*\d+\]/g,
-      '',
-    )
-    .replace(
-      /[ \t]{2,}/g,
-      ' ',
-    )
-    .trim();
-}
-
-function parseAnswerContent(
-  content,
-) {
-  if (!content) {
-    return [];
-  }
-
-  const parts = [];
-
-  let lastIndex = 0;
-
-  const regex =
-    new RegExp(
-      CITATION_MARKER_PATTERN,
-    );
-
-  let match;
-
-  while (
-    (match =
-      regex.exec(
-        content,
-      )) !== null
-  ) {
-    if (
-      match.index >
-      lastIndex
-    ) {
-      parts.push({
-        type: 'text',
-        value: content.slice(
-          lastIndex,
-          match.index,
-        ),
-      });
-    }
-
-    parts.push({
-      type: 'citation',
-      index: Number(
-        match[1],
-      ),
-    });
-
-    lastIndex =
-      regex.lastIndex;
-  }
-
-  if (
-    lastIndex <
-    content.length
-  ) {
-    parts.push({
-      type: 'text',
-      value: content.slice(
-        lastIndex,
-      ),
-    });
-  }
-
-  return parts;
-}
-
-function CitationBadge({
-  citationIndex,
-  sources,
-  onOpenSource,
-}) {
-  const source =
-    sources.find(
-      (item) =>
-        Number(
-          item.citationIndex,
-        ) ===
-        Number(
-          citationIndex,
-        ),
-    );
-
-  if (
-    !source ||
-    !onOpenSource
-  ) {
-    return (
-      <span>{`[근거${citationIndex}]`}</span>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() =>
-        onOpenSource(
-          source,
-        )
-      }
-      className="mx-0.5 inline-flex h-4 min-w-4 translate-y-[-3px] items-center justify-center rounded-full bg-[#DFF6EA] px-1 text-[10px] font-semibold text-[#177551] transition hover:bg-[#BFF0D8]"
-      aria-label={`근거 ${citationIndex}번 자료로 이동`}
-    >
-      {citationIndex}
-    </button>
   );
 }
 
@@ -1464,36 +1343,8 @@ function AnswerMessage({
             }`}
         >
           <p className="whitespace-pre-wrap break-words text-[13px] leading-[21px] text-[#263A31] sm:text-[14px] sm:leading-6">
-            {parseAnswerContent(
+            {stripCitationMarkers(
               answer.content,
-            ).map(
-              (
-                part,
-                partIndex,
-              ) =>
-                part.type ===
-                  'citation' ? (
-                  <CitationBadge
-                    key={`citation-${partIndex}`}
-                    citationIndex={
-                      part.index
-                    }
-                    sources={
-                      sources
-                    }
-                    onOpenSource={
-                      openSource
-                    }
-                  />
-                ) : (
-                  <span
-                    key={`text-${partIndex}`}
-                  >
-                    {
-                      part.value
-                    }
-                  </span>
-                ),
             )}
           </p>
 
