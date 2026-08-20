@@ -106,25 +106,6 @@ function CloseIcon() {
   );
 }
 
-function PlusIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M12 5V19M5 12H19"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function RefreshIcon() {
   return (
     <svg
@@ -888,8 +869,7 @@ function ConversationSidebar({
             onClick={onNewChat}
             className="flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-[11px] bg-[#31F5A0] text-[12px] font-semibold text-[#101211] transition hover:brightness-[0.98] disabled:cursor-not-allowed disabled:opacity-40 sm:text-[13px]"
           >
-            <PlusIcon />
-            새 채팅
+            최신 채팅으로
           </button>
 
           <button
