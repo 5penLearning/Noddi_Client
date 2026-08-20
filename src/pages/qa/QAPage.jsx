@@ -6,7 +6,10 @@ import {
   useState,
 } from 'react';
 
-import { useLocation } from 'react-router-dom';
+import {
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
 
 import {
   createQuestion,
@@ -601,9 +604,57 @@ function mergeQuestions(
 
 function SourceCard({
   source,
+  onClick,
 }) {
+  const clickable =
+    typeof onClick ===
+    'function' &&
+    Boolean(
+      source?.referenceId,
+    );
+
   return (
-    <div className="rounded-[10px] border border-[#D8E8E0] bg-white px-3 py-2.5 sm:rounded-[11px] sm:px-3.5 sm:py-3">
+    <div
+      role={
+        clickable
+          ? 'button'
+          : undefined
+      }
+      tabIndex={
+        clickable
+          ? 0
+          : undefined
+      }
+      onClick={
+        clickable
+          ? () =>
+            onClick(
+              source,
+            )
+          : undefined
+      }
+      onKeyDown={
+        clickable
+          ? (event) => {
+            if (
+              event.key ===
+              'Enter' ||
+              event.key ===
+              ' '
+            ) {
+              event.preventDefault();
+              onClick(
+                source,
+              );
+            }
+          }
+          : undefined
+      }
+      className={`rounded-[10px] border border-[#D8E8E0] bg-white px-3 py-2.5 sm:rounded-[11px] sm:px-3.5 sm:py-3 ${clickable
+        ? 'cursor-pointer transition hover:border-[#31F5A0] hover:bg-[#F5FFFA]'
+        : ''
+        }`}
+    >
       <div className="flex items-center gap-2 sm:gap-2.5">
         <span className="shrink-0 text-[#527064]">
           <SourceIcon />
@@ -628,6 +679,128 @@ function SourceCard({
         </p>
       )}
     </div>
+  );
+}
+
+const CITATION_MARKER_PATTERN =
+  /\[근거\s*(\d+)\]/g;
+
+function stripCitationMarkers(
+  content,
+) {
+  return (content ?? '')
+    .replace(
+      /\s*\[근거\s*\d+\]/g,
+      '',
+    )
+    .replace(
+      /[ \t]{2,}/g,
+      ' ',
+    )
+    .trim();
+}
+
+function parseAnswerContent(
+  content,
+) {
+  if (!content) {
+    return [];
+  }
+
+  const parts = [];
+
+  let lastIndex = 0;
+
+  const regex =
+    new RegExp(
+      CITATION_MARKER_PATTERN,
+    );
+
+  let match;
+
+  while (
+    (match =
+      regex.exec(
+        content,
+      )) !== null
+  ) {
+    if (
+      match.index >
+      lastIndex
+    ) {
+      parts.push({
+        type: 'text',
+        value: content.slice(
+          lastIndex,
+          match.index,
+        ),
+      });
+    }
+
+    parts.push({
+      type: 'citation',
+      index: Number(
+        match[1],
+      ),
+    });
+
+    lastIndex =
+      regex.lastIndex;
+  }
+
+  if (
+    lastIndex <
+    content.length
+  ) {
+    parts.push({
+      type: 'text',
+      value: content.slice(
+        lastIndex,
+      ),
+    });
+  }
+
+  return parts;
+}
+
+function CitationBadge({
+  citationIndex,
+  sources,
+  onOpenSource,
+}) {
+  const source =
+    sources.find(
+      (item) =>
+        Number(
+          item.citationIndex,
+        ) ===
+        Number(
+          citationIndex,
+        ),
+    );
+
+  if (
+    !source ||
+    !onOpenSource
+  ) {
+    return (
+      <span>{`[근거${citationIndex}]`}</span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        onOpenSource(
+          source,
+        )
+      }
+      className="mx-0.5 inline-flex h-4 min-w-4 translate-y-[-3px] items-center justify-center rounded-full bg-[#DFF6EA] px-1 text-[10px] font-semibold text-[#177551] transition hover:bg-[#BFF0D8]"
+      aria-label={`근거 ${citationIndex}번 자료로 이동`}
+    >
+      {citationIndex}
+    </button>
   );
 }
 
@@ -1122,6 +1295,7 @@ function AnswerMessage({
   question,
   teamName,
   onEdit,
+  onOpenSource,
 }) {
   const answer =
     question.answer;
@@ -1236,6 +1410,14 @@ function AnswerMessage({
       ? question.sources
       : [];
 
+  const openSource = (
+    source,
+  ) =>
+    onOpenSource?.(
+      source,
+      question,
+    );
+
   const answerName =
     isTeamAnswer
       ? answer.lastRevisedByName
@@ -1282,7 +1464,37 @@ function AnswerMessage({
             }`}
         >
           <p className="whitespace-pre-wrap break-words text-[13px] leading-[21px] text-[#263A31] sm:text-[14px] sm:leading-6">
-            {answer.content}
+            {parseAnswerContent(
+              answer.content,
+            ).map(
+              (
+                part,
+                partIndex,
+              ) =>
+                part.type ===
+                  'citation' ? (
+                  <CitationBadge
+                    key={`citation-${partIndex}`}
+                    citationIndex={
+                      part.index
+                    }
+                    sources={
+                      sources
+                    }
+                    onOpenSource={
+                      openSource
+                    }
+                  />
+                ) : (
+                  <span
+                    key={`text-${partIndex}`}
+                  >
+                    {
+                      part.value
+                    }
+                  </span>
+                ),
+            )}
           </p>
 
           {answer.revised &&
@@ -1335,6 +1547,9 @@ function AnswerMessage({
                     source={
                       source
                     }
+                    onClick={
+                      openSource
+                    }
                   />
                 ),
               )}
@@ -1351,6 +1566,7 @@ function ConversationItem({
   teamName,
   focused,
   onEdit,
+  onOpenSource,
 }) {
   return (
     <div
@@ -1370,6 +1586,9 @@ function ConversationItem({
           question={question}
           teamName={teamName}
           onEdit={onEdit}
+          onOpenSource={
+            onOpenSource
+          }
         />
       </div>
     </div>
@@ -1537,6 +1756,9 @@ function AnswerEditorPanel({
 function QAPage() {
   const location =
     useLocation();
+
+  const navigate =
+    useNavigate();
 
   const targetQuestionId =
     location.state
@@ -3397,6 +3619,64 @@ function QAPage() {
         ?.requestSubmit();
     };
 
+  const handleOpenSource =
+    (
+      source,
+      question,
+    ) => {
+      if (
+        !source?.referenceId ||
+        !selectedProjectId
+      ) {
+        return;
+      }
+
+      const sourceTeamId =
+        question?.targetTeamId ??
+        selectedTeamId;
+
+      const sourceTeamName =
+        question?.targetTeamName ??
+        selectedTeam?.name;
+
+      if (!sourceTeamId) {
+        return;
+      }
+
+      if (
+        source.sourceType ===
+        'TRANSCRIPT'
+      ) {
+        navigate(
+          `/projects/${selectedProjectId}/teams/${sourceTeamId}/meetings/${source.referenceId}`,
+          {
+            state: {
+              teamName:
+                sourceTeamName,
+            },
+          },
+        );
+
+        return;
+      }
+
+      navigate(
+        `/projects/${selectedProjectId}/teams/${sourceTeamId}/meetings`,
+        {
+          state: {
+            teamName:
+              sourceTeamName,
+
+            initialTab:
+              'memos',
+
+            memoId:
+              source.referenceId,
+          },
+        },
+      );
+    };
+
   const handleOpenEditor =
     async (
       question,
@@ -3428,9 +3708,10 @@ function QAPage() {
         );
 
         setAnswerDraft(
-          question.answer
-            ?.content ??
-          '',
+          stripCitationMarkers(
+            question.answer
+              ?.content,
+          ),
         );
 
         setError('');
@@ -3449,11 +3730,12 @@ function QAPage() {
         );
 
         setAnswerDraft(
-          detail?.answer
-            ?.content ??
-          question.answer
-            ?.content ??
-          '',
+          stripCitationMarkers(
+            detail?.answer
+              ?.content ??
+            question.answer
+              ?.content,
+          ),
         );
       } catch (
       requestError
@@ -3935,6 +4217,9 @@ function QAPage() {
                                   }
                                   onEdit={
                                     handleOpenEditor
+                                  }
+                                  onOpenSource={
+                                    handleOpenSource
                                   }
                                 />
                               </div>

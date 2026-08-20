@@ -33,7 +33,9 @@ function TeamMeetingRecordsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { projectId, teamId } = useParams();
-  const [activeTab, setActiveTab] = useState('records');
+  const [activeTab, setActiveTab] = useState(
+    location.state?.initialTab === 'memos' ? 'memos' : 'records',
+  );
   const [searchKeyword, setSearchKeyword] = useState('');
   const [memoSearchKeyword, setMemoSearchKeyword] = useState('');
   const [sharedMemos, setSharedMemos] = useState([]);
@@ -88,6 +90,17 @@ function TeamMeetingRecordsPage() {
       isCurrentRequest = false;
     };
   }, [teamId]);
+
+  useEffect(() => {
+    if (location.state?.initialTab === 'memos') {
+      setActiveTab('memos');
+    }
+
+    if (location.state?.memoId) {
+      setSelectedMemoId(location.state.memoId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
 
   useEffect(() => {
     if (activeTab !== 'memos' || !teamId) return;
