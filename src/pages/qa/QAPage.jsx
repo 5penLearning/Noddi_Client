@@ -6,7 +6,10 @@ import {
   useState,
 } from 'react';
 
-import { useLocation } from 'react-router-dom';
+import {
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
 
 import {
   createQuestion,
@@ -30,6 +33,7 @@ import {
 } from '../../api/teams';
 
 import ProfileAvatar from '../../components/common/ProfileAvatar';
+import { stripCitationMarkers } from '../../utils/citation';
 
 const STREAMING_STATUSES = [
   'PENDING',
@@ -601,9 +605,57 @@ function mergeQuestions(
 
 function SourceCard({
   source,
+  onClick,
 }) {
+  const clickable =
+    typeof onClick ===
+    'function' &&
+    Boolean(
+      source?.referenceId,
+    );
+
   return (
-    <div className="rounded-[10px] border border-[#D8E8E0] bg-white px-3 py-2.5 sm:rounded-[11px] sm:px-3.5 sm:py-3">
+    <div
+      role={
+        clickable
+          ? 'button'
+          : undefined
+      }
+      tabIndex={
+        clickable
+          ? 0
+          : undefined
+      }
+      onClick={
+        clickable
+          ? () =>
+            onClick(
+              source,
+            )
+          : undefined
+      }
+      onKeyDown={
+        clickable
+          ? (event) => {
+            if (
+              event.key ===
+              'Enter' ||
+              event.key ===
+              ' '
+            ) {
+              event.preventDefault();
+              onClick(
+                source,
+              );
+            }
+          }
+          : undefined
+      }
+      className={`rounded-[10px] border border-[#D8E8E0] bg-white px-3 py-2.5 sm:rounded-[11px] sm:px-3.5 sm:py-3 ${clickable
+        ? 'cursor-pointer transition hover:border-[#31F5A0] hover:bg-[#F5FFFA]'
+        : ''
+        }`}
+    >
       <div className="flex items-center gap-2 sm:gap-2.5">
         <span className="shrink-0 text-[#527064]">
           <SourceIcon />
@@ -1122,6 +1174,7 @@ function AnswerMessage({
   question,
   teamName,
   onEdit,
+  onOpenSource,
 }) {
   const answer =
     question.answer;
@@ -1236,6 +1289,14 @@ function AnswerMessage({
       ? question.sources
       : [];
 
+  const openSource = (
+    source,
+  ) =>
+    onOpenSource?.(
+      source,
+      question,
+    );
+
   const answerName =
     isTeamAnswer
       ? answer.lastRevisedByName
@@ -1282,7 +1343,9 @@ function AnswerMessage({
             }`}
         >
           <p className="whitespace-pre-wrap break-words text-[13px] leading-[21px] text-[#263A31] sm:text-[14px] sm:leading-6">
-            {answer.content}
+            {stripCitationMarkers(
+              answer.content,
+            )}
           </p>
 
           {answer.revised &&
@@ -1335,6 +1398,9 @@ function AnswerMessage({
                     source={
                       source
                     }
+                    onClick={
+                      openSource
+                    }
                   />
                 ),
               )}
@@ -1351,6 +1417,7 @@ function ConversationItem({
   teamName,
   focused,
   onEdit,
+  onOpenSource,
 }) {
   return (
     <div
@@ -1370,6 +1437,9 @@ function ConversationItem({
           question={question}
           teamName={teamName}
           onEdit={onEdit}
+          onOpenSource={
+            onOpenSource
+          }
         />
       </div>
     </div>
@@ -1537,6 +1607,9 @@ function AnswerEditorPanel({
 function QAPage() {
   const location =
     useLocation();
+
+  const navigate =
+    useNavigate();
 
   const targetQuestionId =
     location.state
@@ -3397,6 +3470,64 @@ function QAPage() {
         ?.requestSubmit();
     };
 
+  const handleOpenSource =
+    (
+      source,
+      question,
+    ) => {
+      if (
+        !source?.referenceId ||
+        !selectedProjectId
+      ) {
+        return;
+      }
+
+      const sourceTeamId =
+        question?.targetTeamId ??
+        selectedTeamId;
+
+      const sourceTeamName =
+        question?.targetTeamName ??
+        selectedTeam?.name;
+
+      if (!sourceTeamId) {
+        return;
+      }
+
+      if (
+        source.sourceType ===
+        'TRANSCRIPT'
+      ) {
+        navigate(
+          `/projects/${selectedProjectId}/teams/${sourceTeamId}/meetings/${source.referenceId}`,
+          {
+            state: {
+              teamName:
+                sourceTeamName,
+            },
+          },
+        );
+
+        return;
+      }
+
+      navigate(
+        `/projects/${selectedProjectId}/teams/${sourceTeamId}/meetings`,
+        {
+          state: {
+            teamName:
+              sourceTeamName,
+
+            initialTab:
+              'memos',
+
+            memoId:
+              source.referenceId,
+          },
+        },
+      );
+    };
+
   const handleOpenEditor =
     async (
       question,
@@ -3428,9 +3559,10 @@ function QAPage() {
         );
 
         setAnswerDraft(
-          question.answer
-            ?.content ??
-          '',
+          stripCitationMarkers(
+            question.answer
+              ?.content,
+          ),
         );
 
         setError('');
@@ -3449,11 +3581,12 @@ function QAPage() {
         );
 
         setAnswerDraft(
-          detail?.answer
-            ?.content ??
-          question.answer
-            ?.content ??
-          '',
+          stripCitationMarkers(
+            detail?.answer
+              ?.content ??
+            question.answer
+              ?.content,
+          ),
         );
       } catch (
       requestError
@@ -3935,6 +4068,9 @@ function QAPage() {
                                   }
                                   onEdit={
                                     handleOpenEditor
+                                  }
+                                  onOpenSource={
+                                    handleOpenSource
                                   }
                                 />
                               </div>
