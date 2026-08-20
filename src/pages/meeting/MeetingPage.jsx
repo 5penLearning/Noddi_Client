@@ -907,7 +907,7 @@ function MeetingPage() {
       }
 
       navigate(
-        `/meetings/${meeting.meetingId}/summary`,
+        `/meetings/${meeting.meetingId}/record`,
       );
     };
 
