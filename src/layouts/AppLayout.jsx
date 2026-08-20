@@ -15,7 +15,10 @@ import {
   getApiErrorMessage,
 } from '../api/axios';
 
-import { getMyProfile } from '../api/mypageApi';
+import {
+  getMyProfile,
+  verifyCurrentPassword,
+} from '../api/mypageApi';
 
 import {
   getNotifications,
@@ -26,6 +29,7 @@ import {
 } from '../api/notificationApi';
 
 import NotificationModal from '../components/common/notification/NotificationModal';
+import PasswordConfirmModal from '../components/feature/mypage/PasswordConfirmModal';
 
 import {
   getNotificationGroupPayload,
@@ -132,6 +136,21 @@ function AppLayout() {
     profile,
     setProfile,
   ] = useState(null);
+
+  const [
+    isPasswordConfirmOpen,
+    setIsPasswordConfirmOpen,
+  ] = useState(false);
+
+  const [
+    isVerifyingPassword,
+    setIsVerifyingPassword,
+  ] = useState(false);
+
+  const [
+    passwordConfirmError,
+    setPasswordConfirmError,
+  ] = useState('');
 
   /*
    * 모바일에서 메뉴를 연 뒤 페이지를 이동하면
@@ -460,7 +479,98 @@ function AppLayout() {
         false,
       );
 
-      navigate('/settings');
+      setPasswordConfirmError('');
+
+      setIsPasswordConfirmOpen(
+        true,
+      );
+    };
+
+  const handleClosePasswordConfirm =
+    () => {
+      if (isVerifyingPassword) {
+        return;
+      }
+
+      setPasswordConfirmError('');
+
+      setIsPasswordConfirmOpen(
+        false,
+      );
+    };
+
+  const handleVerifyPassword =
+    async (password) => {
+      if (!profile?.email) {
+        setPasswordConfirmError(
+          '사용자 이메일 정보를 확인할 수 없습니다.',
+        );
+
+        return;
+      }
+
+      try {
+        setIsVerifyingPassword(
+          true,
+        );
+
+        setPasswordConfirmError('');
+
+        const response =
+          await verifyCurrentPassword({
+            email:
+              profile.email,
+
+            password,
+          });
+
+        const verifiedUserId =
+          response?.result?.userId;
+
+        if (
+          verifiedUserId &&
+          Number(
+            verifiedUserId,
+          ) !==
+          Number(
+            profile.userId,
+          )
+        ) {
+          throw new Error(
+            '사용자 정보를 확인하지 못했습니다.',
+          );
+        }
+
+        setIsPasswordConfirmOpen(
+          false,
+        );
+
+        navigate(
+          '/mypage/profile',
+          {
+            state: {
+              passwordVerified:
+                true,
+            },
+          },
+        );
+      } catch (error) {
+        console.error(
+          'Failed to verify password:',
+          error,
+        );
+
+        setPasswordConfirmError(
+          error?.response?.data
+            ?.message ??
+          error?.message ??
+          '비밀번호가 일치하지 않습니다.',
+        );
+      } finally {
+        setIsVerifyingPassword(
+          false,
+        );
+      }
     };
 
   return (
@@ -690,6 +800,24 @@ function AppLayout() {
         }
         onNotificationHide={
           handleNotificationHide
+        }
+      />
+
+      <PasswordConfirmModal
+        isOpen={
+          isPasswordConfirmOpen
+        }
+        isSubmitting={
+          isVerifyingPassword
+        }
+        error={
+          passwordConfirmError
+        }
+        onClose={
+          handleClosePasswordConfirm
+        }
+        onSubmit={
+          handleVerifyPassword
         }
       />
     </div>
