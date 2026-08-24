@@ -8,7 +8,6 @@ import {
   formatMeetingDate,
   formatMeetingRecord,
 } from '../../components/project/meetingRecords/meetingRecordUtils';
-
 import { getApiErrorMessage, getUserId } from '../../api/axios';
 import { getMeetings } from '../../api/meetingApi';
 import {
@@ -33,9 +32,11 @@ function TeamMeetingRecordsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { projectId, teamId } = useParams();
+
   const [activeTab, setActiveTab] = useState(
     location.state?.initialTab === 'memos' ? 'memos' : 'records',
   );
+
   const [searchKeyword, setSearchKeyword] = useState('');
   const [memoSearchKeyword, setMemoSearchKeyword] = useState('');
   const [sharedMemos, setSharedMemos] = useState([]);
@@ -48,9 +49,11 @@ function TeamMeetingRecordsPage() {
   const [deletingMemoId, setDeletingMemoId] = useState(null);
   const [sharedMemosErrorMessage, setSharedMemosErrorMessage] = useState('');
   const [sharedMemoDetailErrorMessage, setSharedMemoDetailErrorMessage] = useState('');
+
   const [selectedDate, setSelectedDate] = useState('');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [sortType, setSortType] = useState('recent');
+
   const [isMemberInviteModalOpen, setIsMemberInviteModalOpen] = useState(false);
   const [projectMembers, setProjectMembers] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
@@ -59,11 +62,13 @@ function TeamMeetingRecordsPage() {
   const [memberActionUserId, setMemberActionUserId] = useState(null);
   const [memberErrorMessage, setMemberErrorMessage] = useState('');
   const [inviteResultMessage, setInviteResultMessage] = useState('');
+
   const [currentTeam, setCurrentTeam] = useState(null);
   const [isTeamEditModalOpen, setIsTeamEditModalOpen] = useState(false);
   const [isTeamUpdating, setIsTeamUpdating] = useState(false);
   const [isTeamDeleting, setIsTeamDeleting] = useState(false);
   const [teamActionErrorMessage, setTeamActionErrorMessage] = useState('');
+
   const [serverMeetings, setServerMeetings] = useState([]);
   const [isMeetingsLoading, setIsMeetingsLoading] = useState(true);
   const [meetingErrorMessage, setMeetingErrorMessage] = useState('');
@@ -74,7 +79,10 @@ function TeamMeetingRecordsPage() {
     const loadCurrentTeam = async () => {
       try {
         const myTeams = await getMyTeams();
-        const nextCurrentTeam = myTeams.find((team) => String(team.id) === String(teamId));
+
+        const nextCurrentTeam = myTeams.find(
+          (team) => String(team.id) === String(teamId),
+        );
 
         if (isCurrentRequest) {
           setCurrentTeam(nextCurrentTeam ?? null);
@@ -99,6 +107,7 @@ function TeamMeetingRecordsPage() {
     if (location.state?.memoId) {
       setSelectedMemoId(location.state.memoId);
     }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key]);
 
@@ -117,20 +126,27 @@ function TeamMeetingRecordsPage() {
           size: 20,
           sort: 'updatedAt,desc',
         });
+
         const nextMemos = pageResult.content ?? [];
 
         if (!isCurrentRequest) return;
 
         setSharedMemos(nextMemos);
-        setSelectedMemoId((currentMemoId) => {
-          const hasCurrentMemo = nextMemos.some((memo) => memo.pageId === currentMemoId);
 
-          return hasCurrentMemo ? currentMemoId : (nextMemos[0]?.pageId ?? null);
+        setSelectedMemoId((currentMemoId) => {
+          const hasCurrentMemo = nextMemos.some(
+            (memo) => memo.pageId === currentMemoId,
+          );
+
+          return hasCurrentMemo
+            ? currentMemoId
+            : (nextMemos[0]?.pageId ?? null);
         });
       } catch (error) {
         if (isCurrentRequest) {
           setSharedMemos([]);
           setSelectedMemoId(null);
+
           setSharedMemosErrorMessage(
             getApiErrorMessage(error, '공유 메모 목록을 불러오지 못했습니다.'),
           );
@@ -170,6 +186,7 @@ function TeamMeetingRecordsPage() {
       } catch (error) {
         if (isCurrentRequest) {
           setSelectedMemo(null);
+
           setSharedMemoDetailErrorMessage(
             getApiErrorMessage(error, '공유 메모를 불러오지 못했습니다.'),
           );
@@ -204,7 +221,10 @@ function TeamMeetingRecordsPage() {
       } catch (error) {
         if (isCurrentRequest) {
           setServerMeetings([]);
-          setMeetingErrorMessage(getApiErrorMessage(error, '회의 목록을 불러오지 못했습니다.'));
+
+          setMeetingErrorMessage(
+            getApiErrorMessage(error, '회의 목록을 불러오지 못했습니다.'),
+          );
         }
       } finally {
         if (isCurrentRequest) {
@@ -222,7 +242,11 @@ function TeamMeetingRecordsPage() {
 
   const meetingRecords = useMemo(() => {
     const normalizedKeyword = searchKeyword.trim().toLowerCase();
-    const teamName = currentTeam?.name ?? location.state?.teamName ?? '';
+
+    const teamName =
+      currentTeam?.name ??
+      location.state?.teamName ??
+      '';
 
     return serverMeetings
       .map((meeting) => formatMeetingRecord(meeting, teamName))
@@ -231,14 +255,22 @@ function TeamMeetingRecordsPage() {
           !normalizedKeyword ||
           record.title.toLowerCase().includes(normalizedKeyword) ||
           record.summary.toLowerCase().includes(normalizedKeyword) ||
-          record.teams.some((team) => team.toLowerCase().includes(normalizedKeyword));
-        const matchesDate = !selectedDate || record.date === selectedDate;
+          record.teams.some((team) =>
+            team.toLowerCase().includes(normalizedKeyword),
+          );
+
+        const matchesDate =
+          !selectedDate ||
+          record.date === selectedDate;
 
         return matchesKeyword && matchesDate;
       })
       .sort((firstRecord, secondRecord) => {
         if (sortType === 'team') {
-          return firstRecord.teams[0].localeCompare(secondRecord.teams[0], 'ko');
+          return firstRecord.teams[0].localeCompare(
+            secondRecord.teams[0],
+            'ko',
+          );
         }
 
         return secondRecord.date.localeCompare(firstRecord.date);
@@ -265,7 +297,9 @@ function TeamMeetingRecordsPage() {
       setProjectMembers(nextProjectMembers);
       setTeamMembers(nextTeamMembers);
     } catch (error) {
-      setMemberErrorMessage(getApiErrorMessage(error, '멤버 목록을 불러오지 못했습니다.'));
+      setMemberErrorMessage(
+        getApiErrorMessage(error, '멤버 목록을 불러오지 못했습니다.'),
+      );
     } finally {
       setIsMembersLoading(false);
     }
@@ -284,10 +318,17 @@ function TeamMeetingRecordsPage() {
       setInviteResultMessage('');
 
       const inviteResults = await Promise.allSettled(
-        targetUserIds.map((targetUserId) => inviteTeamMember(teamId, targetUserId)),
+        targetUserIds.map((targetUserId) =>
+          inviteTeamMember(teamId, targetUserId),
+        ),
       );
-      const successCount = inviteResults.filter((result) => result.status === 'fulfilled').length;
-      const failureCount = inviteResults.length - successCount;
+
+      const successCount = inviteResults.filter(
+        (result) => result.status === 'fulfilled',
+      ).length;
+
+      const failureCount =
+        inviteResults.length - successCount;
 
       if (successCount > 0) {
         await loadMembers();
@@ -301,7 +342,9 @@ function TeamMeetingRecordsPage() {
 
       return failureCount === 0;
     } catch (error) {
-      setMemberErrorMessage(getApiErrorMessage(error, '팀 초대장을 보내지 못했습니다.'));
+      setMemberErrorMessage(
+        getApiErrorMessage(error, '팀 초대장을 보내지 못했습니다.'),
+      );
 
       return false;
     } finally {
@@ -314,18 +357,34 @@ function TeamMeetingRecordsPage() {
       setMemberActionUserId(targetUserId);
       setMemberErrorMessage('');
       setInviteResultMessage('');
-      await updateTeamMemberRole(teamId, targetUserId, role);
+
+      await updateTeamMemberRole(
+        teamId,
+        targetUserId,
+        role,
+      );
+
       await loadMembers();
-      setInviteResultMessage('팀 멤버 권한을 변경했습니다.');
+
+      setInviteResultMessage(
+        '팀 멤버 권한을 변경했습니다.',
+      );
     } catch (error) {
-      setMemberErrorMessage(getApiErrorMessage(error, '팀 멤버 권한을 변경하지 못했습니다.'));
+      setMemberErrorMessage(
+        getApiErrorMessage(
+          error,
+          '팀 멤버 권한을 변경하지 못했습니다.',
+        ),
+      );
     } finally {
       setMemberActionUserId(null);
     }
   };
 
   const handleRemoveTeamMember = async (member) => {
-    const shouldRemove = window.confirm(`${member.name}님을 팀에서 내보낼까요?`);
+    const shouldRemove = window.confirm(
+      `${member.name}님을 팀에서 내보낼까요?`,
+    );
 
     if (!shouldRemove) return;
 
@@ -333,45 +392,81 @@ function TeamMeetingRecordsPage() {
       setMemberActionUserId(member.userId);
       setMemberErrorMessage('');
       setInviteResultMessage('');
-      await removeTeamMember(teamId, member.userId);
+
+      await removeTeamMember(
+        teamId,
+        member.userId,
+      );
+
       await loadMembers();
-      setInviteResultMessage(`${member.name}님을 팀에서 내보냈습니다.`);
+
+      setInviteResultMessage(
+        `${member.name}님을 팀에서 내보냈습니다.`,
+      );
     } catch (error) {
-      setMemberErrorMessage(getApiErrorMessage(error, '팀 멤버를 내보내지 못했습니다.'));
+      setMemberErrorMessage(
+        getApiErrorMessage(
+          error,
+          '팀 멤버를 내보내지 못했습니다.',
+        ),
+      );
     } finally {
       setMemberActionUserId(null);
     }
   };
 
   const handleLeaveTeam = async () => {
-    const shouldLeave = window.confirm('이 팀에서 탈퇴할까요?');
+    const shouldLeave = window.confirm(
+      '이 팀에서 탈퇴할까요?',
+    );
 
     if (!shouldLeave) return;
 
     try {
       setIsTeamDeleting(true);
       setTeamActionErrorMessage('');
-      await removeTeamMember(teamId, getUserId());
-      navigate(`/projects/${projectId}`, { replace: true });
+
+      await removeTeamMember(
+        teamId,
+        getUserId(),
+      );
+
+      navigate(`/projects/${projectId}`, {
+        replace: true,
+      });
     } catch (error) {
-      setTeamActionErrorMessage(getApiErrorMessage(error, '팀에서 탈퇴하지 못했습니다.'));
+      setTeamActionErrorMessage(
+        getApiErrorMessage(
+          error,
+          '팀에서 탈퇴하지 못했습니다.',
+        ),
+      );
     } finally {
       setIsTeamDeleting(false);
     }
   };
 
-  const handleUpdateTeam = async ({ name, description }) => {
+  const handleUpdateTeam = async ({
+    name,
+    description,
+  }) => {
     try {
       setIsTeamUpdating(true);
       setTeamActionErrorMessage('');
 
-      await updateTeam(teamId, { name, description });
+      await updateTeam(teamId, {
+        name,
+        description,
+      });
+
       setCurrentTeam((team) => ({
         ...team,
         name,
         description,
       }));
+
       setIsTeamEditModalOpen(false);
+
       navigate(location.pathname, {
         replace: true,
         state: {
@@ -380,7 +475,12 @@ function TeamMeetingRecordsPage() {
         },
       });
     } catch (error) {
-      setTeamActionErrorMessage(getApiErrorMessage(error, '팀 정보를 수정하지 못했습니다.'));
+      setTeamActionErrorMessage(
+        getApiErrorMessage(
+          error,
+          '팀 정보를 수정하지 못했습니다.',
+        ),
+      );
     } finally {
       setIsTeamUpdating(false);
     }
@@ -396,10 +496,19 @@ function TeamMeetingRecordsPage() {
     try {
       setIsTeamDeleting(true);
       setTeamActionErrorMessage('');
+
       await deleteTeam(teamId);
-      navigate(`/projects/${projectId}`, { replace: true });
+
+      navigate(`/projects/${projectId}`, {
+        replace: true,
+      });
     } catch (error) {
-      setTeamActionErrorMessage(getApiErrorMessage(error, '팀을 삭제하지 못했습니다.'));
+      setTeamActionErrorMessage(
+        getApiErrorMessage(
+          error,
+          '팀을 삭제하지 못했습니다.',
+        ),
+      );
     } finally {
       setIsTeamDeleting(false);
     }
@@ -410,51 +519,92 @@ function TeamMeetingRecordsPage() {
       setIsSharedMemoCreating(true);
       setSharedMemosErrorMessage('');
 
-      const createdPage = await createTeamPage(teamId, {
-        title: '새 공유 메모',
-        content: '공유할 내용을 입력해주세요.',
-      });
-      const createdPageId = createdPage.pageId;
-      const pageResult = await getTeamPages(teamId, {
-        page: 0,
-        size: 20,
-        sort: 'updatedAt,desc',
-      });
+      const createdPage = await createTeamPage(
+        teamId,
+        {
+          title: '새 공유 메모',
+          content: '공유할 내용을 입력해주세요.',
+        },
+      );
 
-      setSharedMemos(pageResult.content ?? []);
-      setSelectedMemoId(createdPageId ?? pageResult.content?.[0]?.pageId ?? null);
+      const createdPageId =
+        createdPage.pageId;
+
+      const pageResult = await getTeamPages(
+        teamId,
+        {
+          page: 0,
+          size: 20,
+          sort: 'updatedAt,desc',
+        },
+      );
+
+      setSharedMemos(
+        pageResult.content ?? [],
+      );
+
+      setSelectedMemoId(
+        createdPageId ??
+        pageResult.content?.[0]?.pageId ??
+        null,
+      );
     } catch (error) {
-      setSharedMemosErrorMessage(getApiErrorMessage(error, '공유 메모를 생성하지 못했습니다.'));
+      setSharedMemosErrorMessage(
+        getApiErrorMessage(
+          error,
+          '공유 메모를 생성하지 못했습니다.',
+        ),
+      );
     } finally {
       setIsSharedMemoCreating(false);
     }
   };
 
-  const handleUpdateSharedMemo = async ({ title, content }) => {
+  const handleUpdateSharedMemo = async ({
+    title,
+    content,
+  }) => {
     if (!selectedMemoId) return false;
 
     try {
       setIsSharedMemoUpdating(true);
       setSharedMemoDetailErrorMessage('');
 
-      await updateTeamPage(teamId, selectedMemoId, { title, content });
+      await updateTeamPage(
+        teamId,
+        selectedMemoId,
+        {
+          title,
+          content,
+        },
+      );
 
-      const [nextMemo, pageResult] = await Promise.all([
-        getTeamPage(teamId, selectedMemoId),
-        getTeamPages(teamId, {
-          page: 0,
-          size: 20,
-          sort: 'updatedAt,desc',
-        }),
-      ]);
+      const [nextMemo, pageResult] =
+        await Promise.all([
+          getTeamPage(
+            teamId,
+            selectedMemoId,
+          ),
+          getTeamPages(teamId, {
+            page: 0,
+            size: 20,
+            sort: 'updatedAt,desc',
+          }),
+        ]);
 
       setSelectedMemo(nextMemo);
-      setSharedMemos(pageResult.content ?? []);
+
+      setSharedMemos(
+        pageResult.content ?? [],
+      );
 
       return true;
     } catch (error) {
       setSharedMemoDetailErrorMessage(
-        getApiErrorMessage(error, '공유 페이지를 수정하지 못했습니다.'),
+        getApiErrorMessage(
+          error,
+          '공유 페이지를 수정하지 못했습니다.',
+        ),
       );
 
       return false;
@@ -463,131 +613,314 @@ function TeamMeetingRecordsPage() {
     }
   };
 
-  const handleDeleteSharedMemo = async (memoId) => {
-    if (!window.confirm('이 공유 메모를 삭제할까요?')) return;
+  const handleDeleteSharedMemo = async (
+    memoId,
+  ) => {
+    if (
+      !window.confirm(
+        '이 공유 메모를 삭제할까요?',
+      )
+    ) {
+      return;
+    }
 
     try {
       setDeletingMemoId(memoId);
       setSharedMemosErrorMessage('');
 
-      await deleteTeamPage(teamId, memoId);
+      await deleteTeamPage(
+        teamId,
+        memoId,
+      );
 
-      setSharedMemos((currentMemos) => currentMemos.filter((memo) => memo.pageId !== memoId));
+      setSharedMemos(
+        (currentMemos) =>
+          currentMemos.filter(
+            (memo) =>
+              memo.pageId !==
+              memoId,
+          ),
+      );
 
-      if (selectedMemoId === memoId) {
+      if (
+        selectedMemoId ===
+        memoId
+      ) {
         setSelectedMemoId(null);
       }
     } catch (error) {
-      setSharedMemosErrorMessage(getApiErrorMessage(error, '공유 메모를 삭제하지 못했습니다.'));
+      setSharedMemosErrorMessage(
+        getApiErrorMessage(
+          error,
+          '공유 메모를 삭제하지 못했습니다.',
+        ),
+      );
     } finally {
       setDeletingMemoId(null);
     }
   };
 
-  const meetingDates = serverMeetings
-    .map((meeting) =>
-      formatMeetingDate(meeting.scheduledStartAt ?? meeting.startedAt ?? meeting.createdAt),
-    )
-    .map((meetingDate) => meetingDate?.date)
-    .filter(Boolean);
+  const meetingDates =
+    serverMeetings
+      .map((meeting) =>
+        formatMeetingDate(
+          meeting.scheduledStartAt ??
+          meeting.startedAt ??
+          meeting.createdAt,
+        ),
+      )
+      .map(
+        (meetingDate) =>
+          meetingDate?.date,
+      )
+      .filter(Boolean);
 
   const memberInviteProps = {
     isOpen: isMemberInviteModalOpen,
-    projectName: location.state?.projectName ?? '프로젝트',
-    teamName: currentTeam?.name ?? location.state?.teamName ?? '팀',
+
+    projectName:
+      location.state?.projectName ??
+      '프로젝트',
+
+    teamName:
+      currentTeam?.name ??
+      location.state?.teamName ??
+      '팀',
+
     projectMembers,
     teamMembers,
+
     currentUserId: getUserId(),
+
     isLoading: isMembersLoading,
     isSubmitting: isInviting,
+
     memberActionUserId,
-    errorMessage: memberErrorMessage,
-    resultMessage: inviteResultMessage,
+
+    errorMessage:
+      memberErrorMessage,
+
+    resultMessage:
+      inviteResultMessage,
+
     onClose: () => {
-      setIsMemberInviteModalOpen(false);
+      setIsMemberInviteModalOpen(
+        false,
+      );
+
       setMemberErrorMessage('');
       setInviteResultMessage('');
     },
-    onInvite: handleInviteMembers,
-    onRoleChange: handleChangeTeamMemberRole,
-    onRemoveMember: handleRemoveTeamMember,
+
+    onInvite:
+      handleInviteMembers,
+
+    onRoleChange:
+      handleChangeTeamMemberRole,
+
+    onRemoveMember:
+      handleRemoveTeamMember,
   };
 
   const teamEditProps = {
     isOpen: isTeamEditModalOpen,
     mode: 'edit',
-    initialTeam: currentTeam,
-    isSubmitting: isTeamUpdating,
-    errorMessage: teamActionErrorMessage,
+
+    initialTeam:
+      currentTeam,
+
+    isSubmitting:
+      isTeamUpdating,
+
+    errorMessage:
+      teamActionErrorMessage,
+
     onClose: () => {
-      setIsTeamEditModalOpen(false);
+      setIsTeamEditModalOpen(
+        false,
+      );
+
       setTeamActionErrorMessage('');
     },
-    onSubmit: handleUpdateTeam,
+
+    onSubmit:
+      handleUpdateTeam,
   };
 
   return (
     <div className="green-border-theme mx-auto flex h-full w-full max-w-[1347px] flex-col">
-      <MeetingRecordsTabs activeTab={activeTab} onChange={setActiveTab} />
+      <MeetingRecordsTabs
+        activeTab={activeTab}
+        onChange={setActiveTab}
+      />
 
       {activeTab === 'records' ? (
         <MeetingRecordsTab
-          searchKeyword={searchKeyword}
-          meetingRecords={meetingRecords}
-          meetingDates={meetingDates}
-          selectedDate={selectedDate}
-          isCalendarOpen={isCalendarOpen}
-          isLoading={isMeetingsLoading}
-          errorMessage={meetingErrorMessage}
-          currentTeam={currentTeam}
-          isTeamDeleting={isTeamDeleting}
-          teamActionErrorMessage={teamActionErrorMessage}
-          memberInviteProps={memberInviteProps}
-          teamEditProps={teamEditProps}
-          onSearchKeywordChange={setSearchKeyword}
-          onToggleSort={() => setSortType((type) => (type === 'team' ? 'recent' : 'team'))}
-          onToggleCalendar={() => setIsCalendarOpen((isOpen) => !isOpen)}
-          onSelectDate={setSelectedDate}
+          searchKeyword={
+            searchKeyword
+          }
+          meetingRecords={
+            meetingRecords
+          }
+          meetingDates={
+            meetingDates
+          }
+          selectedDate={
+            selectedDate
+          }
+          isCalendarOpen={
+            isCalendarOpen
+          }
+          isLoading={
+            isMeetingsLoading
+          }
+          errorMessage={
+            meetingErrorMessage
+          }
+          currentTeam={
+            currentTeam
+          }
+          isTeamDeleting={
+            isTeamDeleting
+          }
+          teamActionErrorMessage={
+            teamActionErrorMessage
+          }
+          memberInviteProps={
+            memberInviteProps
+          }
+          teamEditProps={
+            teamEditProps
+          }
+          onSearchKeywordChange={
+            setSearchKeyword
+          }
+          onToggleSort={() =>
+            setSortType(
+              (type) =>
+                type === 'team'
+                  ? 'recent'
+                  : 'team',
+            )
+          }
+          onToggleCalendar={() =>
+            setIsCalendarOpen(
+              (isOpen) =>
+                !isOpen,
+            )
+          }
+          onSelectDate={
+            setSelectedDate
+          }
           onOpenRecord={(record) =>
-            navigate(`/projects/${projectId}/teams/${teamId}/meetings/${record.id}`, {
-              state: {
-                ...location.state,
-                meetingRecord: record,
+            navigate(
+              `/meetings/${record.id}/record`,
+              {
+                state: {
+                  ...location.state,
+
+                  projectId,
+                  teamId,
+
+                  teamName:
+                    currentTeam?.name ??
+                    location.state
+                      ?.teamName,
+
+                  meetingRecord:
+                    record,
+                },
               },
-            })
+            )
           }
           onOpenTeamEdit={() => {
-            setTeamActionErrorMessage('');
-            setIsTeamEditModalOpen(true);
+            setTeamActionErrorMessage(
+              '',
+            );
+
+            setIsTeamEditModalOpen(
+              true,
+            );
           }}
-          onDeleteTeam={handleDeleteTeam}
-          onLeaveTeam={handleLeaveTeam}
+          onDeleteTeam={
+            handleDeleteTeam
+          }
+          onLeaveTeam={
+            handleLeaveTeam
+          }
           onOpenMemberInvite={() => {
-            setMemberErrorMessage('');
-            setInviteResultMessage('');
-            setIsMemberInviteModalOpen(true);
+            setMemberErrorMessage(
+              '',
+            );
+
+            setInviteResultMessage(
+              '',
+            );
+
+            setIsMemberInviteModalOpen(
+              true,
+            );
           }}
         />
       ) : (
         <SharedPagesTab
           memos={sharedMemos}
-          keyword={memoSearchKeyword}
-          selectedMemoId={selectedMemoId}
-          selectedMemo={selectedMemo}
-          projectName={location.state?.projectName ?? '노디 프로젝트'}
-          teamName={currentTeam?.name ?? location.state?.teamName ?? '마케팅팀'}
-          isListLoading={isSharedMemosLoading}
-          isDetailLoading={isSharedMemoDetailLoading}
-          isCreating={isSharedMemoCreating}
-          isUpdating={isSharedMemoUpdating}
-          deletingMemoId={deletingMemoId}
-          listErrorMessage={sharedMemosErrorMessage}
-          detailErrorMessage={sharedMemoDetailErrorMessage}
-          onKeywordChange={setMemoSearchKeyword}
-          onSelect={setSelectedMemoId}
-          onCreate={handleCreateSharedMemo}
-          onUpdate={handleUpdateSharedMemo}
-          onDelete={handleDeleteSharedMemo}
+          keyword={
+            memoSearchKeyword
+          }
+          selectedMemoId={
+            selectedMemoId
+          }
+          selectedMemo={
+            selectedMemo
+          }
+          projectName={
+            location.state
+              ?.projectName ??
+            '노디 프로젝트'
+          }
+          teamName={
+            currentTeam?.name ??
+            location.state
+              ?.teamName ??
+            '마케팅팀'
+          }
+          isListLoading={
+            isSharedMemosLoading
+          }
+          isDetailLoading={
+            isSharedMemoDetailLoading
+          }
+          isCreating={
+            isSharedMemoCreating
+          }
+          isUpdating={
+            isSharedMemoUpdating
+          }
+          deletingMemoId={
+            deletingMemoId
+          }
+          listErrorMessage={
+            sharedMemosErrorMessage
+          }
+          detailErrorMessage={
+            sharedMemoDetailErrorMessage
+          }
+          onKeywordChange={
+            setMemoSearchKeyword
+          }
+          onSelect={
+            setSelectedMemoId
+          }
+          onCreate={
+            handleCreateSharedMemo
+          }
+          onUpdate={
+            handleUpdateSharedMemo
+          }
+          onDelete={
+            handleDeleteSharedMemo
+          }
         />
       )}
     </div>
