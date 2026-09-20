@@ -1,3 +1,10 @@
+import usersActiveRightIcon from '../../assets/icons/sidebar/users-active-right.svg';
+import usersActiveLeftIcon from '../../assets/icons/sidebar/users-active-left.svg';
+import usersActiveCenterIcon from '../../assets/icons/sidebar/users-active-center.svg';
+import videoActiveIcon from '../../assets/icons/sidebar/video-active.svg';
+import messageActiveIcon from '../../assets/icons/sidebar/message-active.svg';
+import userAvatarActiveIcon from '../../assets/icons/sidebar/user-avatar-active.svg';
+import userBodyActiveIcon from '../../assets/icons/sidebar/user-body-active.svg';
 import homeIcon from '../../assets/icons/sidebar/home.svg';
 import homeInactiveIcon from '../../assets/icons/sidebar/home-inactive.svg';
 import logoIcon from '../../assets/icons/sidebar/logo-simple.svg';
@@ -64,10 +71,15 @@ function HomeIcon({
 function UsersIcon({
   isActive,
 }) {
-  const activeIconClass =
-    isActive
-      ? 'brightness-0 invert'
-      : '';
+  if (isActive) {
+    return (
+      <span className="relative block size-6" aria-hidden="true">
+        <img src={usersActiveRightIcon} alt="" className="absolute left-[16.18px] top-[6px] h-[13px] w-[6.82px]" />
+        <img src={usersActiveLeftIcon} alt="" className="absolute left-[1.38px] top-[6px] h-[13px] w-[6.82px] -scale-x-100" />
+        <img src={usersActiveCenterIcon} alt="" className="absolute left-[5.51px] top-[4.25px] h-[16.14px] w-[13.415px]" />
+      </span>
+    );
+  }
 
   return (
     <span
@@ -79,7 +91,7 @@ function UsersIcon({
           usersPrimaryIcon
         }
         alt=""
-        className={`absolute left-[7.85px] top-[3.85px] h-[8.31px] w-[8.31px] ${activeIconClass}`}
+        className="absolute left-[7.85px] top-[3.85px] h-[8.31px] w-[8.31px]"
       />
 
       <img
@@ -87,7 +99,7 @@ function UsersIcon({
           usersSecondaryIcon
         }
         alt=""
-        className={`absolute left-[5.29px] top-[12.89px] h-[6.75px] w-[13.42px] ${activeIconClass}`}
+        className="absolute left-[5.29px] top-[12.89px] h-[6.75px] w-[13.42px]"
       />
 
       <img
@@ -95,7 +107,7 @@ function UsersIcon({
           userGroupSmallIcon
         }
         alt=""
-        className={`absolute left-[16.57px] top-[5.25px] h-[6.85px] w-[4.18px] ${activeIconClass}`}
+        className="absolute left-[16.57px] top-[5.25px] h-[6.85px] w-[4.18px]"
       />
 
       <img
@@ -103,7 +115,7 @@ function UsersIcon({
           userGroupSideIcon
         }
         alt=""
-        className={`absolute left-[18.7px] top-[13.39px] h-[5.42px] w-[4.05px] ${activeIconClass}`}
+        className="absolute left-[18.7px] top-[13.39px] h-[5.42px] w-[4.05px]"
       />
 
       <img
@@ -111,7 +123,7 @@ function UsersIcon({
           userGroupSmallIcon
         }
         alt=""
-        className={`absolute left-[3.25px] top-[5.25px] h-[6.85px] w-[4.18px] -scale-x-100 ${activeIconClass}`}
+        className="absolute left-[3.25px] top-[5.25px] h-[6.85px] w-[4.18px] -scale-x-100"
       />
 
       <img
@@ -119,7 +131,7 @@ function UsersIcon({
           userGroupSideIcon
         }
         alt=""
-        className={`absolute left-[1.25px] top-[13.39px] h-[5.42px] w-[4.05px] -scale-x-100 ${activeIconClass}`}
+        className="absolute left-[1.25px] top-[13.39px] h-[5.42px] w-[4.05px] -scale-x-100"
       />
     </span>
   );
@@ -134,18 +146,18 @@ function VideoIcon({
       aria-hidden="true"
     >
       <span
-        className={`absolute left-[2px] top-[5.5px] h-[13px] w-[14px] rounded-[3.5px] border-[1.5px] ${isActive
-          ? 'border-white'
-          : 'border-[#2b3f6c]'
+        className={`absolute left-[2px] h-[13px] w-[14px] rounded-[3.5px] border-[1.5px] ${isActive
+          ? 'top-[6px] border-white bg-white'
+          : 'top-[5.5px] border-[#2b3f6c]'
           }`}
       />
 
       <img
-        src={videoIcon}
+        src={isActive ? videoActiveIcon : videoIcon}
         alt=""
-        className={`absolute left-[15.25px] top-[6.75px] h-[10.34px] w-[7.5px] ${isActive
-          ? 'brightness-0 invert'
-          : ''
+        className={`absolute left-[15.25px] h-[10.34px] w-[7.5px] ${isActive
+          ? 'top-[7.34px]'
+          : 'top-[6.75px]'
           }`}
       />
     </span>
@@ -155,10 +167,13 @@ function VideoIcon({
 function MessageIcon({
   isActive,
 }) {
-  const activeIconClass =
-    isActive
-      ? 'brightness-0 invert'
-      : '';
+  if (isActive) {
+    return (
+      <span className="relative block size-6" aria-hidden="true">
+        <img src={messageActiveIcon} alt="" className="absolute left-[1.25px] top-[1.25px] size-[21.5px]" />
+      </span>
+    );
+  }
 
   return (
     <span
@@ -168,7 +183,7 @@ function MessageIcon({
       <img
         src={messageIcon}
         alt=""
-        className={`absolute left-[1.25px] top-[1.25px] size-[21.5px] ${activeIconClass}`}
+        className="absolute left-[1.25px] top-[1.25px] size-[21.5px]"
       />
 
       {[
@@ -182,7 +197,7 @@ function MessageIcon({
             messageDotIcon
           }
           alt=""
-          className={`absolute top-[10.8px] size-[2.5px] ${activeIconClass}`}
+          className="absolute top-[10.8px] size-[2.5px]"
           style={{
             left,
           }}
@@ -195,10 +210,14 @@ function MessageIcon({
 function UserIcon({
   isActive,
 }) {
-  const activeIconClass =
-    isActive
-      ? 'brightness-0 invert'
-      : '';
+  if (isActive) {
+    return (
+      <span className="relative block size-6" aria-hidden="true">
+        <img src={userAvatarActiveIcon} alt="" className="absolute left-[7.25px] top-[2.25px] size-[9.5px] -scale-x-100 brightness-0 invert" />
+        <img src={userBodyActiveIcon} alt="" className="absolute left-[4.25px] top-[13.29px] h-[7.66px] w-[15.5px] brightness-0 invert" />
+      </span>
+    );
+  }
 
   return (
     <span
@@ -210,13 +229,13 @@ function UserIcon({
           userAvatarIcon
         }
         alt=""
-        className={`absolute left-[7.25px] top-[2.25px] size-[9.5px] ${activeIconClass}`}
+        className="absolute left-[7.25px] top-[2.25px] size-[9.5px]"
       />
 
       <img
         src={userBodyIcon}
         alt=""
-        className={`absolute left-[4.25px] top-[12.5px] h-[7.66px] w-[15.5px] ${activeIconClass}`}
+        className="absolute left-[4.25px] top-[12.5px] h-[7.66px] w-[15.5px]"
       />
     </span>
   );
