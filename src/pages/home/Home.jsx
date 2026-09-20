@@ -146,14 +146,14 @@ function Home() {
 
   return (
     <div className="h-full overflow-auto">
-      <div className="mx-auto flex min-h-full w-full flex-col gap-5">
+      <div className="mx-auto flex min-h-full w-full flex-col gap-[10px]">
         <section className="h-[183px] shrink-0 rounded-[10px] bg-[linear-gradient(180deg,#2affa3_0%,#37efd9_100%)] px-6 py-5 text-[var(--color-black)]">
           <img src={logo} alt="Noddi" className="h-auto w-[190px] brightness-0" />
           <p className="subhead-3 mt-2">{hero.tagline}</p>
         </section>
 
-        <div className="grid min-h-[400px] flex-1 grid-cols-[minmax(0,818px)_minmax(370px,1fr)] gap-4">
-          <div className="grid grid-rows-[auto_1fr] gap-3">
+        <div className="grid min-h-[400px] flex-1 grid-cols-[minmax(0,818px)_minmax(370px,1fr)] gap-[10px]">
+          <div className="grid grid-rows-[auto_1fr] gap-[10px]">
             <MeetingSchedule
               initialDate={initialMeetingDate}
               meetings={meetings}
